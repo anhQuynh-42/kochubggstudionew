@@ -265,7 +265,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                             app.status === 'Đã duyệt gửi mẫu'
                               ? 'bg-orange-50 text-orange-800 border-orange-200'
                               : app.status === 'Đã lên bài'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              ? 'bg-blue-50 text-blue-800 border-blue-200'
                               : 'bg-amber-50 text-amber-800 border-amber-200'
                           }`}
                         >
@@ -290,12 +290,12 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                       <span className="text-slate-500 block text-[10px]">Tình trạng mẫu quà tặng:</span>
                       <button
                         onClick={() => handleCopyTracking(app.shippingCode || 'GHTK10928374')}
-                        className="font-bold text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer text-left mt-0.5"
+                        className="font-bold text-blue-700 flex items-center gap-1 hover:underline cursor-pointer text-left mt-0.5"
                         title="Nhấp để sao chép mã vận đơn"
                       >
                         <span className="material-symbols-outlined text-[14px]">local_shipping</span>
                         <span>{app.shippingCode || 'GHTK: Đang xuất kho'}</span>
-                        <span className="material-symbols-outlined text-[12px] text-emerald-600">content_copy</span>
+                        <span className="material-symbols-outlined text-[12px] text-blue-600">content_copy</span>
                       </button>
                     </div>
 
@@ -320,14 +320,14 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                             isCurrent
                               ? 'border-orange-500 bg-orange-50/40 shadow-sm'
                               : isCompleted
-                              ? 'border-emerald-200 bg-emerald-50/40'
+                              ? 'border-blue-200 bg-blue-50/40'
                               : 'border-slate-200 bg-white opacity-70'
                           }`}
                         >
                           <div
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold transition-all ${
                               isCompleted
-                                ? 'bg-emerald-600 text-white'
+                                ? 'bg-blue-600 text-white'
                                 : isCurrent
                                 ? 'bg-orange-500 text-white shadow-sm'
                                 : 'bg-slate-100 text-slate-500'
@@ -343,7 +343,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                               Bước {sIdx + 1}
                             </div>
                             <div className={`text-xs font-bold truncate ${
-                              isCurrent ? 'text-orange-950' : isCompleted ? 'text-emerald-900' : 'text-slate-700'
+                              isCurrent ? 'text-orange-950' : isCompleted ? 'text-blue-900' : 'text-slate-700'
                             }`}>
                               {st.label}
                             </div>
@@ -362,7 +362,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                   <div className="text-xs text-slate-600 w-full sm:w-auto">
                     {app.videoLink ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-700 font-bold flex items-center gap-1 shrink-0">
+                        <span className="text-blue-700 font-bold flex items-center gap-1 shrink-0">
                           <span className="material-symbols-outlined text-[16px]">check_circle</span>
                           Đã nộp link video:
                         </span>

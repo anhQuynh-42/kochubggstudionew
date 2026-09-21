@@ -44,7 +44,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
                     <span><b>Bên mình duyệt qua (12h):</b> Đội ngũ kiểm tra nhanh thông tin kênh và số liệu tương tác.</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
+                    <span className="material-symbols-outlined text-[16px] text-blue-600">verified</span>
                     <span><b>Brand duyệt:</b> Nhãn hàng xác nhận chọn kênh phù hợp để gửi sản phẩm mẫu.</span>
                   </div>
                 </div>
@@ -61,7 +61,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
               <div className="flex-1">
                 <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <span>KOC nhận mẫu free</span>
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
+                  <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">
                     Miễn phí 100%
                   </span>
                 </h3>
@@ -98,7 +98,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
                     <span><b>Up lên Drive (Google Drive):</b> Tải video lên link Google Drive để bên mình & Brand duyệt nội dung.</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-600">publish</span>
+                    <span className="material-symbols-outlined text-[16px] text-blue-600">publish</span>
                     <span>Sau khi duyệt xong, KOC tiến hành đăng video chính thức lên kênh kèm link giỏ hàng/affiliate.</span>
                   </div>
                 </div>
@@ -109,23 +109,23 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
           {/* Step 4 */}
           <div className="rounded-2xl bg-slate-50 p-4 sm:p-5 border border-slate-200">
             <div className="flex items-start gap-3.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-black text-sm shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white font-black text-sm shadow-sm">
                 4
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <span>Nhận hoa hồng sau khi có đơn</span>
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
+                  <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">
                     Thanh toán nhanh
                   </span>
                 </h3>
                 <div className="mt-2 space-y-1.5 text-xs text-slate-600">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-600">shopping_cart_checkout</span>
+                    <span className="material-symbols-outlined text-[16px] text-blue-600">shopping_cart_checkout</span>
                     <span><b>Có đơn hàng:</b> Khách hàng mua qua link giỏ hàng hoặc affiliate từ video của bạn.</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance_wallet</span>
+                    <span className="material-symbols-outlined text-[16px] text-blue-600">account_balance_wallet</span>
                     <span><b>Tiền về tài khoản:</b> Hoa hồng và thù lao được đối soát rõ ràng và chuyển thẳng về tài khoản ngân hàng.</span>
                   </div>
                 </div>

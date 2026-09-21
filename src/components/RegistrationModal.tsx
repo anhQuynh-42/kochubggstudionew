@@ -505,7 +505,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     }}
                     className={`flex items-center gap-3 rounded-2xl border-2 border-dashed p-4 transition-all ${
                       hasUploadedProof
-                        ? 'border-emerald-300 bg-emerald-50/40'
+                        ? 'border-blue-300 bg-blue-50/40'
                         : isDraggingProof
                         ? 'border-orange-500 bg-orange-50/60 scale-[1.01] cursor-pointer'
                         : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 cursor-pointer'
@@ -514,7 +514,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     <div
                       className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl overflow-hidden transition-colors ${
                         hasUploadedProof
-                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 shadow-xs'
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300 shadow-xs'
                           : 'bg-slate-200 text-slate-800'
                       }`}
                     >
@@ -538,7 +538,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       {hasUploadedProof ? (
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <span className="text-xs font-bold text-emerald-800 flex items-center gap-1 truncate">
+                            <span className="text-xs font-bold text-blue-800 flex items-center gap-1 truncate">
                               <span className="material-symbols-outlined text-[15px] shrink-0">check_circle</span>
                               <span className="truncate">{uploadedProofFile.name}</span>
                             </span>
@@ -738,7 +738,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
         ) : (
           /* Success Screen matching Screen 5 */
           <div className="p-8 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-700 shadow-sm">
               <span className="material-symbols-outlined text-3xl">check</span>
             </div>
 
@@ -779,7 +779,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Đơn vị vận chuyển:</span>
-                <span className="font-bold text-emerald-700">ViettelPost / GHTK (Hỏa tốc)</span>
+                <span className="font-bold text-blue-700">ViettelPost / GHTK (Hỏa tốc)</span>
               </div>
             </div>
 
@@ -815,11 +815,11 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[9px] font-bold text-white mt-0.5">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white mt-0.5">
                     4
                   </span>
                   <div>
-                    <span className="font-bold text-emerald-800">Nhận hoa hồng sau khi có đơn:</span> Tiền về tài khoản ngân hàng.
+                    <span className="font-bold text-blue-800">Nhận hoa hồng sau khi có đơn:</span> Tiền về tài khoản ngân hàng.
                   </div>
                 </div>
               </div>

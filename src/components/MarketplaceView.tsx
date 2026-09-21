@@ -162,7 +162,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         <div className="relative z-10 flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-800 border border-slate-700/80 px-3 py-1 text-xs font-semibold tracking-wide mb-4 text-slate-300">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span className="flex h-2 w-2 rounded-full bg-blue-400"></span>
               CỔNG NHẬN MẪU & BOOKING KOC CHÍNH HÃNG
             </div>
             <h1 className="font-['Plus_Jakarta_Sans'] text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight text-white">
@@ -199,7 +199,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
               </a>
 
               <div className="flex items-center gap-2 rounded-xl bg-slate-800/80 border border-slate-700/60 px-3.5 py-2 text-xs font-medium text-slate-300">
-                <span className="material-symbols-outlined text-[16px] text-emerald-400">check_circle</span>
+                <span className="material-symbols-outlined text-[16px] text-blue-400">check_circle</span>
                 <span>Duyệt mẫu trong 24 giờ</span>
               </div>
             </div>
@@ -351,10 +351,10 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
           <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
             <div>
               <div className="flex items-center justify-between">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-sm">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shadow-sm">
                   4
                 </span>
-                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800">
                   Tự động đối soát
                 </span>
               </div>
@@ -363,11 +363,11 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
               </h4>
               <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
                 <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-emerald-600 shrink-0 mt-0.5">shopping_cart</span>
+                  <span className="material-symbols-outlined text-[15px] text-blue-600 shrink-0 mt-0.5">shopping_cart</span>
                   <span>Phát sinh đơn hàng từ video</span>
                 </li>
                 <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-emerald-600 shrink-0 mt-0.5">account_balance</span>
+                  <span className="material-symbols-outlined text-[15px] text-blue-600 shrink-0 mt-0.5">account_balance</span>
                   <span className="font-semibold text-slate-900">Chuyển khoản trực tiếp</span>
                 </li>
               </ul>
@@ -776,7 +776,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                   <div className="flex flex-1 flex-col p-4">
                     {/* Top Benefit Highlight Bar */}
                     <div className="mb-2 flex items-center justify-between gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 border border-emerald-200">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-800 border border-blue-200">
                         <span className="material-symbols-outlined text-[13px]">inventory_2</span>
                         Tặng mẫu 0đ
                       </span>
@@ -862,7 +862,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
             </div>
             <div>
               <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 border border-orange-200 px-3 py-0.5 text-[11px] font-semibold text-orange-800 mb-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span className="h-2 w-2 rounded-full bg-blue-500"></span>
                 <span>CỘNG ĐỒNG KOC VIỆT NAM (1.200+ THÀNH VIÊN)</span>
               </div>
               <h3 className="font-['Plus_Jakarta_Sans'] text-lg sm:text-xl font-extrabold text-slate-900">

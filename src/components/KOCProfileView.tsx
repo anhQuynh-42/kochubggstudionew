@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { KOCUser } from '../types';
 import { APP_LOGOS } from '../data/mockData';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
@@ -181,6 +181,30 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
   // Form State initialized from currentUser or fallback defaults
   const [name, setName] = useState(currentUser?.name || '');
   const [avatar, setAvatar] = useState(currentUser?.avatar || APP_LOGOS.userProfile);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      onShowToast('Định dạng ảnh không hợp lệ', 'Vui lòng chọn ảnh định dạng PNG, JPG hoặc WebP.', 'warning');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      onShowToast('Dung lượng ảnh quá lớn', 'Kích thước ảnh đại diện tối đa là 8MB.', 'warning');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setAvatar(result);
+        onShowToast('Đã đổi ảnh đại diện!', 'Ảnh mới đã được cập nhật cho thẻ hồ sơ KOC của bạn.', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   const [tiktokHandle, setTiktokHandle] = useState(currentUser?.tiktokHandle || '');
   const [channelLink, setChannelLink] = useState(
     currentUser?.channelLink || (currentUser?.tiktokHandle ? `https://www.tiktok.com/${currentUser.tiktokHandle}` : '')
@@ -431,9 +455,9 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             {/* Top Badge & Verified Banner */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-1.5">
-                <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                  KOC Hub Verified
+                <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                  Ki ô xây Verified
                 </span>
               </div>
               <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-extrabold text-orange-800 border border-orange-200">
@@ -443,23 +467,44 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
 
             {/* Avatar & Main Info */}
             <div className="mt-5 text-center">
-              <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-2xl border-4 border-orange-100 shadow-sm group">
-                <img
-                  src={avatar || APP_LOGOS.userProfile}
-                  alt={name || 'KOC Avatar'}
-                  className="h-full w-full object-cover"
-                />
+              {/* Hidden Avatar File Input */}
+              <input
+                ref={avatarFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
+
+              <div className="relative mx-auto h-24 w-24 rounded-2xl border-4 border-orange-100 shadow-sm group">
+                <div className="h-full w-full overflow-hidden rounded-xl">
+                  <img
+                    src={avatar || APP_LOGOS.userProfile}
+                    alt={name || 'KOC Avatar'}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const newUrl = prompt('Nhập URL ảnh đại diện KOC mới:', avatar);
-                    if (newUrl && newUrl.trim()) setAvatar(newUrl.trim());
+                    avatarFileInputRef.current?.click();
                   }}
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
-                  title="Thay đổi ảnh đại diện"
+                  className="absolute inset-0 rounded-xl flex flex-col items-center justify-center bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold"
+                  title="Nhấp để tải ảnh đại diện từ thiết bị của bạn"
                 >
                   <span className="material-symbols-outlined text-base">photo_camera</span>
                   Đổi ảnh
+                </button>
+                {/* Visible quick action badge button on mobile and desktop */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    avatarFileInputRef.current?.click();
+                  }}
+                  className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-md border-2 border-white transition-transform active:scale-90 cursor-pointer"
+                  title="Tải ảnh mới từ thiết bị"
+                >
+                  <span className="material-symbols-outlined text-[14px]">photo_camera</span>
                 </button>
               </div>
 
@@ -490,7 +535,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </div>
               <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-500 block">Tương tác</span>
-                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-emerald-600">
+                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-blue-600">
                   {engagementRate || '6.5%'}
                 </span>
               </div>
@@ -523,10 +568,10 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs">
               <div className="flex items-center justify-between text-slate-600">
                 <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
+                  <span className="material-symbols-outlined text-[16px] text-blue-600">check_circle</span>
                   Mẫu 0đ (Freecast)
                 </span>
-                <b className="text-emerald-700">{acceptFreecast ? 'Sẵn sàng' : 'Không nhận'}</b>
+                <b className="text-blue-700">{acceptFreecast ? 'Sẵn sàng' : 'Không nhận'}</b>
               </div>
               <div className="flex items-center justify-between text-slate-600">
                 <span className="flex items-center gap-1.5">
@@ -1085,12 +1130,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 </div>
 
                 {/* Final Verification Checklist */}
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-2">
-                  <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[18px] text-emerald-700">verified</span>
-                    Quyền lợi sau khi tạo hồ sơ KOC tại KOCHub:
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 space-y-2">
+                  <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[18px] text-blue-700">verified</span>
+                    Quyền lợi sau khi tạo hồ sơ KOC tại Ki ô xây:
                   </h4>
-                  <ul className="text-xs text-emerald-800 space-y-1.5 list-disc pl-5">
+                  <ul className="text-xs text-blue-800 space-y-1.5 list-disc pl-5">
                     <li>Duyệt nhanh hồ sơ nhận mẫu trong vòng 12h thay vì 48h thông thường.</li>
                     <li>Tự động điền nhanh form đăng ký nhận mẫu quà 0đ với một click.</li>
                     <li>Được nhãn hàng chủ động gửi lời mời booking chiến dịch độc quyền.</li>
@@ -1181,7 +1226,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 </div>
                 <div className="rounded-xl bg-white p-2.5 border border-slate-100">
                   <span className="text-[10px] text-slate-500 block">Tương tác</span>
-                  <b className="text-sm text-emerald-600 font-['Plus_Jakarta_Sans']">{engagementRate || '6.5%'}</b>
+                  <b className="text-sm text-blue-600 font-['Plus_Jakarta_Sans']">{engagementRate || '6.5%'}</b>
                 </div>
               </div>
 

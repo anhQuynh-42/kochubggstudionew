@@ -45,7 +45,7 @@ export const Toast: React.FC<ToastProps> = ({ toasts = [], notification, onDismi
             key={toast.id}
             className={`pointer-events-auto flex items-start gap-3 rounded-2xl border p-4 shadow-xl backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-5 duration-200 ${
               isSuccess
-                ? 'border-emerald-200 bg-white/95 text-slate-900'
+                ? 'border-blue-200 bg-white/95 text-slate-900'
                 : isWarning
                 ? 'border-amber-200 bg-white/95 text-slate-900'
                 : 'border-orange-200 bg-white/95 text-slate-900'
@@ -54,7 +54,7 @@ export const Toast: React.FC<ToastProps> = ({ toasts = [], notification, onDismi
             <div
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
                 isSuccess
-                  ? 'bg-emerald-100 text-emerald-700'
+                  ? 'bg-blue-100 text-blue-700'
                   : isWarning
                   ? 'bg-amber-100 text-amber-800'
                   : 'bg-orange-100 text-orange-800'

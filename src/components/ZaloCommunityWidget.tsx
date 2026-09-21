@@ -19,7 +19,9 @@ export const ZaloIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-
   </svg>
 );
 
-export const ZaloCommunityWidget: React.FC = () => {
+export const ZaloCommunityWidget: React.FC<{
+  onNavigateToMarketplace?: () => void;
+}> = ({ onNavigateToMarketplace }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -43,8 +45,8 @@ export const ZaloCommunityWidget: React.FC = () => {
                 <h4 className="font-['Plus_Jakarta_Sans'] text-sm font-extrabold text-slate-900">
                   Nhóm Zalo KOC Official
                 </h4>
-                <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                <div className="flex items-center gap-1.5 text-[11px] text-blue-600 font-medium">
+                  <span className="h-2 w-2 rounded-full bg-blue-500"></span>
                   <span>Admin & Brand đang online</span>
                 </div>
               </div>
@@ -101,20 +103,44 @@ export const ZaloCommunityWidget: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Trigger Button */}
-      <div className="flex items-center gap-2">
-        {!isOpen && (
-          <button
-            onClick={() => setIsOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-md border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer animate-in fade-in"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span>Vào nhóm Zalo KOC</span>
-          </button>
-        )}
+      {/* Floating Action Buttons (Stacked Vertically) */}
+      <div className="flex flex-col items-end gap-2.5">
+        {/* New Job Updated Button - Positioned above Zalo button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (onNavigateToMarketplace) {
+              onNavigateToMarketplace();
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          className="group relative flex h-12 items-center gap-2 rounded-full bg-[#0068FF] hover:bg-[#0054cc] px-4 text-white shadow-lg shadow-blue-500/30 transition-all cursor-pointer animate-shake-attention hover:scale-105 active:scale-95"
+          title="Xem ngay các chiến dịch và Job mới cập nhật"
+        >
+          {/* Subtle glowing pulse ring */}
+          <span className="absolute -inset-1 rounded-full bg-[#0068FF]/30 -z-10 animate-pulse-ring pointer-events-none" />
 
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#0068FF] shadow-xs">
+            <span className="material-symbols-outlined text-[18px]">campaign</span>
+            {/* New alert notification dot */}
+            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white"></span>
+            </span>
+          </div>
+          <div className="flex flex-col text-left pr-1">
+            <span className="text-[10px] font-medium text-white/85 leading-none">Cơ hội nhận mẫu</span>
+            <span className="text-xs font-extrabold text-white leading-tight whitespace-nowrap">
+              Job mới cập nhật !
+            </span>
+          </div>
+          <span className="material-symbols-outlined text-[16px] text-white/90 group-hover:translate-x-0.5 transition-transform">
+            arrow_forward
+          </span>
+        </button>
+
+        {/* Existing Zalo Community Button - Positioned below */}
         <a
           href={ZALO_GROUP_URL}
           target="_blank"
@@ -129,13 +155,13 @@ export const ZaloCommunityWidget: React.FC = () => {
             Zalo
             {/* Online notification dot */}
             <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border border-white"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500 border border-white"></span>
             </span>
           </div>
           <div className="flex flex-col text-left pr-1">
             <span className="text-[10px] font-medium text-white/85 leading-none">Cộng đồng KOC</span>
-            <span className="text-xs font-extrabold text-white leading-tight">Nhóm Zalo</span>
+            <span className="text-xs font-extrabold text-white leading-tight whitespace-nowrap">Nhóm Zalo</span>
           </div>
           <span className="material-symbols-outlined text-[16px] text-white/90 group-hover:translate-x-0.5 transition-transform">
             open_in_new

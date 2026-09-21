@@ -12,6 +12,7 @@ import { LoginModal } from './components/LoginModal';
 import { KOCProfileView } from './components/KOCProfileView';
 import { ZaloCommunityWidget } from './components/ZaloCommunityWidget';
 import { Toast, ToastNotification } from './components/Toast';
+import { BrandContactModal } from './components/BrandContactModal';
 
 export const App: React.FC = () => {
   // Authentication state: KOC starts as a guest explorer or loads saved profile
@@ -92,6 +93,7 @@ export const App: React.FC = () => {
   // Modals
   const [applyCampaign, setApplyCampaign] = useState<Campaign | null>(null);
   const [isGuidelinesOpen, setIsGuidelinesOpen] = useState(false);
+  const [isBrandContactOpen, setIsBrandContactOpen] = useState(false);
 
   // Handler: Select Campaign to view details
   const handleSelectCampaign = (campaign: Campaign) => {
@@ -360,7 +362,23 @@ export const App: React.FC = () => {
       </main>
 
       {/* 3. Footer */}
-      <Footer />
+      <Footer
+        onOpenBrandContact={() => setIsBrandContactOpen(true)}
+        onOpenGuidelines={() => setIsGuidelinesOpen(true)}
+      />
+
+      {/* 3.1 Brand Contact Modal */}
+      <BrandContactModal
+        isOpen={isBrandContactOpen}
+        onClose={() => setIsBrandContactOpen(false)}
+        onSubmitSuccess={(info) => {
+          showToast(
+            'Đã gửi thông tin đối tác Brand!',
+            `Đội ngũ Ki ô xây sẽ liên hệ với ${info.brandName} qua số ${info.phone} sớm nhất.`,
+            'success'
+          );
+        }}
+      />
 
       {/* 4. Application Registration Modal */}
       {applyCampaign && (
@@ -404,8 +422,14 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 7. Floating Zalo Community Support Button */}
-      <ZaloCommunityWidget />
+      {/* 7. Floating Action Buttons (Zalo Community + Job mới cập nhật !) */}
+      <ZaloCommunityWidget
+        onNavigateToMarketplace={() => {
+          setSelectedCampaign(null);
+          setCurrentTab('marketplace');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
 
       {/* 8. Global Toast Notification System */}
       <Toast notification={toast} onClose={() => setToast(null)} />

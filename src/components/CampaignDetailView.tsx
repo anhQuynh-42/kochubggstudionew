@@ -157,7 +157,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                 <span className="rounded-lg bg-slate-100 border border-slate-200/80 px-2.5 py-1 font-semibold text-slate-700">
                   Yêu cầu: <b className="text-slate-900">{campaign.followerRequirement}</b>
                 </span>
-                <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 font-semibold text-emerald-800">
+                <span className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 font-semibold text-blue-800">
                   Tỷ lệ duyệt: <b>{campaign.approvalRate || '85%'}</b>
                 </span>
               </div>
@@ -348,7 +348,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
                     2
                   </span>
-                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
                     Free 100%
                   </span>
                 </div>
@@ -378,7 +378,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
                     4
                   </span>
-                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
                     Về tài khoản
                   </span>
                 </div>
@@ -541,11 +541,11 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
 
               {/* Escrow Guarantee Pill */}
               <div className="mt-5 flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-[11px] font-medium text-slate-700 border border-slate-200">
-                <span className="material-symbols-outlined text-[18px] text-emerald-600 shrink-0">
+                <span className="material-symbols-outlined text-[18px] text-blue-600 shrink-0">
                   shield
                 </span>
                 <span>
-                  <b>KOCHub Escrow:</b> Thù lao booking được ký quỹ 100% tại KOCHub trước khi khởi chạy chiến dịch.
+                  <b>Ki ô xây Escrow:</b> Thù lao booking được ký quỹ 100% tại Ki ô xây trước khi khởi chạy chiến dịch.
                 </span>
               </div>
             </div>
@@ -564,7 +564,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
             />
             <div className="min-w-0">
               <div className="text-[11px] font-bold text-slate-900 truncate">{campaign.brandName}</div>
-              <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-0.5">
+              <div className="text-[10px] text-blue-700 font-semibold flex items-center gap-0.5">
                 <span className="material-symbols-outlined text-[12px]">inventory_2</span>
                 Tặng mẫu 0đ • {campaign.commissionRate || '10% HH'}
               </div>

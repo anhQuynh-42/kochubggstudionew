@@ -44,14 +44,9 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="material-symbols-outlined text-xl text-white">hub</span>
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-['Plus_Jakarta_Sans'] text-xl font-extrabold tracking-tight text-slate-900">
-                  KOC<span className="text-orange-600">Hub</span>
-                </span>
-                <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 border border-orange-200">
-                  Creator
-                </span>
-              </div>
+              <span className="font-['Plus_Jakarta_Sans'] text-xl font-extrabold tracking-tight text-slate-900 whitespace-nowrap">
+                Ki ô <span className="text-orange-600">xây</span>
+              </span>
               <span className="text-[10px] font-medium text-slate-500 -mt-1 hidden sm:inline">
                 Cổng nhận mẫu & Booking KOC
               </span>
@@ -86,42 +81,27 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Sau khi đăng nhập: Hồ sơ KOC & Chiến dịch của tôi (xuống cuối) */}
+            {/* Sau khi đăng nhập: Chiến dịch của tôi (xuống cuối) */}
             {currentUser && (
-              <>
-                <button
-                  id="nav-profile-btn"
-                  onClick={() => onSelectTab('profile')}
-                  className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all cursor-pointer ${
-                    currentTab === 'profile'
-                      ? 'bg-orange-500 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              <button
+                id="nav-my-campaigns-btn"
+                onClick={() => onSelectTab('my-campaigns')}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all cursor-pointer ${
+                  currentTab === 'my-campaigns'
+                    ? 'bg-orange-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">assignment_turned_in</span>
+                <span>Chiến dịch của tôi</span>
+                <span
+                  className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                    currentTab === 'my-campaigns' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">badge</span>
-                  <span>Hồ sơ KOC</span>
-                </button>
-
-                <button
-                  id="nav-my-campaigns-btn"
-                  onClick={() => onSelectTab('my-campaigns')}
-                  className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all cursor-pointer ${
-                    currentTab === 'my-campaigns'
-                      ? 'bg-orange-500 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">assignment_turned_in</span>
-                  <span>Chiến dịch của tôi</span>
-                  <span
-                    className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                      currentTab === 'my-campaigns' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
-                    }`}
-                  >
-                    2
-                  </span>
-                </button>
-              </>
+                  2
+                </span>
+              </button>
             )}
           </nav>
         </div>
@@ -202,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
                             <div
                               className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                                 notif.type === 'delivery'
-                                  ? 'bg-emerald-100 text-emerald-700'
+                                  ? 'bg-blue-100 text-blue-700'
                                   : notif.type === 'payout'
                                   ? 'bg-amber-100 text-amber-700'
                                   : 'bg-slate-100 text-slate-900'
@@ -248,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
                       alt={currentUser.name}
                       className="h-full w-full object-cover"
                     />
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500"></span>
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-blue-500"></span>
                   </div>
                   <div className="hidden sm:flex flex-col text-left">
                     <div className="flex items-center gap-1">
@@ -366,33 +346,19 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Sau khi đăng nhập: Hồ sơ KOC & Chiến dịch của tôi (đưa xuống cuối) */}
+          {/* Sau khi đăng nhập: Chiến dịch của tôi (đưa xuống cuối) */}
           {currentUser && (
-            <>
-              <button
-                onClick={() => onSelectTab('profile')}
-                className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                  currentTab === 'profile'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">badge</span>
-                Hồ sơ KOC
-              </button>
-
-              <button
-                onClick={() => onSelectTab('my-campaigns')}
-                className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                  currentTab === 'my-campaigns'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
-                Chiến dịch của tôi (2)
-              </button>
-            </>
+            <button
+              onClick={() => onSelectTab('my-campaigns')}
+              className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                currentTab === 'my-campaigns'
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
+              Chiến dịch của tôi (2)
+            </button>
           )}
         </div>
 

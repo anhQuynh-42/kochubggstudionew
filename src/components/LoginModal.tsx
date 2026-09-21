@@ -182,7 +182,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-800">
                   Trải nghiệm nhanh (1-Click)
                 </span>
-                <span className="rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+                <span className="rounded-full bg-blue-100 border border-blue-200 px-2 py-0.5 text-[9px] font-bold text-blue-800">
                   Có sẵn 2 chiến dịch
                 </span>
               </div>
