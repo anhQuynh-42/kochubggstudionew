@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Defensive guard for environments where window.fetch has only a getter
+      (function() {
+        try {
+          var originalFetch = typeof window !== 'undefined' && window.fetch ? window.fetch.bind(window) : undefined;
+          var currentFetch = originalFetch;
+          if (typeof window !== 'undefined') {
+            try {
+              Object.defineProperty(window, 'fetch', {
+                get: function() {
+                  return currentFetch;
+                },
+                set: function(fn) {
+                  currentFetch = fn;
+                },
+                configurable: true,
+                enumerable: true
+              });
+            } catch (e1) {
+              try {
+                if (window.Window && window.Window.prototype) {
+                  Object.defineProperty(window.Window.prototype, 'fetch', {
+                    get: function() {
+                      return currentFetch;
+                    },
+                    set: function(fn) {
+                      currentFetch = fn;
+                    },
+                    configurable: true,
+                    enumerable: true
+                  });
+                }
+              } catch (e2) {}
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <title>KOCHub - Nền tảng kết nối KOC & Brand</title>
+    <meta name="description" content="Nền tảng tài trợ mẫu sản phẩm và kết nối chiến dịch dành riêng cho KOC: Tạo hồ sơ & Media Kit chuyên nghiệp, khám phá nhãn hàng, đăng ký nhận mẫu miễn phí và theo dõi tiến độ lên bài." />
+    <meta property="og:title" content="KOCHub - Nền tảng kết nối KOC & Brand" />
+    <meta property="og:description" content="Nền tảng tài trợ mẫu sản phẩm và kết nối chiến dịch dành riêng cho KOC: Tạo hồ sơ & Media Kit chuyên nghiệp, khám phá nhãn hàng, đăng ký nhận mẫu miễn phí và theo dõi tiến độ lên bài." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  </head>
+  <body class="bg-[#fafaf9] text-slate-900 antialiased selection:bg-orange-100 selection:text-orange-900">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

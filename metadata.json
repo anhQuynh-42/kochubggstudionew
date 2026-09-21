@@ -1,0 +1,8 @@
+{
+  "name": "KOCHub - Nền tảng kết nối KOC & Brand",
+  "description": "Nền tảng tài trợ mẫu sản phẩm và kết nối chiến dịch dành riêng cho KOC: Tạo hồ sơ & Media Kit chuyên nghiệp, khám phá nhãn hàng, đăng ký nhận mẫu miễn phí và theo dõi tiến độ lên bài.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
