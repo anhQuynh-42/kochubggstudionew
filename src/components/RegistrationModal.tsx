@@ -185,6 +185,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       if (WEBHOOK_URL) {
         fetch(WEBHOOK_URL, {
           method: 'POST',
+          mode: 'no-cors',
           headers: {
             'Content-Type': 'text/plain;charset=utf-8', // Tránh lỗi CORS preflight trên Apps Script
           },
