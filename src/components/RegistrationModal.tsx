@@ -180,6 +180,18 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
         verified: true,
       };
 
+      // Gửi dữ liệu qua Google Sheets Webhook
+      const WEBHOOK_URL = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+      if (WEBHOOK_URL) {
+        fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8', // Tránh lỗi CORS preflight trên Apps Script
+          },
+          body: JSON.stringify(newApplication),
+        }).catch(err => console.error("Lỗi khi gửi data đến Google Sheets", err));
+      }
+
       onSubmitSuccess(newApplication);
 
       if (onAutoLogin) {
