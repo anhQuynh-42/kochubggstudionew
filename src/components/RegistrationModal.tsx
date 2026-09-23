@@ -142,6 +142,11 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       return;
     }
 
+    if (campaign.registeredSpots >= campaign.totalSpots) {
+      setErrorMessage('Chiến dịch này hiện đã hết slot nhận mẫu.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     setTimeout(() => {
@@ -278,7 +283,10 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     {campaign.title}
                   </span>
                 </div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded bg-orange-100 border border-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-800">
+                    Đã đăng ký: {campaign.registeredSpots}/{campaign.totalSpots} slot (Còn {Math.max(0, campaign.totalSpots - campaign.registeredSpots)})
+                  </span>
                   {campaign.benefits.map((b, idx) => (
                     <span
                       key={idx}
@@ -743,10 +751,10 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             </div>
 
             <h3 className="mt-4 font-['Plus_Jakarta_Sans'] text-xl font-extrabold text-slate-900">
-              Đăng ký chiến dịch thành công!
+              Đã gửi hồ sơ - Đang chờ Brand duyệt!
             </h3>
             <p className="mt-2 text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-              Hồ sơ nhận mẫu của bạn đã được chuyển tới nhãn hàng {campaign.brandName}. Bạn có thể theo dõi tiến độ duyệt và mã vận đơn hỏa tốc trong mục Chiến dịch của tôi.
+              Hồ sơ của bạn đã được chuyển tới nhãn hàng <b>{campaign.brandName}</b>. Nhãn hàng sẽ xem qua kênh TikTok/Reels của bạn, đánh giá phong cách nội dung xem có phù hợp với sản phẩm hay không trước khi phê duyệt gửi quà mẫu.
             </p>
 
             {/* Application Code Pill */}
@@ -754,6 +762,9 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
               <span className="text-xs text-orange-800 font-medium">Mã hồ sơ:</span>
               <span className="font-mono text-sm font-extrabold text-orange-900">
                 {generatedAppCode}
+              </span>
+              <span className="rounded-md bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                Chờ duyệt
               </span>
               <button
                 onClick={() => {
@@ -765,6 +776,14 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
               >
                 {copiedCode ? 'Đã chép!' : 'Sao chép'}
               </button>
+            </div>
+
+            {/* Review notice callout */}
+            <div className="mt-4 rounded-2xl bg-amber-50/80 border border-amber-200 p-3 text-left max-w-md mx-auto text-xs text-amber-950 flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-[18px] text-amber-700 shrink-0 mt-0.5">info</span>
+              <div>
+                <span className="font-bold">Lưu ý quan trọng:</span> Sau khi nộp hồ sơ, KOC ở trạng thái <b>Chờ duyệt</b>. Nhãn hàng sẽ xét duyệt chất lượng kênh, lượt tương tác và tệp khán giả. Khi được duyệt chính thức, quà mẫu sẽ được đóng gói giao ngay!
+              </div>
             </div>
 
             {/* Delivery notice */}
@@ -795,7 +814,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     1
                   </span>
                   <div>
-                    <span className="font-bold text-slate-900">Đăng ký tham gia:</span> Bên mình duyệt qua (12h) & Brand duyệt.
+                    <span className="font-bold text-slate-900">Brand xem xét kênh:</span> Nhãn hàng đánh giá kênh & chọn KOC phù hợp (12h - 24h).
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
@@ -803,7 +822,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     2
                   </span>
                   <div>
-                    <span className="font-bold text-slate-900">KOC nhận mẫu free:</span> Làm video review (Hạn 4 - 7 ngày).
+                    <span className="font-bold text-slate-900">Khi được duyệt:</span> Brand gửi quà mẫu 0đ hỏa tốc để KOC trải nghiệm & lên video.
                   </div>
                 </div>
                 <div className="flex items-start gap-2">

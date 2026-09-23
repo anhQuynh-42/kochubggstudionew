@@ -209,12 +209,19 @@ export const App: React.FC = () => {
       )
     );
 
+    // Also update selectedCampaign if currently viewing its details
+    setSelectedCampaign((prev) =>
+      prev && prev.id === newApp.campaignId
+        ? { ...prev, registeredSpots: Math.min(prev.totalSpots, prev.registeredSpots + 1) }
+        : prev
+    );
+
     // Add notification
     setNotifications((prev) => [
       {
         id: `notif-${Date.now()}`,
-        title: `Hồ sơ đăng ký ${newApp.code} đã được gửi!`,
-        message: `Đơn nhận mẫu ${newApp.campaignName} đã được chuyển tới Brand để phê duyệt.`,
+        title: `Đã nộp hồ sơ ${newApp.code} - Đang chờ Brand duyệt`,
+        message: `Hồ sơ đăng ký ${newApp.campaignName} đã gửi thành công. Brand sẽ xem qua kênh TikTok/Reels để đánh giá độ phù hợp trước khi gửi mẫu.`,
         time: 'Vừa xong',
         read: false,
         type: 'approval',
@@ -223,9 +230,9 @@ export const App: React.FC = () => {
     ]);
 
     showToast(
-      'Đăng ký mẫu thành công!',
-      `Hồ sơ ${newApp.code} đã gửi tới Brand. Theo dõi tại "Chiến dịch của tôi".`,
-      'success'
+      'Nộp hồ sơ thành công - Đang chờ duyệt',
+      `Hồ sơ ${newApp.code} đã chuyển tới Brand. Nhãn hàng sẽ xem qua kênh và duyệt gửi quà mẫu nếu phù hợp!`,
+      'info'
     );
   };
 
@@ -246,6 +253,19 @@ export const App: React.FC = () => {
     );
   };
 
+  // Count recorded campaigns for current logged-in KOC
+  const userApplicationsCount = currentUser
+    ? applications.filter(
+        (a) =>
+          a.kocName.toLowerCase().includes(currentUser.name.toLowerCase()) ||
+          a.tiktokHandle.toLowerCase().includes(currentUser.tiktokHandle.toLowerCase()) ||
+          (currentUser.tiktokHandle.includes('minhthu') &&
+            (a.kocName.includes('Minh Thư') ||
+              a.status === 'Đã duyệt gửi mẫu' ||
+              a.status === 'Chờ duyệt'))
+      ).length
+    : 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       {/* 1. Header Navigation Bar (KOC-tailored, with Guest/Logged-in state) */}
@@ -262,6 +282,7 @@ export const App: React.FC = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenGuidelines={() => setIsGuidelinesOpen(true)}
+        myCampaignsCount={userApplicationsCount}
       />
 
       {/* Guest Exploration Banner Notice (subtle top alert for new KOC visitors) */}

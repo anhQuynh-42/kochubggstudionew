@@ -23,8 +23,9 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
-  const quotaPercent = Math.round((campaign.registeredSpots / campaign.totalSpots) * 100);
-  const spotsLeft = campaign.totalSpots - campaign.registeredSpots;
+  const quotaPercent = Math.min(100, Math.round((campaign.registeredSpots / campaign.totalSpots) * 100));
+  const spotsLeft = Math.max(0, campaign.totalSpots - campaign.registeredSpots);
+  const isFull = spotsLeft <= 0;
 
   const handleCopyHashtags = () => {
     navigator.clipboard.writeText(campaign.hashtags.join(' '));
@@ -132,10 +133,17 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                     <span className="material-symbols-outlined text-[12px]">open_in_new</span>
                   </a>
                 )}
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-[11px] font-semibold text-orange-800">
-                  <span className="material-symbols-outlined text-[13px] text-orange-600">local_fire_department</span>
-                  Chiến dịch HOT
-                </span>
+                {isFull ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-300 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
+                    <span className="material-symbols-outlined text-[13px] text-slate-500">do_not_disturb_on</span>
+                    Đã hết slot
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-[11px] font-semibold text-orange-800">
+                    <span className="material-symbols-outlined text-[13px] text-orange-600">local_fire_department</span>
+                    Chiến dịch HOT
+                  </span>
+                )}
               </div>
 
               <h1 className="mt-2 font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 leading-snug">
@@ -165,15 +173,25 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
-            <button
-              onClick={() => onOpenApplyModal(campaign)}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-              <span>Đăng ký nhận mẫu</span>
-            </button>
-            <div className="text-center text-[11px] font-semibold text-orange-700">
-              Còn {spotsLeft} suất cuối cùng
+            {isFull ? (
+              <button
+                disabled
+                className="flex items-center justify-center gap-2 rounded-2xl bg-slate-200 px-6 py-3.5 text-sm font-bold text-slate-500 shadow-none cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-[18px]">event_busy</span>
+                <span>Đã hết slot nhận mẫu</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => onOpenApplyModal(campaign)}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                <span>Đăng ký nhận mẫu</span>
+              </button>
+            )}
+            <div className={`text-center text-[11px] font-semibold ${isFull ? 'text-slate-500' : 'text-orange-700'}`}>
+              {isFull ? 'Chiến dịch đã đủ số lượng' : `Còn ${spotsLeft} suất cuối cùng`}
             </div>
           </div>
         </div>
@@ -492,14 +510,25 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               </div>
 
               {/* Primary Apply CTA */}
-              <button
-                id="dossier-apply-btn"
-                onClick={() => onOpenApplyModal(campaign)}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 py-4 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
-                <span>ĐĂNG KÝ THAM GIA NGAY (MỞ FORM)</span>
-              </button>
+              {isFull ? (
+                <button
+                  id="dossier-apply-btn"
+                  disabled
+                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-200 py-4 text-center text-sm font-bold text-slate-500 shadow-none cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-[20px]">event_busy</span>
+                  <span>ĐÃ HẾT SLOT NHẬN MẪU</span>
+                </button>
+              ) : (
+                <button
+                  id="dossier-apply-btn"
+                  onClick={() => onOpenApplyModal(campaign)}
+                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 py-4 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
+                  <span>ĐĂNG KÝ THAM GIA NGAY (MỞ FORM)</span>
+                </button>
+              )}
 
               {/* Secondary actions */}
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -588,14 +617,25 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               </button>
             )}
 
-            <button
-              id="mobile-sticky-apply-btn"
-              onClick={() => onOpenApplyModal(campaign)}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-4 py-3 text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-              <span>Đăng ký nhận mẫu</span>
-            </button>
+            {isFull ? (
+              <button
+                id="mobile-sticky-apply-btn"
+                disabled
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-200 px-4 py-3 text-xs font-bold text-slate-500 shadow-none cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-[18px]">event_busy</span>
+                <span>Hết slot</span>
+              </button>
+            ) : (
+              <button
+                id="mobile-sticky-apply-btn"
+                onClick={() => onOpenApplyModal(campaign)}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-4 py-3 text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                <span>Đăng ký nhận mẫu</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

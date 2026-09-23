@@ -170,7 +170,10 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
             <h1 className="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-extrabold text-slate-900">
               Chiến dịch của tôi
             </h1>
-            <span className="rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-[10px] font-semibold text-orange-800">
+            <span className="rounded-full bg-orange-100 border border-orange-200 px-2.5 py-0.5 text-xs font-extrabold text-orange-800">
+              {myApps.length} chiến dịch
+            </span>
+            <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-semibold text-slate-700">
               {currentUser.tiktokHandle}
             </span>
           </div>
@@ -236,8 +239,8 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
             const currentStepIdx = app.videoLink || app.status === 'Đã lên bài' ? 3 : app.status === 'Đã duyệt gửi mẫu' ? 2 : 1;
 
             const steps = [
-              { label: 'Đăng ký mẫu', desc: 'Đã gửi hồ sơ', icon: 'how_to_reg' },
-              { label: 'Brand duyệt', desc: 'Duyệt trong 24h', icon: 'verified' },
+              { label: 'Đăng ký mẫu', desc: 'Đã nộp hồ sơ', icon: 'how_to_reg' },
+              { label: 'Brand duyệt kênh', desc: 'Xem xét kênh & chọn', icon: 'verified' },
               { label: 'Giao quà mẫu', desc: app.shippingCode || 'GHTK đang giao', icon: 'local_shipping' },
               { label: 'Nghiệm thu video', desc: app.videoLink ? 'Đã nộp video' : 'Hạn 4 - 7 ngày', icon: 'video_library' },
             ];
@@ -261,15 +264,18 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                           {app.code}
                         </span>
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold border ${
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border flex items-center gap-1 ${
                             app.status === 'Đã duyệt gửi mẫu'
                               ? 'bg-orange-50 text-orange-800 border-orange-200'
                               : app.status === 'Đã lên bài'
                               ? 'bg-blue-50 text-blue-800 border-blue-200'
-                              : 'bg-amber-50 text-amber-800 border-amber-200'
+                              : 'bg-amber-50 text-amber-900 border-amber-300'
                           }`}
                         >
-                          {app.status}
+                          {app.status === 'Chờ duyệt' && (
+                            <span className="material-symbols-outlined text-[13px] text-amber-700">schedule</span>
+                          )}
+                          {app.status === 'Chờ duyệt' ? 'Chờ Brand duyệt kênh' : app.status}
                         </span>
                       </div>
                       <h3
@@ -288,15 +294,22 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
                       <span className="text-slate-500 block text-[10px]">Tình trạng mẫu quà tặng:</span>
-                      <button
-                        onClick={() => handleCopyTracking(app.shippingCode || 'GHTK10928374')}
-                        className="font-bold text-blue-700 flex items-center gap-1 hover:underline cursor-pointer text-left mt-0.5"
-                        title="Nhấp để sao chép mã vận đơn"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">local_shipping</span>
-                        <span>{app.shippingCode || 'GHTK: Đang xuất kho'}</span>
-                        <span className="material-symbols-outlined text-[12px] text-blue-600">content_copy</span>
-                      </button>
+                      {app.status === 'Chờ duyệt' ? (
+                        <span className="font-semibold text-amber-800 flex items-center gap-1 text-left mt-0.5">
+                          <span className="material-symbols-outlined text-[14px] text-amber-700">hourglass_top</span>
+                          <span>Chờ Brand duyệt kênh để gửi mẫu</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleCopyTracking(app.shippingCode || 'GHTK10928374')}
+                          className="font-bold text-blue-700 flex items-center gap-1 hover:underline cursor-pointer text-left mt-0.5"
+                          title="Nhấp để sao chép mã vận đơn"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">local_shipping</span>
+                          <span>{app.shippingCode || 'GHTK: Đang xuất kho'}</span>
+                          <span className="material-symbols-outlined text-[12px] text-blue-600">content_copy</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
@@ -318,7 +331,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                           key={sIdx}
                           className={`flex items-center gap-3 rounded-2xl p-3 border transition-all ${
                             isCurrent
-                              ? 'border-orange-500 bg-orange-50/40 shadow-sm'
+                              ? 'border-blue-500 bg-blue-50/60 shadow-sm ring-1 ring-blue-400/30'
                               : isCompleted
                               ? 'border-blue-200 bg-blue-50/40'
                               : 'border-slate-200 bg-white opacity-70'
@@ -329,7 +342,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                               isCompleted
                                 ? 'bg-blue-600 text-white'
                                 : isCurrent
-                                ? 'bg-orange-500 text-white shadow-sm'
+                                ? 'bg-blue-600 text-white shadow-sm'
                                 : 'bg-slate-100 text-slate-500'
                             }`}
                           >
@@ -339,15 +352,15 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                           </div>
 
                           <div className="min-w-0">
-                            <div className="text-[10px] font-semibold text-slate-500">
+                            <div className={`text-[10px] font-semibold ${isCurrent ? 'text-blue-700 font-bold' : 'text-slate-500'}`}>
                               Bước {sIdx + 1}
                             </div>
                             <div className={`text-xs font-bold truncate ${
-                              isCurrent ? 'text-orange-950' : isCompleted ? 'text-blue-900' : 'text-slate-700'
+                              isCurrent ? 'text-blue-950 font-extrabold' : isCompleted ? 'text-blue-900' : 'text-slate-700'
                             }`}>
                               {st.label}
                             </div>
-                            <div className="text-[10px] text-slate-500 truncate">
+                            <div className={`text-[10px] truncate ${isCurrent ? 'text-blue-800' : 'text-slate-500'}`}>
                               {st.desc}
                             </div>
                           </div>

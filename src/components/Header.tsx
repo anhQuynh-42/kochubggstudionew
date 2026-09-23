@@ -12,6 +12,7 @@ interface HeaderProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onOpenGuidelines?: () => void;
+  myCampaignsCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   onOpenGuidelines,
+  myCampaignsCount = 0,
 }) => {
   const [showNotif, setShowNotif] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -99,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
                     currentTab === 'my-campaigns' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
                   }`}
                 >
-                  2
+                  {myCampaignsCount}
                 </span>
               </button>
             )}
@@ -276,12 +278,17 @@ export const Header: React.FC<HeaderProps> = ({
                           onSelectTab('my-campaigns');
                           setShowUserMenu(false);
                         }}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 cursor-pointer"
+                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[16px] text-slate-900">
-                          inventory_2
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[16px] text-slate-900">
+                            inventory_2
+                          </span>
+                          <span>Quản lý đơn nhận mẫu</span>
+                        </div>
+                        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-800">
+                          {myCampaignsCount}
                         </span>
-                        Quản lý đơn nhận mẫu
                       </button>
 
                       <div className="my-1 border-t border-slate-100"></div>
@@ -357,7 +364,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
-              Chiến dịch của tôi (2)
+              <span>Chiến dịch của tôi ({myCampaignsCount})</span>
             </button>
           )}
         </div>

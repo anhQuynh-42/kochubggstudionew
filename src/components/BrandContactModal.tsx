@@ -29,6 +29,24 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
     }
     setIsSubmitting(true);
     setTimeout(() => {
+      // Save submitted brand contact requests into localStorage
+      try {
+        const existing = JSON.parse(localStorage.getItem('kochub_brand_contacts') || '[]');
+        const newRecord = {
+          id: `brand-req-${Date.now()}`,
+          brandName,
+          contactPerson,
+          phone,
+          email,
+          budget,
+          requirements,
+          submittedAt: new Date().toISOString(),
+        };
+        localStorage.setItem('kochub_brand_contacts', JSON.stringify([newRecord, ...existing]));
+      } catch (err) {
+        console.error('Failed to save brand contact locally:', err);
+      }
+
       setIsSubmitting(false);
       setIsSuccess(true);
       if (onSubmitSuccess) {

@@ -229,157 +229,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         </div>
       </section>
 
-      {/* 2. Quy trình hợp tác 4 bước tối giản */}
-      <section className="mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-800 border border-slate-200">
-              <span className="material-symbols-outlined text-[18px]">alt_route</span>
-            </span>
-            <div>
-              <h3 className="font-['Plus_Jakarta_Sans'] text-base sm:text-lg font-extrabold text-slate-900">
-                Quy trình hợp tác 4 bước đơn giản
-              </h3>
-              <p className="text-xs text-slate-500">
-                Nhận mẫu miễn phí 100%, quy trình duyệt tinh gọn và hoa hồng về tài khoản minh bạch
-              </p>
-            </div>
-          </div>
-          <a
-            href={ZALO_GROUP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:underline self-start sm:self-auto"
-          >
-            <span>Hỗ trợ qua Zalo</span>
-            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-          </a>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Step 1 */}
-          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
-                  1
-                </span>
-                <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
-                  Duyệt 12h
-                </span>
-              </div>
-              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
-                Đăng ký tham gia
-              </h4>
-              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">check</span>
-                  <span>KOCHub duyệt hồ sơ (12h)</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">check</span>
-                  <span>Brand xác nhận gửi mẫu</span>
-                </li>
-              </ul>
-            </div>
-            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
-              Chọn chiến dịch & gửi thông tin
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
-                  2
-                </span>
-                <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
-                  Miễn phí 100%
-                </span>
-              </div>
-              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
-                KOC nhận mẫu tận nhà
-              </h4>
-              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">local_shipping</span>
-                  <span>Giao hàng GHTK tận nơi</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">schedule</span>
-                  <span>Làm video trong 4-7 ngày</span>
-                </li>
-              </ul>
-            </div>
-            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
-              Trải nghiệm thực tế sản phẩm
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
-                  3
-                </span>
-                <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
-                  Nghiệm thu
-                </span>
-              </div>
-              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
-                KOC trả link video
-              </h4>
-              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">link</span>
-                  <span>Gửi link Google Drive / TikTok</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">verified</span>
-                  <span>Duyệt video & lên bài kênh</span>
-                </li>
-              </ul>
-            </div>
-            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
-              Gắn giỏ hàng & hashtag chiến dịch
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shadow-sm">
-                  4
-                </span>
-                <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                  Tự động đối soát
-                </span>
-              </div>
-              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
-                Nhận hoa hồng & thù lao
-              </h4>
-              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-blue-600 shrink-0 mt-0.5">shopping_cart</span>
-                  <span>Phát sinh đơn hàng từ video</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-blue-600 shrink-0 mt-0.5">account_balance</span>
-                  <span className="font-semibold text-slate-900">Chuyển khoản trực tiếp</span>
-                </li>
-              </ul>
-            </div>
-            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
-              Đối soát minh bạch hàng tuần
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Filter & Command Center */}
+      {/* 2. Filter & Command Center */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm mb-8">
         <div className="flex flex-col gap-4">
           {/* Top Row: Search input & Platform dropdown */}
@@ -677,8 +527,9 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredCampaigns.map((camp) => {
-              const quotaPercent = Math.round((camp.registeredSpots / camp.totalSpots) * 100);
-              const spotsLeft = camp.totalSpots - camp.registeredSpots;
+              const quotaPercent = Math.min(100, Math.round((camp.registeredSpots / camp.totalSpots) * 100));
+              const spotsLeft = Math.max(0, camp.totalSpots - camp.registeredSpots);
+              const isFull = spotsLeft <= 0;
               const isBookmarked = bookmarkedIds.includes(camp.id);
 
               return (
@@ -815,13 +666,20 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                         <span className="font-medium text-slate-500">
                           Đã đăng ký: <b className="text-slate-900">{camp.registeredSpots}/{camp.totalSpots}</b>
                         </span>
-                        <span className="font-semibold text-orange-700">
-                          Còn {spotsLeft} suất
-                        </span>
+                        {isFull ? (
+                          <span className="font-bold text-slate-500 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[13px]">block</span>
+                            Đã hết slot
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-orange-700">
+                            Còn {spotsLeft} suất
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                         <div
-                          className="h-full rounded-full bg-orange-500 transition-all"
+                          className={`h-full rounded-full transition-all ${isFull ? 'bg-slate-400' : 'bg-orange-500'}`}
                           style={{ width: `${quotaPercent}%` }}
                         ></div>
                       </div>
@@ -837,14 +695,25 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                     >
                       Xem chi tiết
                     </button>
-                    <button
-                      id={`apply-btn-${camp.id}`}
-                      onClick={() => onOpenApplyModal(camp)}
-                      className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-orange-500 py-2 text-center text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <span>Đăng ký ngay</span>
-                      <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                    </button>
+                    {isFull ? (
+                      <button
+                        id={`apply-btn-${camp.id}`}
+                        disabled
+                        className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-slate-200 py-2 text-center text-xs font-bold text-slate-500 shadow-none cursor-not-allowed"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">event_busy</span>
+                        <span>Đã hết slot</span>
+                      </button>
+                    ) : (
+                      <button
+                        id={`apply-btn-${camp.id}`}
+                        onClick={() => onOpenApplyModal(camp)}
+                        className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-orange-500 py-2 text-center text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <span>Đăng ký ngay</span>
+                        <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -890,7 +759,157 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         </div>
       </section>
 
-      {/* 5. Bottom Assurance Banner */}
+      {/* 5. Quy trình hợp tác 4 bước đơn giản */}
+      <section className="mt-8 mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-800 border border-slate-200">
+              <span className="material-symbols-outlined text-[18px]">alt_route</span>
+            </span>
+            <div>
+              <h3 className="font-['Plus_Jakarta_Sans'] text-base sm:text-lg font-extrabold text-slate-900">
+                Quy trình hợp tác 4 bước đơn giản
+              </h3>
+              <p className="text-xs text-slate-500">
+                Nhận mẫu miễn phí 100%, quy trình duyệt tinh gọn và hoa hồng về tài khoản minh bạch
+              </p>
+            </div>
+          </div>
+          <a
+            href={ZALO_GROUP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:underline self-start sm:self-auto"
+          >
+            <span>Hỗ trợ qua Zalo</span>
+            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+          </a>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Step 1 */}
+          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
+                  1
+                </span>
+                <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
+                  Duyệt 12h
+                </span>
+              </div>
+              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
+                Đăng ký tham gia
+              </h4>
+              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">check</span>
+                  <span>KOCHub duyệt hồ sơ (12h)</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">check</span>
+                  <span>Brand xác nhận gửi mẫu</span>
+                </li>
+              </ul>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
+              Chọn chiến dịch & gửi thông tin
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
+                  2
+                </span>
+                <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
+                  Miễn phí 100%
+                </span>
+              </div>
+              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
+                KOC nhận mẫu tận nhà
+              </h4>
+              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">local_shipping</span>
+                  <span>Giao hàng GHTK tận nơi</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">schedule</span>
+                  <span>Làm video trong 4-7 ngày</span>
+                </li>
+              </ul>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
+              Trải nghiệm thực tế sản phẩm
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
+                  3
+                </span>
+                <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
+                  Nghiệm thu
+                </span>
+              </div>
+              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
+                KOC trả link video
+              </h4>
+              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">link</span>
+                  <span>Gửi link Google Drive / TikTok</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-orange-500 shrink-0 mt-0.5">verified</span>
+                  <span>Duyệt video & lên bài kênh</span>
+                </li>
+              </ul>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
+              Gắn giỏ hàng & hashtag chiến dịch
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shadow-sm">
+                  4
+                </span>
+                <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800">
+                  Tự động đối soát
+                </span>
+              </div>
+              <h4 className="mt-3 font-['Plus_Jakarta_Sans'] text-sm font-bold text-slate-900">
+                Nhận hoa hồng & thù lao
+              </h4>
+              <ul className="mt-2 space-y-1.5 text-xs text-slate-600">
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-blue-600 shrink-0 mt-0.5">shopping_cart</span>
+                  <span>Phát sinh đơn hàng từ video</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-blue-600 shrink-0 mt-0.5">account_balance</span>
+                  <span className="font-semibold text-slate-900">Chuyển khoản trực tiếp</span>
+                </li>
+              </ul>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-200/70 text-[11px] font-medium text-slate-400">
+              Đối soát minh bạch hàng tuần
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Bottom Assurance Banner */}
       <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
