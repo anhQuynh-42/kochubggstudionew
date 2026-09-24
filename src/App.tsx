@@ -109,6 +109,10 @@ export const App: React.FC = () => {
 
   // Handler: Open Apply Registration Form
   const handleOpenApplyModal = (campaign: Campaign) => {
+    if (!currentUser) {
+      handleOpenLogin('login', 'Vui lòng đăng nhập hoặc tạo tài khoản KOC để đăng ký nhận mẫu chiến dịch này.');
+      return;
+    }
     setApplyCampaign(campaign);
   };
 
