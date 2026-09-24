@@ -446,13 +446,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                 </span>
               </div>
 
-              {/* Big compensation number */}
-              <div className="mt-4">
-                <span className="text-xs text-slate-500">Tổng giá trị gói tài trợ / KOC</span>
-                <div className="font-['Plus_Jakarta_Sans'] text-3xl font-extrabold text-orange-600">
-                  3.500.000 VNĐ
-                </div>
-              </div>
+
 
               {/* Itemized benefits breakdown */}
               <div className="mt-5 space-y-3">
@@ -461,31 +455,20 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                     <span className="material-symbols-outlined text-[18px]">inventory_2</span>
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900">Fullset sản phẩm mẫu (850.000đ)</span>
+                    <span className="text-xs font-bold text-slate-900">Nhận sản phẩm mẫu miễn phí</span>
                     <p className="text-[11px] text-slate-600">
                       Brand đóng gói và gửi ViettelPost hỏa tốc tận nhà miễn phí.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 border border-slate-200">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-                    <span className="material-symbols-outlined text-[18px]">payments</span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-slate-900">Thù lao cố định (1.500.000đ)</span>
-                    <p className="text-[11px] text-slate-600">
-                      Chuyển khoản trực tiếp vào tài khoản ngân hàng sau khi duyệt video.
-                    </p>
-                  </div>
-                </div>
 
                 <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 border border-slate-200">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
                     <span className="material-symbols-outlined text-[18px]">trending_up</span>
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900">Hoa hồng Affiliate (18%)</span>
+                    <span className="text-xs font-bold text-slate-900">Hoa hồng Affiliate (10%)</span>
                     <p className="text-[11px] text-slate-600">
                       Hưởng trực tiếp trên mọi đơn hàng phát sinh từ giỏ hàng TikTok Shop.
                     </p>
