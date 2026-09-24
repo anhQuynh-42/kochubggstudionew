@@ -468,7 +468,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                     <span className="material-symbols-outlined text-[18px]">trending_up</span>
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900">Hoa hồng Affiliate (10%)</span>
+                    <span className="text-xs font-bold text-slate-900">Hoa hồng Affiliate ({campaign.commissionRate || '10%'})</span>
                     <p className="text-[11px] text-slate-600">
                       Hưởng trực tiếp trên mọi đơn hàng phát sinh từ giỏ hàng TikTok Shop.
                     </p>
