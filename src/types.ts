@@ -98,6 +98,7 @@ export interface KOCUser {
   followers: string;
   phone: string;
   email: string;
+  password?: string;
   verified: boolean;
   bio?: string;
   categories?: string[];

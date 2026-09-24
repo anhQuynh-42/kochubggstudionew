@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KOCUser } from '../types';
 import { APP_LOGOS } from '../data/mockData';
 
@@ -40,6 +40,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [regCategory, setRegCategory] = useState('Làm đẹp & Mỹ phẩm');
   const [regPassword, setRegPassword] = useState('');
   const [regFollowers, setRegFollowers] = useState('10K+');
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const demoUser: KOCUser = {
     id: 'koc-minhthu',
@@ -55,41 +56,68 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     address: 'Số 45, Đường Lê Duẩn, Phường Bến Nghé',
     shippingNote: 'Giao trong giờ hành chính, gọi trước khi đến.',
     categories: ['Làm đẹp & Mỹ phẩm', 'Lifestyle'],
+    password: 'password123',
   };
+
+  useEffect(() => {
+    const savedUsers = localStorage.getItem('koctrend_registered_users');
+    if (!savedUsers) {
+      localStorage.setItem('koctrend_registered_users', JSON.stringify([demoUser]));
+    }
+  }, []);
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
     const handleValue = loginHandle.trim();
     const phoneValue = loginPhone.trim();
 
     const formattedHandle = handleValue
       ? (handleValue.startsWith('@') ? handleValue : `@${handleValue}`)
-      : '@koc.creator';
+      : '';
 
-    const user: KOCUser = {
-      id: `koc-${Date.now()}`,
-      name: formattedHandle.replace('@', ''),
-      avatar: APP_LOGOS.userProfile,
-      tiktokHandle: formattedHandle,
-      followers: '25K+',
-      phone: phoneValue || '0908.888.999',
-      email: `${formattedHandle.replace('@', '')}@creator.vn`,
-      verified: true,
-      city: 'TP. Hồ Chí Minh',
-      district: 'Quận 1',
-      address: 'Số 123, Đường Nguyễn Huệ',
-      shippingNote: 'Gọi trước khi giao hàng',
-      categories: ['Làm đẹp & Mỹ phẩm', 'Lifestyle'],
-    };
+    const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+    const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
 
-    onLoginSuccess(user, false);
+    let foundUser = null;
+
+    if (loginMethod === 'tiktok') {
+      foundUser = savedUsers.find(
+        (u) => u.tiktokHandle.toLowerCase() === formattedHandle.toLowerCase() && u.password === loginPassword
+      );
+    } else {
+      foundUser = savedUsers.find(
+        (u) => u.phone === phoneValue && u.password === loginPassword
+      );
+    }
+
+    if (foundUser) {
+      onLoginSuccess(foundUser, false);
+    } else {
+      setLoginError('Tài khoản hoặc mật khẩu không chính xác. Vui lòng đăng ký nếu chưa có tài khoản.');
+    }
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
     const cleanHandle = regHandle.trim().startsWith('@')
       ? regHandle.trim()
       : `@${regHandle.trim() || 'new.koc'}`;
+
+    const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+    const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
+
+    const exists = savedUsers.some(
+      (u) =>
+        u.tiktokHandle.toLowerCase() === cleanHandle.toLowerCase() ||
+        (u.phone === regPhone.trim() && regPhone.trim() !== '')
+    );
+
+    if (exists) {
+      setLoginError('Tài khoản TikTok hoặc số điện thoại này đã được đăng ký.');
+      return;
+    }
 
     const newUser: KOCUser = {
       id: `koc-reg-${Date.now()}`,
@@ -99,6 +127,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       followers: regFollowers,
       phone: regPhone.trim() || '0901.234.567',
       email: `${cleanHandle.replace('@', '')}@gmail.com`,
+      password: regPassword,
       verified: true,
       city: 'TP. Hồ Chí Minh',
       district: 'Quận 1',
@@ -107,6 +136,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       categories: [regCategory],
     };
 
+    localStorage.setItem('koctrend_registered_users', JSON.stringify([...savedUsers, newUser]));
     onLoginSuccess(newUser, true);
   };
 
@@ -129,6 +159,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </span>
             <p className="text-xs text-orange-950 font-medium leading-relaxed">
               {promptMessage}
+            </p>
+          </div>
+        )}
+
+        {loginError && (
+          <div className="mb-4 rounded-2xl bg-red-50 border border-red-200 p-3 flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-red-600 text-[18px] shrink-0 mt-0.5">
+              error
+            </span>
+            <p className="text-xs text-red-950 font-medium leading-relaxed">
+              {loginError}
             </p>
           </div>
         )}
@@ -284,6 +325,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs text-slate-900 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none"
+                  required
                 />
               </div>
 
