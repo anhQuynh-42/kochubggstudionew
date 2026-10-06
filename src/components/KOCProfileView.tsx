@@ -138,12 +138,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     return (
       <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-12 shadow-sm text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 border border-orange-200 shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-50 text-[#613bd1] border border-purple-200 shadow-sm">
             <span className="material-symbols-outlined text-3xl">badge</span>
           </div>
 
           <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3.5 py-1 text-xs font-semibold text-slate-700">
-            <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+            <span className="h-2 w-2 rounded-full bg-[#613bd1]"></span>
             YÊU CẦU ĐĂNG NHẬP
           </div>
 
@@ -159,7 +159,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             {onOpenLogin && (
               <button
                 onClick={onOpenLogin}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-sm transition-all cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] hover:opacity-95 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">login</span>
                 <span>Đăng nhập ngay</span>
@@ -210,44 +210,28 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     currentUser?.channelLink || (currentUser?.tiktokHandle ? `https://www.tiktok.com/${currentUser.tiktokHandle}` : '')
   );
   const [followers, setFollowers] = useState(currentUser?.followers || '');
-  const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '20K views');
-  const [engagementRate, setEngagementRate] = useState(currentUser?.engagementRate || '6.5%');
+  const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '');
+  const [engagementRate, setEngagementRate] = useState(currentUser?.engagementRate || '');
   const [instagramHandle, setInstagramHandle] = useState(currentUser?.instagramHandle || '');
   const [youtubeHandle, setYoutubeHandle] = useState(currentUser?.youtubeHandle || '');
 
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [email, setEmail] = useState(currentUser?.email || '');
-  const [city, setCity] = useState(currentUser?.city || 'TP. Hồ Chí Minh');
-  const [district, setDistrict] = useState(currentUser?.district || 'Quận 1');
+  const [city, setCity] = useState(currentUser?.city || '');
+  const [district, setDistrict] = useState(currentUser?.district || '');
   const [address, setAddress] = useState(currentUser?.address || '');
-  const [shippingNote, setShippingNote] = useState(
-    currentUser?.shippingNote || 'Giao giờ hành chính, gọi trước khi đến'
-  );
+  const [shippingNote, setShippingNote] = useState(currentUser?.shippingNote || '');
 
-  const [bio, setBio] = useState(
-    currentUser?.bio || 'KOC chuyên sản xuất video review chân thực, giàu năng lượng và gắn link giỏ hàng TikTok Shop.'
-  );
-  const [categories, setCategories] = useState<string[]>(
-    currentUser?.categories && currentUser.categories.length > 0
-      ? currentUser.categories
-      : ['Làm đẹp & Mỹ phẩm', 'Thời trang & Phụ kiện']
-  );
-  const [contentStyle, setContentStyle] = useState<string[]>(
-    currentUser?.contentStyle && currentUser.contentStyle.length > 0
-      ? currentUser.contentStyle
-      : ['Review chân thực & Khách quan', 'Unboxing & ASMR']
-  );
-  const [targetAudience, setTargetAudience] = useState(
-    currentUser?.targetAudience || 'Khán giả độ tuổi 18-30, học sinh sinh viên & dân văn phòng thích mua sắm online.'
-  );
+  const [bio, setBio] = useState(currentUser?.bio || '');
+  const [categories, setCategories] = useState<string[]>(currentUser?.categories || []);
+  const [contentStyle, setContentStyle] = useState<string[]>(currentUser?.contentStyle || []);
+  const [targetAudience, setTargetAudience] = useState(currentUser?.targetAudience || '');
   const [acceptFreecast, setAcceptFreecast] = useState(
     currentUser?.acceptFreecast !== undefined ? currentUser.acceptFreecast : true
   );
-  const [minBookingRate, setMinBookingRate] = useState(
-    currentUser?.minBookingRate || 'Mẫu 0đ (Freecast) + Hoa hồng Affiliate 8% - 15%'
-  );
+  const [minBookingRate, setMinBookingRate] = useState(currentUser?.minBookingRate || '');
   const [allowSparkAds, setAllowSparkAds] = useState(
-    currentUser?.allowSparkAds !== undefined ? currentUser.allowSparkAds : true
+    currentUser?.allowSparkAds !== undefined ? currentUser.allowSparkAds : false
   );
   const [portfolioDriveLink, setPortfolioDriveLink] = useState(
     currentUser?.portfolioDriveLink || ''
@@ -258,6 +242,36 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
 
   // Preview Card Modal toggle
   const [showMediaKitModal, setShowMediaKitModal] = useState(false);
+  const [copyMemberCodeSuccess, setCopyMemberCodeSuccess] = useState(false);
+
+  // Mã định danh KOC cá nhân cố định (dễ nhớ, dùng để đối soát mẫu và quản lý)
+  const kocMemberCode = React.useMemo(() => {
+    if (!currentUser) return 'KOC-MEMBER';
+    if (currentUser.id?.toUpperCase().startsWith('KOC-')) {
+      return currentUser.id.toUpperCase();
+    }
+    const cleanId = (currentUser.id || '').replace(/[^a-zA-Z0-9]/g, '');
+    if (cleanId.length >= 4) {
+      return `KOC-${cleanId.slice(-4).toUpperCase()}`;
+    }
+    if (currentUser.phone) {
+      const cleanPhone = currentUser.phone.replace(/\D/g, '');
+      if (cleanPhone.length >= 4) {
+        return `KOC-${cleanPhone.slice(-4)}`;
+      }
+    }
+    const seed = (currentUser.name || 'CREATOR').split('').reduce((acc, c) => acc + c.charCodeAt(0), 1000);
+    return `KOC-${(seed % 9000) + 1000}`;
+  }, [currentUser]);
+
+  const handleCopyMemberCode = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(kocMemberCode);
+    }
+    setCopyMemberCodeSuccess(true);
+    onShowToast('Đã sao chép mã KOC!', `Mã định danh của bạn là #${kocMemberCode}`, 'success');
+    setTimeout(() => setCopyMemberCodeSuccess(false), 2500);
+  };
 
   // Apply Quick Preset
   const handleApplyPreset = (preset: typeof QUICK_PRESETS[0]) => {
@@ -321,15 +335,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       name: name.trim(),
       avatar: avatar || APP_LOGOS.userProfile,
       tiktokHandle: formattedHandle,
-      followers: followers.trim() || '15K+',
-      phone: phone.trim() || '0908.888.999',
-      email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-      verified: true,
+      followers: followers.trim(),
+      phone: phone.trim() || currentUser?.phone || '',
+      email: email.trim() || currentUser?.email || '',
+      verified: Boolean(currentUser?.verified),
       bio: bio.trim(),
       categories,
-      avgViews,
-      engagementRate,
-      channelLink: channelLink || `https://www.tiktok.com/${formattedHandle}`,
+      avgViews: avgViews.trim(),
+      engagementRate: engagementRate.trim(),
+      channelLink: channelLink || (formattedHandle ? `https://www.tiktok.com/${formattedHandle}` : ''),
       instagramHandle,
       youtubeHandle,
       city,
@@ -342,8 +356,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       minBookingRate,
       allowSparkAds,
       portfolioDriveLink,
-      sampleDeliveredCount: currentUser?.sampleDeliveredCount || 2,
-      completedVideosCount: currentUser?.completedVideosCount || 2,
+      sampleDeliveredCount: currentUser?.sampleDeliveredCount || 0,
+      completedVideosCount: currentUser?.completedVideosCount || 0,
     };
 
     onSaveProfile(updatedUser);
@@ -360,13 +374,13 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm">
               <span className="material-symbols-outlined text-[18px]">badge</span>
             </span>
             <h1 className="font-['Plus_Jakarta_Sans'] text-2xl sm:text-3xl font-extrabold text-slate-900">
               {currentUser ? 'Hồ sơ KOC & Media Kit' : 'Tạo hồ sơ KOC mới'}
             </h1>
-            <span className="rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-xs font-bold text-orange-800">
+            <span className="rounded-full bg-purple-50 border border-purple-200 px-2.5 py-0.5 text-xs font-bold text-[#613bd1]">
               {currentUser ? 'Đã kích hoạt' : 'Miễn phí 100%'}
             </span>
           </div>
@@ -382,9 +396,9 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
           {currentUser && (
             <button
               onClick={() => setShowMediaKitModal(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 shadow-sm transition-all cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 hover:bg-purple-50 hover:text-[#613bd1] hover:border-purple-200 shadow-sm transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px] text-orange-600">visibility</span>
+              <span className="material-symbols-outlined text-[18px] text-[#613bd1]">visibility</span>
               <span>Xem trước Media Kit</span>
             </button>
           )}
@@ -392,58 +406,11 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
           <button
             id="save-koc-profile-btn"
             onClick={() => handleSave()}
-            className="flex items-center gap-1.5 rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">check_circle</span>
             <span>{currentUser ? 'Lưu thay đổi hồ sơ' : 'Kích hoạt hồ sơ KOC ngay'}</span>
           </button>
-        </div>
-      </div>
-
-      {/* Quick 1-Click Starter Presets (especially helpful for new creators or fast exploration) */}
-      <div className="mb-8 rounded-3xl border border-orange-200/80 bg-orange-50/50 p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-orange-600 text-[20px]">auto_fix_high</span>
-            <h2 className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-bold text-orange-950">
-              Gợi ý điền nhanh mẫu KOC (1 chạm để trải nghiệm ngay)
-            </h2>
-          </div>
-          <span className="text-[11px] text-orange-800 font-medium">
-            Bấm chọn để tự động điền thông tin kênh & địa chỉ mẫu
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          {QUICK_PRESETS.map((preset, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleApplyPreset(preset)}
-              className="group flex flex-col text-left rounded-2xl border border-white bg-white p-4 shadow-sm hover:border-orange-300 hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-orange-700 group-hover:bg-orange-500 group-hover:text-white transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">{preset.icon}</span>
-                  </div>
-                  <span className="text-xs font-bold text-slate-900 group-hover:text-orange-600 transition-colors">
-                    {preset.title}
-                  </span>
-                </div>
-                <span className="text-[10px] font-semibold text-orange-800 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">
-                  {preset.data.followers}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 line-clamp-2">{preset.subtitle}</p>
-              <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
-                <span className="font-mono text-slate-700">{preset.data.tiktokHandle}</span>
-                <span className="font-semibold text-orange-600 group-hover:underline flex items-center gap-0.5">
-                  Áp dụng <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                </span>
-              </div>
-            </button>
-          ))}
         </div>
       </div>
 
@@ -457,10 +424,10 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <div className="flex items-center gap-1.5">
                 <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                  Ki ô xây Verified
+                  Kocity Creator
                 </span>
               </div>
-              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-extrabold text-orange-800 border border-orange-200">
+              <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-extrabold text-[#613bd1] border border-purple-200">
                 ⭐ 5.0 KOC Rating
               </span>
             </div>
@@ -476,7 +443,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 onChange={handleAvatarFileChange}
               />
 
-              <div className="relative mx-auto h-24 w-24 rounded-2xl border-4 border-orange-100 shadow-sm group">
+              <div className="relative mx-auto h-24 w-24 rounded-2xl border-4 border-purple-100 shadow-sm group">
                 <div className="h-full w-full overflow-hidden rounded-xl">
                   <img
                     src={avatar || APP_LOGOS.userProfile}
@@ -501,7 +468,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   onClick={() => {
                     avatarFileInputRef.current?.click();
                   }}
-                  className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-md border-2 border-white transition-transform active:scale-90 cursor-pointer"
+                  className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#613bd1] hover:bg-[#522eb8] text-white shadow-md border-2 border-white transition-transform active:scale-90 cursor-pointer"
                   title="Tải ảnh mới từ thiết bị"
                 >
                   <span className="material-symbols-outlined text-[14px]">photo_camera</span>
@@ -511,9 +478,26 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <h3 className="mt-3 font-['Plus_Jakarta_Sans'] text-lg font-extrabold text-slate-900">
                 {name || 'Tên KOC của bạn'}
               </h3>
-              <p className="font-mono text-xs font-semibold text-orange-700">
-                {tiktokHandle ? (tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`) : '@your_tiktok_handle'}
+              <p className="font-mono text-xs font-semibold text-[#613bd1]">
+                {tiktokHandle ? (tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`) : '@chua_cap_nhat_tiktok'}
               </p>
+
+              {/* KOC Member ID Badge with Quick Copy */}
+              <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-purple-50/80 px-3 py-1 border border-purple-200">
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Mã KOC:</span>
+                <span className="font-mono text-xs font-extrabold text-[#613bd1]">#{kocMemberCode}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyMemberCode}
+                  className="ml-0.5 text-slate-400 hover:text-[#613bd1] transition-colors cursor-pointer"
+                  title="Sao chép mã KOC để gửi nhãn hàng hoặc đối soát quà mẫu"
+                >
+                  <span className="material-symbols-outlined text-[13px] leading-none">
+                    {copyMemberCodeSuccess ? 'done' : 'content_copy'}
+                  </span>
+                </button>
+              </div>
+
               <p className="mt-2 text-xs text-slate-600 line-clamp-2 px-2">
                 {bio || 'Chưa cập nhật phần tự giới thiệu ngắn cho nhãn hàng.'}
               </p>
@@ -524,25 +508,25 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-500 block">Followers</span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-slate-900">
-                  {followers || '0'}
+                  {followers || 'Chưa có'}
                 </span>
               </div>
               <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-500 block">Avg Views</span>
-                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-orange-600">
-                  {avgViews || '20K'}
+                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-[#316bbf]">
+                  {avgViews || 'Chưa có'}
                 </span>
               </div>
               <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-500 block">Tương tác</span>
-                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-blue-600">
-                  {engagementRate || '6.5%'}
+                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-[#613bd1]">
+                  {engagementRate || 'Chưa có'}
                 </span>
               </div>
               <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-500 block">Đã duyệt mẫu</span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-slate-900">
-                  {currentUser?.sampleDeliveredCount || 2} chiến dịch
+                  {currentUser?.sampleDeliveredCount || 0} chiến dịch
                 </span>
               </div>
             </div>
@@ -553,14 +537,18 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 Ngành hàng thế mạnh
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {categories.map((cat, idx) => (
-                  <span
-                    key={idx}
-                    className="rounded-lg bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800"
-                  >
-                    {cat}
-                  </span>
-                ))}
+                {categories.length > 0 ? (
+                  categories.map((cat, idx) => (
+                    <span
+                      key={idx}
+                      className="rounded-lg bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-semibold text-[#613bd1]"
+                    >
+                      {cat}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[11px] text-slate-400 italic">Chưa chọn ngành hàng</span>
+                )}
               </div>
             </div>
 
@@ -568,24 +556,26 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs">
               <div className="flex items-center justify-between text-slate-600">
                 <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-blue-600">check_circle</span>
+                  <span className="material-symbols-outlined text-[16px] text-[#316bbf]">check_circle</span>
                   Mẫu 0đ (Freecast)
                 </span>
-                <b className="text-blue-700">{acceptFreecast ? 'Sẵn sàng' : 'Không nhận'}</b>
+                <b className="text-[#316bbf]">{acceptFreecast ? 'Sẵn sàng' : 'Không nhận'}</b>
               </div>
               <div className="flex items-center justify-between text-slate-600">
                 <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-orange-600">bolt</span>
+                  <span className="material-symbols-outlined text-[16px] text-[#613bd1]">bolt</span>
                   Cấp mã Spark Ads
                 </span>
-                <b className="text-orange-700">{allowSparkAds ? 'Đồng ý' : 'Thỏa thuận'}</b>
+                <b className="text-[#613bd1]">{allowSparkAds ? 'Đồng ý' : 'Chưa thiết lập'}</b>
               </div>
               <div className="flex items-center justify-between text-slate-600">
                 <span className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px] text-slate-500">location_on</span>
                   Khu vực giao mẫu
                 </span>
-                <b className="text-slate-900 truncate max-w-[140px]">{city || 'Toàn quốc'}</b>
+                <b className="text-slate-900 truncate max-w-[140px]">
+                  {city ? `${city}${district ? `, ${district}` : ''}` : 'Chưa cập nhật'}
+                </b>
               </div>
             </div>
 
@@ -598,7 +588,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 );
                 onShowToast('Đã sao chép link Media Kit KOC!', 'Chia sẻ link cho Brand để nhận booking trực tiếp.', 'success');
               }}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 py-2.5 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-purple-50 hover:text-[#613bd1] hover:border-purple-200 py-2.5 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">content_copy</span>
               <span>Sao chép link Media Kit</span>
@@ -606,23 +596,23 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
           </div>
 
           {/* Quick Direct Link to Zalo Group */}
-          <div className="rounded-2xl border border-orange-200 bg-orange-50/70 p-4">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4">
             <div className="flex items-center gap-2.5 mb-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-[10px] font-black text-white shadow-sm">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#316bbf] text-[10px] font-black text-white shadow-sm">
                 Z
               </span>
-              <span className="text-xs font-bold text-orange-950">
+              <span className="text-xs font-bold text-blue-950">
                 Cộng đồng KOC nhận mẫu Zalo
               </span>
             </div>
-            <p className="text-[11px] text-orange-900 mb-3">
+            <p className="text-[11px] text-blue-900 mb-3">
               Tham gia nhóm để nhận thông báo chiến dịch booking riêng và được hỗ trợ duyệt mã mẫu hỏa tốc.
             </p>
             <a
               href={ZALO_GROUP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 py-2 text-xs font-bold text-white shadow-sm transition-all"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#316bbf] hover:bg-[#28579e] py-2 text-xs font-bold text-white shadow-sm transition-all"
             >
               <span>Vào nhóm Zalo KOC</span>
               <span className="material-symbols-outlined text-[14px]">open_in_new</span>
@@ -639,7 +629,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               onClick={() => setActiveTab('channel')}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'channel'
-                  ? 'bg-orange-500 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -652,7 +642,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               onClick={() => setActiveTab('address')}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'address'
-                  ? 'bg-orange-500 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -665,7 +655,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               onClick={() => setActiveTab('rates')}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'rates'
-                  ? 'bg-orange-500 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -678,7 +668,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               onClick={() => setActiveTab('mediaKit')}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'mediaKit'
-                  ? 'bg-orange-500 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -692,12 +682,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             {/* TAB 1: Kênh TikTok & Chỉ số */}
             {activeTab === 'channel' && (
               <div className="space-y-5 animate-in fade-in duration-150">
-                <div className="rounded-2xl bg-orange-50/60 p-4 border border-orange-200">
-                  <h3 className="text-xs font-bold text-orange-950 flex items-center gap-1.5 mb-1">
-                    <span className="material-symbols-outlined text-[16px] text-orange-600">verified</span>
+                <div className="rounded-2xl bg-gradient-to-r from-purple-50/70 to-blue-50/50 p-4 border border-purple-200">
+                  <h3 className="text-xs font-bold text-[#613bd1] flex items-center gap-1.5 mb-1">
+                    <span className="material-symbols-outlined text-[16px] text-[#613bd1]">verified</span>
                     Khai báo chỉ số kênh chính xác
                   </h3>
-                  <p className="text-[11px] text-orange-900">
+                  <p className="text-[11px] text-slate-700">
                     Đội ngũ duyệt chiến dịch sẽ kiểm tra trực tiếp kênh TikTok của bạn. Số liệu minh bạch giúp hồ sơ được duyệt gửi mẫu 0đ nhanh trong 12h.
                   </p>
                 </div>
@@ -712,7 +702,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ví dụ: Nguyễn Minh Thư"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                       required
                     />
                   </div>
@@ -728,7 +718,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                         value={tiktokHandle.replace('@', '')}
                         onChange={(e) => setTiktokHandle(e.target.value)}
                         placeholder="minhthu.beauty"
-                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-3 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-3 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                         required
                       />
                     </div>
@@ -744,7 +734,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     value={channelLink}
                     onChange={(e) => setChannelLink(e.target.value)}
                     placeholder="https://www.tiktok.com/@minhthu.beauty"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                   />
                 </div>
 
@@ -758,7 +748,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={followers}
                       onChange={(e) => setFollowers(e.target.value)}
                       placeholder="Ví dụ: 120K hoặc 50.000"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
 
@@ -771,7 +761,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={avgViews}
                       onChange={(e) => setAvgViews(e.target.value)}
                       placeholder="Ví dụ: 25K views"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
 
@@ -784,7 +774,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={engagementRate}
                       onChange={(e) => setEngagementRate(e.target.value)}
                       placeholder="Ví dụ: 6.8%"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
                 </div>
@@ -799,7 +789,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={instagramHandle}
                       onChange={(e) => setInstagramHandle(e.target.value)}
                       placeholder="@minhthu.insta"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
 
@@ -812,7 +802,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={youtubeHandle}
                       onChange={(e) => setYoutubeHandle(e.target.value)}
                       placeholder="@MinhThuVlogs"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
                 </div>
@@ -821,7 +811,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('address')}
-                    className="flex items-center gap-1 rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 cursor-pointer"
+                    className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 cursor-pointer"
                   >
                     <span>Tiếp: Địa chỉ nhận mẫu</span>
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -833,12 +823,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             {/* TAB 2: Địa chỉ nhận hàng mẫu */}
             {activeTab === 'address' && (
               <div className="space-y-5 animate-in fade-in duration-150">
-                <div className="rounded-2xl bg-orange-50/60 p-4 border border-orange-200">
-                  <h3 className="text-xs font-bold text-orange-950 flex items-center gap-1.5 mb-1">
-                    <span className="material-symbols-outlined text-[16px] text-orange-600">local_shipping</span>
+                <div className="rounded-2xl bg-purple-50/60 p-4 border border-purple-200">
+                  <h3 className="text-xs font-bold text-purple-950 flex items-center gap-1.5 mb-1">
+                    <span className="material-symbols-outlined text-[16px] text-[#613bd1]">local_shipping</span>
                     Giao mẫu hỏa tốc tận tay (0đ phí vận chuyển)
                   </h3>
-                  <p className="text-[11px] text-orange-900">
+                  <p className="text-[11px] text-purple-900">
                     Khi Brand duyệt hồ sơ, sản phẩm quà mẫu sẽ được tự động điều phối tới địa chỉ này qua GHTK / ViettelPost. Hãy điền chính xác để shipper liên hệ.
                   </p>
                 </div>
@@ -853,7 +843,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="0908.xxx.xxx"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                       required
                     />
                   </div>
@@ -867,7 +857,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="koc.contact@gmail.com"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
                 </div>
@@ -880,8 +870,9 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     <select
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     >
+                      <option value="">-- Chọn Tỉnh / Thành phố --</option>
                       <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
                       <option value="Hà Nội">Hà Nội</option>
                       <option value="Đà Nẵng">Đà Nẵng</option>
@@ -902,7 +893,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={district}
                       onChange={(e) => setDistrict(e.target.value)}
                       placeholder="Ví dụ: Quận 1, Cầu Giấy, Hải Châu..."
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
                 </div>
@@ -916,7 +907,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Ví dụ: Tầng 8 Toà S2.05 Vinhome Smart City, Tây Mỗ"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                   />
                 </div>
 
@@ -929,7 +920,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     value={shippingNote}
                     onChange={(e) => setShippingNote(e.target.value)}
                     placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến 15 phút, gửi lễ tân nếu vắng nhà."
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                   />
                 </div>
 
@@ -945,7 +936,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('rates')}
-                    className="flex items-center gap-1 rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 cursor-pointer"
+                    className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 cursor-pointer"
                   >
                     <span>Tiếp: Chuyên môn & Hợp tác</span>
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -971,7 +962,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                           onClick={() => toggleCategory(cat)}
                           className={`flex items-center justify-center rounded-xl p-2.5 text-xs font-semibold border transition-all cursor-pointer text-center ${
                             isSelected
-                              ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-xs'
+                              ? 'border-[#613bd1] bg-purple-50 text-[#613bd1] font-bold shadow-xs'
                               : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
@@ -996,11 +987,11 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                           onClick={() => toggleStyle(st)}
                           className={`flex items-center gap-2 rounded-xl p-2.5 text-xs font-semibold border transition-all cursor-pointer text-left ${
                             isSelected
-                              ? 'border-orange-500 bg-orange-50 text-orange-950 shadow-xs'
+                              ? 'border-[#613bd1] bg-purple-50 text-[#613bd1] font-bold shadow-xs'
                               : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
-                          <span className={`material-symbols-outlined text-[18px] ${isSelected ? 'text-orange-600' : 'text-slate-400'}`}>
+                          <span className={`material-symbols-outlined text-[18px] ${isSelected ? 'text-[#613bd1]' : 'text-slate-400'}`}>
                             {isSelected ? 'check_box' : 'check_box_outline_blank'}
                           </span>
                           <span>{st}</span>
@@ -1019,7 +1010,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     value={targetAudience}
                     onChange={(e) => setTargetAudience(e.target.value)}
                     placeholder="Ví dụ: Nữ 18-28 tuổi, học sinh sinh viên thích skincare & đồ tiện ích giá rẻ..."
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                   />
                 </div>
 
@@ -1033,7 +1024,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       type="checkbox"
                       checked={acceptFreecast}
                       onChange={(e) => setAcceptFreecast(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 accent-orange-500"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#613bd1] focus:ring-[#613bd1] accent-[#613bd1]"
                     />
                     <div>
                       <span className="text-xs font-bold text-slate-900">
@@ -1050,7 +1041,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       type="checkbox"
                       checked={allowSparkAds}
                       onChange={(e) => setAllowSparkAds(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 accent-orange-500"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#613bd1] focus:ring-[#613bd1] accent-[#613bd1]"
                     />
                     <div>
                       <span className="text-xs font-bold text-slate-900">
@@ -1072,7 +1063,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     value={minBookingRate}
                     onChange={(e) => setMinBookingRate(e.target.value)}
                     placeholder="Ví dụ: Mẫu 0đ + Hoa hồng hoặc 500k - 1tr/video nếu có booking fee"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                   />
                 </div>
 
@@ -1088,7 +1079,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('mediaKit')}
-                    className="flex items-center gap-1 rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 cursor-pointer"
+                    className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 cursor-pointer"
                   >
                     <span>Tiếp: Portfolio & Bio</span>
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -1109,7 +1100,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="Mô tả phong cách làm video, định hướng nội dung và cam kết chất lượng của bạn với Brand..."
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 leading-relaxed"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1] leading-relaxed"
                   />
                 </div>
 
@@ -1122,7 +1113,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     value={portfolioDriveLink}
                     onChange={(e) => setPortfolioDriveLink(e.target.value)}
                     placeholder="https://drive.google.com/drive/folders/your-koc-portfolio"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                   />
                   <p className="mt-1 text-[11px] text-slate-500">
                     Gắn link Google Drive chứa video review mẫu hoặc ảnh screenshot chỉ số tài khoản TikTok Shop.
@@ -1133,7 +1124,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 space-y-2">
                   <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[18px] text-blue-700">verified</span>
-                    Quyền lợi sau khi tạo hồ sơ KOC tại Ki ô xây:
+                    Quyền lợi sau khi tạo hồ sơ KOC tại Kocity:
                   </h4>
                   <ul className="text-xs text-blue-800 space-y-1.5 list-disc pl-5">
                     <li>Duyệt nhanh hồ sơ nhận mẫu trong vòng 12h thay vì 48h thông thường.</li>
@@ -1165,7 +1156,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
 
                     <button
                       type="submit"
-                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
                       <span>{currentUser ? 'Lưu cập nhật hồ sơ' : 'Hoàn tất & Kích hoạt hồ sơ KOC'}</span>
@@ -1190,13 +1181,27 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             </button>
 
             <div className="text-center mb-6">
-              <span className="rounded-full bg-orange-50 px-3 py-1 text-[10px] font-extrabold text-orange-800 border border-orange-200 uppercase tracking-wider">
+              <span className="rounded-full bg-purple-50 px-3 py-1 text-[10px] font-extrabold text-[#613bd1] border border-purple-200 uppercase tracking-wider">
                 Thẻ Media Kit KOC Chính Thức
               </span>
               <h3 className="mt-2 font-['Plus_Jakarta_Sans'] text-xl font-extrabold text-slate-900">
                 {name || 'Hồ sơ KOC'}
               </h3>
-              <p className="font-mono text-xs text-orange-600">{tiktokHandle || '@creator'}</p>
+              <p className="font-mono text-xs text-[#613bd1]">{tiktokHandle || '@creator'}</p>
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 border border-slate-200">
+                <span className="text-[10px] font-semibold text-slate-500 uppercase">Mã KOC:</span>
+                <span className="font-mono text-xs font-extrabold text-[#613bd1]">#{kocMemberCode}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyMemberCode}
+                  className="ml-0.5 text-slate-400 hover:text-[#613bd1] transition-colors cursor-pointer"
+                  title="Sao chép mã KOC"
+                >
+                  <span className="material-symbols-outlined text-[13px] leading-none">
+                    {copyMemberCodeSuccess ? 'done' : 'content_copy'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 space-y-4">
@@ -1204,13 +1209,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 <img
                   src={avatar || APP_LOGOS.userProfile}
                   alt={name}
-                  className="h-16 w-16 rounded-2xl object-cover border-2 border-orange-200"
+                  className="h-16 w-16 rounded-2xl object-cover border-2 border-purple-200"
                 />
                 <div>
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium">{bio}</p>
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                    {bio || 'Chưa cập nhật phần tự giới thiệu ngắn cho nhãn hàng.'}
+                  </p>
                   <p className="mt-1 text-[11px] text-slate-500 font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px] text-orange-600">location_on</span>
-                    {address ? `${district}, ${city}` : city}
+                    <span className="material-symbols-outlined text-[14px] text-[#316bbf]">location_on</span>
+                    {address ? `${address}${district ? `, ${district}` : ''}${city ? `, ${city}` : ''}` : (city || 'Chưa cập nhật')}
                   </p>
                 </div>
               </div>
@@ -1218,15 +1225,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <div className="grid grid-cols-3 gap-2 text-center pt-3 border-t border-slate-200">
                 <div className="rounded-xl bg-white p-2.5 border border-slate-100">
                   <span className="text-[10px] text-slate-500 block">Followers</span>
-                  <b className="text-sm text-slate-900 font-['Plus_Jakarta_Sans']">{followers || '0'}</b>
+                  <b className="text-sm text-slate-900 font-['Plus_Jakarta_Sans']">{followers || 'Chưa có'}</b>
                 </div>
                 <div className="rounded-xl bg-white p-2.5 border border-slate-100">
                   <span className="text-[10px] text-slate-500 block">Avg Views</span>
-                  <b className="text-sm text-orange-600 font-['Plus_Jakarta_Sans']">{avgViews || '20K'}</b>
+                  <b className="text-sm text-[#316bbf] font-['Plus_Jakarta_Sans']">{avgViews || 'Chưa có'}</b>
                 </div>
                 <div className="rounded-xl bg-white p-2.5 border border-slate-100">
                   <span className="text-[10px] text-slate-500 block">Tương tác</span>
-                  <b className="text-sm text-blue-600 font-['Plus_Jakarta_Sans']">{engagementRate || '6.5%'}</b>
+                  <b className="text-sm text-[#613bd1] font-['Plus_Jakarta_Sans']">{engagementRate || 'Chưa có'}</b>
                 </div>
               </div>
 
@@ -1235,11 +1242,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   Thế mạnh nội dung:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {categories.map((c, i) => (
-                    <span key={i} className="rounded-lg bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-800">
-                      {c}
-                    </span>
-                  ))}
+                  {categories.length > 0 ? (
+                    categories.map((c, i) => (
+                      <span key={i} className="rounded-lg bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-[#613bd1]">
+                        {c}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-slate-400 italic">Chưa chọn ngành hàng</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1248,7 +1259,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `https://kochub.vn/koc/${tiktokHandle.replace('@', '') || 'creator'}`
+                    `https://kocity.vn/koc/${tiktokHandle.replace('@', '') || 'creator'}`
                   );
                   onShowToast('Đã sao chép link Media Kit!', '', 'success');
                 }}
@@ -1259,7 +1270,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </button>
               <button
                 onClick={() => setShowMediaKitModal(false)}
-                className="flex-1 rounded-xl bg-orange-500 py-2.5 text-xs font-bold text-white hover:bg-orange-600 cursor-pointer"
+                className="flex-1 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] py-2.5 text-xs font-bold text-white hover:opacity-95 shadow-md shadow-indigo-500/20 cursor-pointer"
               >
                 Đóng
               </button>

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Campaign, KOCApplication, KOCUser } from '../types';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
+import { APP_LOGOS } from '../data/mockData';
 
 interface RegistrationModalProps {
   campaign: Campaign;
@@ -26,25 +27,28 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const [copiedCode, setCopiedCode] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Form State
-  const [fullName, setFullName] = useState(currentUser?.name || 'Nguyễn Minh Thư');
-  const [phone, setPhone] = useState(currentUser?.phone || '0908.123.456');
-  const [email, setEmail] = useState(currentUser?.email || 'minhthu.koc@gmail.com');
+  // Form State: Initialize with current user's actual data or empty strings
+  const [fullName, setFullName] = useState(currentUser?.name || '');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
+  const [email, setEmail] = useState(currentUser?.email || '');
   const [city, setCity] = useState(currentUser?.city || 'TP. Hồ Chí Minh');
-  const [district, setDistrict] = useState(currentUser?.district || 'Quận 1');
-  const [address, setAddress] = useState(currentUser?.address || 'Số 45, Đường Lê Duẩn, Phường Bến Nghé');
-  const [shippingNote, setShippingNote] = useState(currentUser?.shippingNote || 'Giao trong giờ hành chính, gọi trước khi đến.');
+  const [district, setDistrict] = useState(currentUser?.district || '');
+  const [address, setAddress] = useState(currentUser?.address || '');
+  const [shippingNote, setShippingNote] = useState(currentUser?.shippingNote || '');
+  const [selectedProductCode, setSelectedProductCode] = useState(() => {
+    return campaign.sampleProducts?.[0]?.code || '';
+  });
 
   // Step 2
   const [platform, setPlatform] = useState('TikTok');
   const [channelLink, setChannelLink] = useState(
     currentUser?.channelLink ||
-      (currentUser?.tiktokHandle ? `https://www.tiktok.com/${currentUser.tiktokHandle}` : 'https://www.tiktok.com/@minhthu.creator')
+      (currentUser?.tiktokHandle ? `https://www.tiktok.com/${currentUser.tiktokHandle}` : '')
   );
-  const [tiktokHandle, setTiktokHandle] = useState(currentUser?.tiktokHandle || '@minhthu.creator');
-  const [followers, setFollowers] = useState(currentUser?.followers || '15.2K');
-  const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '25K views');
-  const [audience, setAudience] = useState(currentUser?.targetAudience || 'HSSV & Dân văn phòng, yêu thích Lifestyle và đồ tiện ích');
+  const [tiktokHandle, setTiktokHandle] = useState(currentUser?.tiktokHandle || '');
+  const [followers, setFollowers] = useState(currentUser?.followers || '');
+  const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '');
+  const [audience, setAudience] = useState(currentUser?.targetAudience || '');
   const [hasUploadedProof, setHasUploadedProof] = useState(false);
   const [uploadedProofFile, setUploadedProofFile] = useState<{
     name: string;
@@ -153,31 +157,41 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       const randomCode = `#KOC-${Math.floor(1000 + Math.random() * 9000)}`;
       setGeneratedAppCode(randomCode);
 
+      let calculatedCount = 0;
+      if (followers.toLowerCase().includes('k')) {
+        calculatedCount = Math.round(parseFloat(followers) * 1000) || 0;
+      } else if (followers.toLowerCase().includes('m')) {
+        calculatedCount = Math.round(parseFloat(followers) * 1000000) || 0;
+      } else {
+        calculatedCount = parseInt(followers.replace(/\D/g, ''), 10) || 0;
+      }
+
       const newApplication: KOCApplication = {
         id: `app-${Date.now()}`,
         code: randomCode,
-        kocName: fullName,
-        avatar:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDoV0m73VoY07k3KAu4UYXOt7UQ4aRw3gOpFZYNUXO12CG31nzhjcvK-kkfdnGpLsEkoyVXvzvRQCeyyzz_q__iKcT97K74k5IjD3lYcToRBShK-8QK5Fzn1v9prbGRS9DMLCJyqo5sKYCbSAD0z6UA97eQ8XQhknSlGeUsve84FVC9TvAdbN6s85z5P7GeWfGPkxgpfth468LWt1dqLKVub0JApSsGP69CZ1NsVmz7xzHFvaseuw3y',
-        phone,
-        email,
-        tiktokHandle,
-        followers,
-        followersCount: 120000,
-        avgViews: `Avg ${avgViews}`,
-        address: `${address}, ${district}, ${city}`,
-        shippingCode: 'GHTK: Chờ sinh mã',
+        kocName: fullName.trim(),
+        avatar: currentUser?.avatar || APP_LOGOS.userProfile,
+        phone: phone.trim(),
+        email: email.trim(),
+        tiktokHandle: tiktokHandle.trim(),
+        followers: followers.trim() || 'Chưa cập nhật',
+        followersCount: calculatedCount,
+        avgViews: avgViews.trim() ? (avgViews.startsWith('Avg') ? avgViews : `Avg ${avgViews}`) : 'Chưa cập nhật',
+        address: `${address.trim()}${district.trim() ? `, ${district.trim()}` : ''}${city ? `, ${city}` : ''}`,
+        shippingCode: '',
         shippingStatus: 'Chờ duyệt để sinh mã',
         createdAtTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         createdAtDate: new Date().toLocaleDateString('vi-VN'),
         status: 'Chờ duyệt',
         videoLink: '',
         videoViews: '',
-        audience,
-        contentConcept: concept,
+        audience: audience.trim(),
+        contentConcept: (campaign.sampleProducts?.find((p) => p.code === selectedProductCode)
+          ? `[Mẫu đăng ký: ${campaign.sampleProducts.find((p) => p.code === selectedProductCode)?.code} - ${campaign.sampleProducts.find((p) => p.code === selectedProductCode)?.name}] `
+          : '') + concept.trim(),
         campaignId: campaign.id,
         campaignName: campaign.title,
-        verified: true,
+        verified: Boolean(currentUser?.verified),
       };
 
       // Gửi dữ liệu qua Google Sheets Webhook
@@ -195,16 +209,20 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
       onSubmitSuccess(newApplication);
 
-      if (onAutoLogin) {
+      // Đồng bộ thông tin KOC vừa nhập vào Hồ sơ cá nhân nếu trước đó còn trống
+      if (currentUser && onAutoLogin) {
         onAutoLogin({
-          id: `koc-${Date.now()}`,
-          name: fullName,
-          avatar: newApplication.avatar,
-          tiktokHandle: newApplication.tiktokHandle,
-          followers: newApplication.followers,
-          phone: newApplication.phone,
-          email: newApplication.email,
-          verified: true,
+          ...currentUser,
+          name: fullName.trim() || currentUser.name,
+          phone: phone.trim() || currentUser.phone,
+          email: email.trim() || currentUser.email,
+          city: city || currentUser.city,
+          district: district.trim() || currentUser.district,
+          address: address.trim() || currentUser.address,
+          shippingNote: shippingNote.trim() || currentUser.shippingNote,
+          tiktokHandle: tiktokHandle.trim() || currentUser.tiktokHandle,
+          followers: followers.trim() || currentUser.followers,
+          avgViews: avgViews.trim() || currentUser.avgViews,
         });
       }
 
@@ -239,7 +257,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
               <div className="flex items-center gap-2">
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
-                    step >= 1 ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-400'
+                    step >= 1 ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm' : 'bg-slate-100 text-slate-400'
                   }`}
                 >
                   1
@@ -250,12 +268,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </div>
               </div>
 
-              <div className={`h-0.5 flex-1 mx-2 ${step >= 2 ? 'bg-orange-500' : 'bg-slate-200'}`}></div>
+              <div className={`h-0.5 flex-1 mx-2 ${step >= 2 ? 'bg-[#6366f1]' : 'bg-slate-200'}`}></div>
 
               <div className="flex items-center gap-2">
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
-                    step >= 2 ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-400'
+                    step >= 2 ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm' : 'bg-slate-100 text-slate-400'
                   }`}
                 >
                   2
@@ -266,12 +284,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </div>
               </div>
 
-              <div className={`h-0.5 flex-1 mx-2 ${step === 3 ? 'bg-orange-500' : 'bg-slate-200'}`}></div>
+              <div className={`h-0.5 flex-1 mx-2 ${step === 3 ? 'bg-[#6366f1]' : 'bg-slate-200'}`}></div>
 
               <div className="flex items-center gap-2">
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-xl text-xs font-bold ${
-                    step === 3 ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-400'
+                    step === 3 ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm' : 'bg-slate-100 text-slate-400'
                   }`}
                 >
                   3
@@ -297,7 +315,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </span>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <span className="rounded bg-orange-100 border border-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-800">
+                  <span className="rounded bg-indigo-100 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-[#6366f1]">
                     Đã đăng ký: {campaign.registeredSpots}/{campaign.totalSpots} slot (Còn {Math.max(0, campaign.totalSpots - campaign.registeredSpots)})
                   </span>
                   {campaign.benefits.map((b, idx) => (
@@ -396,6 +414,29 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     placeholder="Số 45, Đường Lê Duẩn, Phường Bến Nghé, Quận 1"
                   />
                 </div>
+
+                {campaign.sampleProducts && campaign.sampleProducts.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-900 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[#6366f1] text-[16px]">redeem</span>
+                        Chọn mẫu sản phẩm bạn muốn nhận (Freecast 0đ) <span className="text-red-600">*</span>
+                      </span>
+                      <span className="text-[10px] text-indigo-600 font-semibold">{campaign.sampleProducts.length} lựa chọn</span>
+                    </label>
+                    <select
+                      value={selectedProductCode}
+                      onChange={(e) => setSelectedProductCode(e.target.value)}
+                      className="w-full rounded-xl border border-indigo-200 bg-indigo-50/40 p-2.5 text-xs text-slate-900 font-medium focus:border-[#6366f1] focus:ring-1 focus:ring-indigo-300 focus:outline-none cursor-pointer"
+                    >
+                      {campaign.sampleProducts.map((p) => (
+                        <option key={p.code} value={p.code}>
+                          [{p.code}] {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold text-slate-900 mb-1">
@@ -528,7 +569,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       hasUploadedProof
                         ? 'border-blue-300 bg-blue-50/40'
                         : isDraggingProof
-                        ? 'border-orange-500 bg-orange-50/60 scale-[1.01] cursor-pointer'
+                        ? 'border-[#6366f1] bg-indigo-50/60 scale-[1.01] cursor-pointer'
                         : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 cursor-pointer'
                     }`}
                   >
@@ -590,7 +631,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                                 e.stopPropagation();
                                 fileInputRef.current?.click();
                               }}
-                              className="text-xs text-orange-600 font-semibold hover:underline cursor-pointer"
+                              className="text-xs text-[#6366f1] font-semibold hover:underline cursor-pointer"
                             >
                               Đổi ảnh
                             </button>
@@ -618,7 +659,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                                 e.stopPropagation();
                                 fileInputRef.current?.click();
                               }}
-                              className="text-orange-600 hover:text-orange-700 underline font-bold cursor-pointer inline p-0 bg-transparent border-0"
+                              className="text-[#6366f1] hover:text-[#8b5cf6] underline font-bold cursor-pointer inline p-0 bg-transparent border-0"
                             >
                               tải ảnh lên
                             </button>
@@ -645,7 +686,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     rows={3}
                     value={concept}
                     onChange={(e) => setConcept(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 focus:border-slate-900 focus:outline-none leading-relaxed"
+                    className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 focus:border-[#6366f1] focus:outline-none leading-relaxed"
                     placeholder="Mô tả ngắn góc quay, hook giật tít và cách bạn lồng ghép USP sản phẩm..."
                   ></textarea>
                 </div>
@@ -657,7 +698,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   <select
                     value={expectedDays}
                     onChange={(e) => setExpectedDays(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-slate-900 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-[#6366f1] focus:outline-none"
                   >
                     <option value="Trong 3 ngày sau khi nhận mẫu">Trong 3 ngày sau khi nhận mẫu (Ưu tiên duyệt)</option>
                     <option value="Trong 5 ngày sau khi nhận mẫu">Trong 5 ngày sau khi nhận mẫu</option>
@@ -676,7 +717,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       type="checkbox"
                       checked={agreeBrief}
                       onChange={(e) => setAgreeBrief(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 accent-orange-500"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#6366f1] focus:ring-[#6366f1] accent-[#6366f1]"
                     />
                     <span>
                       Tôi cam kết thực hiện đúng theo Brief kịch bản, nêu đủ USP và gắn giỏ hàng TikTok Shop chính hãng của Brand.
@@ -688,7 +729,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       type="checkbox"
                       checked={agreeSparkAds}
                       onChange={(e) => setAgreeSparkAds(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 accent-orange-500"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#6366f1] focus:ring-[#6366f1] accent-[#6366f1]"
                     />
                     <span>
                       Đồng ý cung cấp mã Spark Ads để Brand chạy quảng cáo đẩy GMV (nếu video đạt chỉ số tốt).
@@ -700,7 +741,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       type="checkbox"
                       checked={agreeTruth}
                       onChange={(e) => setAgreeTruth(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 accent-orange-500"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#6366f1] focus:ring-[#6366f1] accent-[#6366f1]"
                     />
                     <span>
                       Cam kết số liệu chỉ số kênh và thông tin địa chỉ nhận mẫu là hoàn toàn chính xác.
@@ -729,7 +770,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="flex items-center gap-1 rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                  className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
                 >
                   <span>Tiếp tục</span>
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -739,7 +780,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   type="button"
                   disabled={isSubmitting}
                   onClick={handleSubmit}
-                  className="flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-orange-600 disabled:opacity-50 active:scale-95 transition-all cursor-pointer"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 disabled:opacity-50 active:scale-95 transition-all cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
@@ -771,9 +812,9 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             </p>
 
             {/* Application Code Pill */}
-            <div className="mt-6 inline-flex items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 p-3">
-              <span className="text-xs text-orange-800 font-medium">Mã hồ sơ:</span>
-              <span className="font-mono text-sm font-extrabold text-orange-900">
+            <div className="mt-6 inline-flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-3">
+              <span className="text-xs text-[#6366f1] font-medium">Mã hồ sơ:</span>
+              <span className="font-mono text-sm font-extrabold text-[#6366f1]">
                 {generatedAppCode}
               </span>
               <span className="rounded-md bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
@@ -785,7 +826,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   setCopiedCode(true);
                   setTimeout(() => setCopiedCode(false), 2000);
                 }}
-                className="rounded-lg bg-orange-200 px-2 py-1 text-[11px] font-bold text-orange-900 hover:bg-orange-300 cursor-pointer"
+                className="rounded-lg bg-indigo-100 px-2 py-1 text-[11px] font-bold text-[#6366f1] hover:bg-indigo-200 cursor-pointer"
               >
                 {copiedCode ? 'Đã chép!' : 'Sao chép'}
               </button>
@@ -818,12 +859,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             {/* Next steps workflow overview */}
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left max-w-md mx-auto">
               <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-2.5">
-                <span className="material-symbols-outlined text-[16px] text-orange-600">alt_route</span>
+                <span className="material-symbols-outlined text-[16px] text-[#6366f1]">alt_route</span>
                 Lộ trình 4 bước tiếp theo của bạn:
               </h4>
               <div className="space-y-2 text-[11px] text-slate-600">
                 <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white mt-0.5">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#6366f1] text-[9px] font-bold text-white mt-0.5">
                     1
                   </span>
                   <div>
@@ -831,7 +872,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white mt-0.5">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#8b5cf6] text-[9px] font-bold text-white mt-0.5">
                     2
                   </span>
                   <div>
@@ -839,7 +880,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white mt-0.5">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#6366f1] text-[9px] font-bold text-white mt-0.5">
                     3
                   </span>
                   <div>
@@ -847,7 +888,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white mt-0.5">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[9px] font-bold text-white mt-0.5">
                     4
                   </span>
                   <div>
@@ -858,9 +899,9 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             </div>
 
             {/* Zalo group prompt for fast tracking & direct support */}
-            <div className="mt-6 rounded-2xl border border-orange-200 bg-orange-50/60 p-4 text-left max-w-md mx-auto">
+            <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 text-left max-w-md mx-auto">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white font-extrabold text-xs shadow-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-extrabold text-xs shadow-md shadow-indigo-500/20">
                   Zalo
                 </div>
                 <div>
@@ -868,7 +909,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     Cần duyệt mẫu nhanh hoặc trao đổi thêm?
                   </h4>
                   <p className="text-[11px] text-slate-600">
-                    Tham gia nhóm Zalo KOC để Admin KOCHub ưu tiên xử lý hồ sơ và cập nhật thông tin vận đơn trực tiếp.
+                    Tham gia nhóm Zalo KOC để Admin Kocity ưu tiên xử lý hồ sơ và cập nhật thông tin vận đơn trực tiếp.
                   </p>
                 </div>
               </div>
@@ -877,7 +918,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 href={ZALO_GROUP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 py-2 px-3 text-xs font-bold text-white shadow-sm transition-all"
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:opacity-95 py-2 px-3 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all"
               >
                 <span>Vào nhóm Zalo KOC trao đổi ngay</span>
                 <span className="material-symbols-outlined text-[14px]">open_in_new</span>
@@ -891,7 +932,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   onClose();
                   onViewMyCampaigns();
                 }}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-xs font-bold text-white shadow-sm hover:bg-orange-600 cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-3 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">assignment_turned_in</span>
                 <span>Xem trong Chiến dịch của tôi</span>
@@ -919,7 +960,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="material-symbols-outlined text-orange-600 text-[20px]">image</span>
+                  <span className="material-symbols-outlined text-[#6366f1] text-[20px]">image</span>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-900 truncate">
                       {uploadedProofFile.name}
@@ -936,7 +977,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       setIsPreviewImageModalOpen(false);
                       fileInputRef.current?.click();
                     }}
-                    className="flex items-center gap-1 text-xs font-semibold text-orange-600 hover:bg-orange-50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-center gap-1 text-xs font-semibold text-[#6366f1] hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[15px]">sync</span>
                     <span>Đổi ảnh khác</span>
@@ -969,7 +1010,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsPreviewImageModalOpen(false)}
-                  className="rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-orange-600 transition-colors cursor-pointer"
+                  className="rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all cursor-pointer"
                 >
                   Xác nhận ảnh này
                 </button>

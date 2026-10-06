@@ -46,6 +46,23 @@ export interface Campaign {
   tiktokUrl?: string;
   tiktokHandle?: string;
   timeline: TimelineStep[];
+  sampleProducts?: Array<{
+    code: string;
+    name: string;
+    category?: string;
+    commission?: string;
+    shortDesc?: string;
+    detailDesc?: string;
+    reviewTips?: string;
+    tags?: string;
+    affiliateLink?: string;
+  }>;
+  registrationFormUrl?: string;
+  zaloGroupUrl?: string;
+  minVideos?: number;
+  videoDeadline?: string;
+  contentRequirement?: string;
+  approvalCondition?: string;
 }
 
 export type ApplicationStatus =
@@ -93,6 +110,7 @@ export interface AppNotification {
 export interface KOCUser {
   id: string;
   name: string;
+  role?: 'koc' | 'admin';
   avatar: string;
   tiktokHandle: string;
   followers: string;

@@ -56,7 +56,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
             <button
               id="guest-login-cta-btn"
               onClick={onOpenLogin}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">login</span>
               <span>Đăng nhập ngay</span>
@@ -75,9 +75,9 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
               href={ZALO_GROUP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-orange-50 border border-orange-200 hover:bg-orange-100 px-5 py-3 text-xs sm:text-sm font-semibold text-orange-900 shadow-sm transition-all"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-5 py-3 text-xs sm:text-sm font-semibold text-indigo-900 shadow-sm transition-all"
             >
-              <span className="flex h-4 w-4 items-center justify-center rounded bg-orange-500 text-[9px] font-black text-white">
+              <span className="flex h-4 w-4 items-center justify-center rounded bg-[#6366f1] text-[9px] font-black text-white">
                 Z
               </span>
               <span>Vào nhóm Zalo KOC trao đổi</span>
@@ -122,13 +122,36 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
     );
   }
 
-  // 2. When KOC IS logged in: filter user's applications
-  const myApps = applications.filter(
-    (a) =>
-      a.kocName.toLowerCase().includes(currentUser.name.toLowerCase()) ||
-      a.tiktokHandle.toLowerCase().includes(currentUser.tiktokHandle.toLowerCase()) ||
-      (currentUser.tiktokHandle.includes('minhthu') && (a.kocName.includes('Minh Thư') || a.status === 'Đã duyệt gửi mẫu' || a.status === 'Chờ duyệt'))
-  );
+  // Chuẩn hóa chuỗi so khớp tài khoản KOC
+  const normalizeHandle = (h?: string) => (h ? h.toLowerCase().replace(/[@\s]/g, '') : '');
+  const normalizePhone = (p?: string) => (p ? p.replace(/[\s.-]/g, '') : '');
+
+  // 2. When KOC IS logged in: CHỈ hiển thị đúng các đơn KOC này tự nộp trên web
+  const myApps = applications.filter((a) => {
+    if (!currentUser) return false;
+    const userHandle = normalizeHandle(currentUser.tiktokHandle);
+    const appHandle = normalizeHandle(a.tiktokHandle);
+    if (userHandle && appHandle && userHandle === appHandle) return true;
+
+    const userPhone = normalizePhone(currentUser.phone);
+    const appPhone = normalizePhone(a.phone);
+    if (userPhone && appPhone && userPhone.length >= 9 && userPhone === appPhone) return true;
+
+    return false;
+  });
+
+  // Tính tổng thù lao chờ nhận từ các chiến dịch thực tế của KOC
+  const totalPendingPayout = myApps.reduce((acc, app) => {
+    const c = campaigns.find((camp) => camp.id === app.campaignId);
+    if (!c) return acc;
+    if (c.bookingFee && c.bookingFee.includes('1.500.000')) return acc + 1500000;
+    if (c.bookingFee && c.bookingFee.includes('1.000.000')) return acc + 1000000;
+    if (c.bookingFee && c.bookingFee.includes('2.000.000')) return acc + 2000000;
+    if (c.bookingFee && c.bookingFee.includes('500.000')) return acc + 500000;
+    return acc;
+  }, 0);
+
+  const formattedPayout = totalPendingPayout > 0 ? `${totalPendingPayout.toLocaleString('vi-VN')}đ` : '0đ';
 
   const handleCopyTracking = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -164,13 +187,13 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm">
               <span className="material-symbols-outlined text-lg">assignment_turned_in</span>
             </div>
             <h1 className="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-extrabold text-slate-900">
               Chiến dịch của tôi
             </h1>
-            <span className="rounded-full bg-orange-100 border border-orange-200 px-2.5 py-0.5 text-xs font-extrabold text-orange-800">
+            <span className="rounded-full bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 text-xs font-extrabold text-indigo-800">
               {myApps.length} chiến dịch
             </span>
             <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-semibold text-slate-700">
@@ -186,9 +209,9 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
           {onOpenProfile && (
             <button
               onClick={onOpenProfile}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:text-[#6366f1] hover:border-indigo-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition-all shadow-sm cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px] text-orange-600">badge</span>
+              <span className="material-symbols-outlined text-[16px] text-[#6366f1]">badge</span>
               <span>Hồ sơ KOC & Media Kit</span>
             </button>
           )}
@@ -197,10 +220,10 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
             href={ZALO_GROUP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/70 hover:bg-orange-100 px-3.5 py-2 text-xs font-semibold text-orange-900 transition-all shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 px-3.5 py-2 text-xs font-semibold text-indigo-900 transition-all shadow-sm"
             title="Vào nhóm Zalo KOC trao đổi & hỗ trợ trực tiếp"
           >
-            <span className="flex h-4 w-4 items-center justify-center rounded bg-orange-500 text-[8px] font-black text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded bg-[#6366f1] text-[8px] font-black text-white">
               Z
             </span>
             <span>Nhóm Zalo hỗ trợ KOC</span>
@@ -208,7 +231,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
           </a>
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs shadow-sm">
             <span className="text-slate-500">Tổng thù lao chờ nhận: </span>
-            <b className="font-['Plus_Jakarta_Sans'] text-orange-600 text-sm">3.500.000đ</b>
+            <b className="font-['Plus_Jakarta_Sans'] text-[#6366f1] text-sm">{formattedPayout}</b>
           </div>
         </div>
       </div>
@@ -223,11 +246,11 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
             Bạn chưa đăng ký chiến dịch nào
           </h3>
           <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-            Khám phá các chiến dịch nhận mẫu 0đ và nhận thù lao hấp dẫn từ các thương hiệu chính hãng ngay hôm nay.
+            Hồ sơ tài khoản của bạn đã được kích hoạt. Hãy khám phá và đăng ký các chiến dịch nhận mẫu 0đ để bắt đầu nhận hàng trải nghiệm từ các thương hiệu chính hãng.
           </p>
           <button
             onClick={onBackToMarketplace}
-            className="mt-5 rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-bold text-white hover:bg-orange-600 shadow-sm transition-colors cursor-pointer"
+            className="mt-5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all cursor-pointer"
           >
             Khám phá chiến dịch ngay
           </button>
@@ -236,13 +259,27 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
         <div className="space-y-4">
           {myApps.map((app) => {
             const matchedCampaign = campaigns.find((c) => c.id === app.campaignId) || campaigns[0];
-            const currentStepIdx = app.videoLink || app.status === 'Đã lên bài' ? 3 : app.status === 'Đã duyệt gửi mẫu' ? 2 : 1;
+            const isApproved = app.status === 'Đã duyệt gửi mẫu' || app.status === 'Đang giao' || app.status === 'Đã lên bài';
+            const isRejected = app.status === 'Từ chối';
+            const currentStepIdx = app.videoLink || app.status === 'Đã lên bài' ? 3 : app.status === 'Đã duyệt gửi mẫu' || app.status === 'Đang giao' ? 2 : 1;
 
             const steps = [
               { label: 'Đăng ký mẫu', desc: 'Đã nộp hồ sơ', icon: 'how_to_reg' },
-              { label: 'Brand duyệt kênh', desc: 'Xem xét kênh & chọn', icon: 'verified' },
-              { label: 'Giao quà mẫu', desc: app.shippingCode || 'GHTK đang giao', icon: 'local_shipping' },
-              { label: 'Nghiệm thu video', desc: app.videoLink ? 'Đã nộp video' : 'Hạn 4 - 7 ngày', icon: 'video_library' },
+              { 
+                label: isRejected ? 'Từ chối duyệt' : 'Quản trị viên duyệt', 
+                desc: isRejected ? 'Hồ sơ chưa đạt' : isApproved ? 'Đã duyệt gửi mẫu' : 'Đang chờ Admin duyệt', 
+                icon: isRejected ? 'cancel' : 'verified' 
+              },
+              { 
+                label: 'Giao quà mẫu', 
+                desc: app.shippingCode || (isApproved ? 'GHTK đang giao' : 'Chờ duyệt để gửi mẫu'), 
+                icon: 'local_shipping' 
+              },
+              { 
+                label: 'Nghiệm thu video', 
+                desc: app.videoLink ? 'Đã nộp video' : (isApproved ? 'Hạn 4 - 7 ngày' : 'Chờ nhận mẫu'), 
+                icon: 'video_library' 
+              },
             ];
 
             return (
@@ -260,27 +297,43 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-orange-900 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md">
+                        <span className="font-mono text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
                           {app.code}
                         </span>
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border flex items-center gap-1 ${
                             app.status === 'Đã duyệt gửi mẫu'
-                              ? 'bg-orange-50 text-orange-800 border-orange-200'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : app.status === 'Đang giao'
+                              ? 'bg-sky-50 text-sky-800 border-sky-300'
                               : app.status === 'Đã lên bài'
                               ? 'bg-blue-50 text-blue-800 border-blue-200'
+                              : app.status === 'Từ chối'
+                              ? 'bg-rose-50 text-rose-800 border-rose-300'
                               : 'bg-amber-50 text-amber-900 border-amber-300'
                           }`}
                         >
                           {app.status === 'Chờ duyệt' && (
-                            <span className="material-symbols-outlined text-[13px] text-amber-700">schedule</span>
+                            <span className="material-symbols-outlined text-[13px] text-amber-700">hourglass_top</span>
                           )}
-                          {app.status === 'Chờ duyệt' ? 'Chờ Brand duyệt kênh' : app.status}
+                          {app.status === 'Đã duyệt gửi mẫu' && (
+                            <span className="material-symbols-outlined text-[13px] text-emerald-700">verified</span>
+                          )}
+                          {app.status === 'Từ chối' && (
+                            <span className="material-symbols-outlined text-[13px] text-rose-700">cancel</span>
+                          )}
+                          {app.status === 'Chờ duyệt'
+                            ? 'Chờ Quản trị viên duyệt mẫu'
+                            : app.status === 'Đã duyệt gửi mẫu'
+                            ? 'Đã duyệt gửi mẫu'
+                            : app.status === 'Từ chối'
+                            ? 'Chưa được duyệt'
+                            : app.status}
                         </span>
                       </div>
                       <h3
                         onClick={() => onSelectCampaign(matchedCampaign)}
-                        className="mt-1 font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-bold text-slate-900 cursor-pointer hover:text-orange-600 transition-colors"
+                        className="mt-1 font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-bold text-slate-900 cursor-pointer hover:text-[#6366f1] transition-colors"
                       >
                         {app.campaignName}
                       </h3>
@@ -296,25 +349,36 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                       <span className="text-slate-500 block text-[10px]">Tình trạng mẫu quà tặng:</span>
                       {app.status === 'Chờ duyệt' ? (
                         <span className="font-semibold text-amber-800 flex items-center gap-1 text-left mt-0.5">
-                          <span className="material-symbols-outlined text-[14px] text-amber-700">hourglass_top</span>
-                          <span>Chờ Brand duyệt kênh để gửi mẫu</span>
+                          <span className="material-symbols-outlined text-[14px] text-amber-700">schedule</span>
+                          <span>Chờ Quản trị viên duyệt hồ sơ gửi mẫu</span>
+                        </span>
+                      ) : app.status === 'Từ chối' ? (
+                        <span className="font-semibold text-rose-700 flex items-center gap-1 text-left mt-0.5">
+                          <span className="material-symbols-outlined text-[14px] text-rose-600">block</span>
+                          <span>Chưa đạt tiêu chí chiến dịch này</span>
                         </span>
                       ) : (
                         <button
-                          onClick={() => handleCopyTracking(app.shippingCode || 'GHTK10928374')}
-                          className="font-bold text-blue-700 flex items-center gap-1 hover:underline cursor-pointer text-left mt-0.5"
+                          onClick={() => handleCopyTracking(app.shippingCode || 'GHTK-EXP98234')}
+                          className="font-bold text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer text-left mt-0.5"
                           title="Nhấp để sao chép mã vận đơn"
                         >
                           <span className="material-symbols-outlined text-[14px]">local_shipping</span>
-                          <span>{app.shippingCode || 'GHTK: Đang xuất kho'}</span>
-                          <span className="material-symbols-outlined text-[12px] text-blue-600">content_copy</span>
+                          <span>{app.shippingCode ? `${app.shippingCode}` : 'GHTK: Đang chuẩn bị hàng'}</span>
+                          <span className="material-symbols-outlined text-[12px] text-emerald-600">content_copy</span>
                         </button>
                       )}
                     </div>
 
                     <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
                       <span className="text-slate-500 block text-[10px]">Thời hạn làm video (4 - 7 ngày):</span>
-                      <span className="font-semibold text-slate-900 block mt-0.5">Còn 5 ngày (Hạn 4 - 7 ngày)</span>
+                      <span className="font-semibold text-slate-900 block mt-0.5">
+                        {app.status === 'Chờ duyệt'
+                          ? 'Tính sau khi nhận hàng mẫu'
+                          : app.status === 'Từ chối'
+                          ? 'Không áp dụng'
+                          : 'Hạn 4 - 7 ngày sau nhận hàng'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -383,7 +447,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                           href={app.videoLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-orange-700 underline truncate max-w-xs font-semibold"
+                          className="text-[#6366f1] underline truncate max-w-xs font-semibold"
                         >
                           {app.videoLink}
                         </a>
@@ -410,11 +474,11 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                           placeholder="Dán link Drive / TikTok (tiktok.com/@...)"
                           value={videoLinkInput}
                           onChange={(e) => setVideoLinkInput(e.target.value)}
-                          className="rounded-xl border border-orange-500 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-500 w-full sm:w-64"
+                          className="rounded-xl border border-[#6366f1] px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#6366f1] w-full sm:w-64"
                         />
                         <button
                           onClick={() => handleSubmitLink(app.id)}
-                          className="rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white hover:bg-orange-600 shrink-0 cursor-pointer"
+                          className="rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2 text-xs font-bold text-white hover:opacity-95 shrink-0 cursor-pointer"
                         >
                           Gửi
                         </button>
@@ -428,7 +492,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                     ) : (
                       <button
                         onClick={() => setSelectedAppId(app.id)}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-orange-600 transition-all cursor-pointer"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[16px]">upload_file</span>
                         <span>{app.videoLink ? 'Cập nhật link video' : 'Trả video (Drive/TikTok)'}</span>

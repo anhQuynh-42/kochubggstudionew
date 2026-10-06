@@ -28,19 +28,19 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
           {/* Step 1 */}
           <div className="rounded-2xl bg-slate-50 p-4 sm:p-5 border border-slate-200">
             <div className="flex items-start gap-3.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white font-black text-sm shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#613bd1] text-white font-black text-sm shadow-sm">
                 1
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <span>Đăng ký tham gia</span>
-                  <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-bold text-orange-800">
+                  <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold text-[#613bd1]">
                     Duyệt trong 12h
                   </span>
                 </h3>
                 <div className="mt-2 space-y-1.5 text-xs text-slate-600">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-orange-600">schedule</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#613bd1]">schedule</span>
                     <span><b>Bên mình duyệt qua (12h):</b> Đội ngũ kiểm tra nhanh thông tin kênh và số liệu tương tác.</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
           {/* Step 2 */}
           <div className="rounded-2xl bg-slate-50 p-4 sm:p-5 border border-slate-200">
             <div className="flex items-start gap-3.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white font-black text-sm shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#316bbf] text-white font-black text-sm shadow-sm">
                 2
               </div>
               <div className="flex-1">
@@ -67,11 +67,11 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
                 </h3>
                 <div className="mt-2 space-y-1.5 text-xs text-slate-600">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-orange-600">package_2</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#316bbf]">package_2</span>
                     <span><b>KOC nhận mẫu free:</b> Sản phẩm được gửi hỏa tốc về tận tay (0đ chi phí).</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-orange-600">videocam</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#316bbf]">videocam</span>
                     <span><b>Làm video (Hạn 4 - 7 ngày):</b> Trải nghiệm và sản xuất video review/sáng tạo đúng hạn.</span>
                   </div>
                 </div>
@@ -82,19 +82,19 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
           {/* Step 3 */}
           <div className="rounded-2xl bg-slate-50 p-4 sm:p-5 border border-slate-200">
             <div className="flex items-start gap-3.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white font-black text-sm shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#613bd1] text-white font-black text-sm shadow-sm">
                 3
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <span>KOC trả video</span>
-                  <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-bold text-orange-800">
+                  <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold text-[#613bd1]">
                     Nghiệm thu
                   </span>
                 </h3>
                 <div className="mt-2 space-y-1.5 text-xs text-slate-600">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-orange-600">drive_file_move</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#613bd1]">drive_file_move</span>
                     <span><b>Up lên Drive (Google Drive):</b> Tải video lên link Google Drive để bên mình & Brand duyệt nội dung.</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
           {/* Step 4 */}
           <div className="rounded-2xl bg-slate-50 p-4 sm:p-5 border border-slate-200">
             <div className="flex items-start gap-3.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white font-black text-sm shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#316bbf] text-white font-black text-sm shadow-sm">
                 4
               </div>
               <div className="flex-1">
@@ -140,9 +140,9 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
             href={ZALO_GROUP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-xs font-bold text-orange-950 hover:text-orange-600 hover:underline"
+            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-[#613bd1] hover:underline"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-orange-500 text-[10px] font-black text-white shadow-sm">
+            <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-[10px] font-black text-white shadow-sm">
               Z
             </span>
             <span>Vào nhóm Zalo KOC trao đổi trực tiếp</span>
@@ -151,7 +151,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ onClose }) => 
 
           <button
             onClick={onClose}
-            className="rounded-xl bg-orange-500 px-5 py-2.5 text-xs font-bold text-white hover:bg-orange-600 shadow-sm transition-colors w-full sm:w-auto cursor-pointer"
+            className="rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] px-5 py-2.5 text-xs font-bold text-white hover:opacity-95 shadow-md shadow-indigo-500/20 transition-all w-full sm:w-auto cursor-pointer"
           >
             Đã hiểu, quay lại khám phá chiến dịch
           </button>

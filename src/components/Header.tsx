@@ -42,12 +42,12 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onSelectTab('marketplace')}
             className="group flex items-center gap-2.5 text-left focus:outline-none cursor-pointer"
           >
-            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-orange-500 p-1.5 shadow-sm transition-transform group-hover:scale-105">
+            <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-tr from-[#6366f1] to-[#8b5cf6] p-1.5 shadow-md shadow-indigo-500/20 transition-transform group-hover:scale-105">
               <span className="material-symbols-outlined text-xl text-white">hub</span>
             </div>
             <div className="flex flex-col">
               <span className="font-['Plus_Jakarta_Sans'] text-xl font-extrabold tracking-tight text-slate-900 whitespace-nowrap">
-                Ki ô <span className="text-orange-600">xây</span>
+                Ko<span className="text-[#6366f1]">city</span>
               </span>
               <span className="text-[10px] font-medium text-slate-500 -mt-1 hidden sm:inline">
                 Cổng nhận mẫu & Booking KOC
@@ -62,9 +62,9 @@ export const Header: React.FC<HeaderProps> = ({
               id="nav-marketplace-btn"
               onClick={() => onSelectTab('marketplace')}
               className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all cursor-pointer ${
-                currentTab === 'marketplace'
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                currentTab === 'marketplace' || currentTab === 'detail'
+                  ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-md shadow-indigo-500/20'
+                  : 'text-slate-600 hover:bg-indigo-50/70 hover:text-[#6366f1]'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">explore</span>
@@ -76,33 +76,65 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="nav-guidelines-btn"
                 onClick={onOpenGuidelines}
-                className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 hover:bg-indigo-50/70 hover:text-[#6366f1] transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">verified_user</span>
                 <span>Quy trình và hướng dẫn</span>
               </button>
             )}
 
-            {/* Sau khi đăng nhập: Chiến dịch của tôi (xuống cuối) */}
-            {currentUser && (
+            {/* Sau khi đăng nhập: Chiến dịch của tôi (dành cho KOC) */}
+            {currentUser && currentUser.role !== 'admin' && (
               <button
                 id="nav-my-campaigns-btn"
                 onClick={() => onSelectTab('my-campaigns')}
                 className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all cursor-pointer ${
                   currentTab === 'my-campaigns'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-md shadow-indigo-500/20'
+                    : 'text-slate-600 hover:bg-indigo-50/70 hover:text-[#6366f1]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">assignment_turned_in</span>
                 <span>Chiến dịch của tôi</span>
                 <span
                   className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                    currentTab === 'my-campaigns' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
+                    currentTab === 'my-campaigns' ? 'bg-white/25 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
                   }`}
                 >
                   {myCampaignsCount}
                 </span>
+              </button>
+            )}
+
+            {/* Sau khi đăng nhập: Hồ sơ KOC (dành cho KOC) */}
+            {currentUser && currentUser.role !== 'admin' && (
+              <button
+                id="nav-profile-btn"
+                onClick={() => onSelectTab('profile')}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all cursor-pointer ${
+                  currentTab === 'profile'
+                    ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-md shadow-indigo-500/20'
+                    : 'text-slate-600 hover:bg-indigo-50/70 hover:text-[#6366f1]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">badge</span>
+                <span>Hồ sơ KOC</span>
+              </button>
+            )}
+
+            {/* Khi là ADMIN: nút truy cập nhanh Admin Dashboard trên navbar */}
+            {currentUser && currentUser.role === 'admin' && (
+              <button
+                id="nav-admin-dashboard-btn"
+                onClick={() => onSelectTab('admin')}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold transition-all cursor-pointer ${
+                  currentTab === 'admin'
+                    ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-md shadow-indigo-500/20'
+                    : 'text-[#6366f1] bg-purple-50 hover:bg-purple-100'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px] text-purple-600">admin_panel_settings</span>
+                <span>Admin Dashboard</span>
               </button>
             )}
           </nav>
@@ -121,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
               placeholder="Tìm chiến dịch, brand..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-9 pr-8 text-xs text-slate-900 placeholder-slate-400 transition-all focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-9 pr-8 text-xs text-slate-900 placeholder-slate-400 transition-all focus:border-[#6366f1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#6366f1]"
             />
             {searchQuery && (
               <button
@@ -132,6 +164,27 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
           </div>
+
+          {/* Admin Mode Toggle Button (Chỉ hiển thị khi đã đăng nhập Admin) */}
+          {currentUser?.role === 'admin' && (
+            <button
+              id="header-admin-toggle-btn"
+              onClick={() => onSelectTab(currentTab === 'admin' ? 'marketplace' : 'admin')}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                currentTab === 'admin'
+                  ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-300'
+                  : 'bg-slate-900 text-slate-100 hover:bg-slate-800'
+              }`}
+              title="Chuyển đổi giao diện Quản Trị Hệ Thống"
+            >
+              <span className="material-symbols-outlined text-[16px] text-purple-300">
+                admin_panel_settings
+              </span>
+              <span className="hidden sm:inline">
+                {currentTab === 'admin' ? 'Xem giao diện KOC' : 'Admin Dashboard'}
+              </span>
+            </button>
+          )}
 
           {/* Conditional Rendering: Logged-in vs Guest */}
           {currentUser ? (
@@ -146,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <span className="material-symbols-outlined text-[20px]">notifications</span>
                   {unreadCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold text-white shadow-sm">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#6366f1] px-1 text-[10px] font-bold text-white shadow-sm">
                       {unreadCount}
                     </span>
                   )}
@@ -222,7 +275,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   id="user-profile-menu-btn"
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1 pr-2.5 hover:bg-slate-50 transition-colors cursor-pointer"
+                  className={`flex items-center gap-2 rounded-xl border p-1 pr-2.5 transition-all cursor-pointer ${
+                    currentTab === 'profile'
+                      ? 'border-indigo-300 bg-indigo-50/80 ring-2 ring-indigo-200 shadow-xs'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
                 >
                   <div className="relative h-8 w-8 overflow-hidden rounded-lg bg-slate-100">
                     <img
@@ -265,9 +322,13 @@ export const Header: React.FC<HeaderProps> = ({
                           onSelectTab('profile');
                           setShowUserMenu(false);
                         }}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-700 cursor-pointer"
+                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
+                          currentTab === 'profile'
+                            ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs font-bold'
+                            : 'text-slate-800 hover:bg-indigo-50 hover:text-[#6366f1]'
+                        }`}
                       >
-                        <span className="material-symbols-outlined text-[16px] text-orange-600">
+                        <span className={`material-symbols-outlined text-[16px] ${currentTab === 'profile' ? 'text-white' : 'text-[#6366f1]'}`}>
                           badge
                         </span>
                         Hồ sơ KOC & Media Kit
@@ -278,15 +339,25 @@ export const Header: React.FC<HeaderProps> = ({
                           onSelectTab('my-campaigns');
                           setShowUserMenu(false);
                         }}
-                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 cursor-pointer"
+                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
+                          currentTab === 'my-campaigns'
+                            ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs font-bold'
+                            : 'text-slate-800 hover:bg-slate-50'
+                        }`}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[16px] text-slate-900">
+                          <span className={`material-symbols-outlined text-[16px] ${currentTab === 'my-campaigns' ? 'text-white' : 'text-slate-900'}`}>
                             inventory_2
                           </span>
                           <span>Quản lý đơn nhận mẫu</span>
                         </div>
-                        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-800">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            currentTab === 'my-campaigns'
+                              ? 'bg-white/20 text-white'
+                              : 'bg-indigo-50 border border-indigo-100 text-indigo-700'
+                          }`}
+                        >
                           {myCampaignsCount}
                         </span>
                       </button>
@@ -311,12 +382,20 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </>
           ) : (
-            /* Guest mode: prominent clean login button */
+            /* Guest mode: chỉ hiển thị Đăng ký và Đăng nhập trên thanh điều hướng */
             <div className="flex items-center gap-2">
+              <button
+                id="header-register-btn"
+                onClick={() => onOpenLogin('register', 'Đăng ký tài khoản KOC để nhận mẫu 0đ và quản lý các chiến dịch!')}
+                className="hidden sm:flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50/80 hover:bg-purple-100 px-3.5 py-2 text-xs sm:text-sm font-bold text-[#6366f1] transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                <span>Đăng ký</span>
+              </button>
               <button
                 id="header-login-btn"
                 onClick={() => onOpenLogin('login')}
-                className="flex items-center gap-1.5 rounded-xl bg-orange-500 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:opacity-95 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">login</span>
                 <span>Đăng nhập</span>
@@ -333,8 +412,8 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => onSelectTab('marketplace')}
             className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-              currentTab === 'marketplace'
-                ? 'bg-orange-500 text-white shadow-sm'
+              currentTab === 'marketplace' || currentTab === 'detail'
+                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm'
                 : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -342,7 +421,7 @@ export const Header: React.FC<HeaderProps> = ({
             Khám phá chiến dịch
           </button>
 
-          {/* 2. Quy trình & hướng dẫn (đưa lên thay cho Chiến dịch của tôi) */}
+          {/* 2. Quy trình & hướng dẫn */}
           {onOpenGuidelines && (
             <button
               onClick={onOpenGuidelines}
@@ -353,18 +432,48 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Sau khi đăng nhập: Chiến dịch của tôi (đưa xuống cuối) */}
+          {/* 3. Chế độ Quản trị Admin (Mobile - Chỉ hiện khi đã đăng nhập Admin) */}
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={() => onSelectTab(currentTab === 'admin' ? 'marketplace' : 'admin')}
+              className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                currentTab === 'admin'
+                  ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm'
+                  : 'text-slate-800 bg-slate-200/80 hover:bg-slate-300'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+              Quản trị
+            </button>
+          )}
+
+          {/* Sau khi đăng nhập: Chiến dịch của tôi */}
           {currentUser && (
             <button
               onClick={() => onSelectTab('my-campaigns')}
               className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
                 currentTab === 'my-campaigns'
-                  ? 'bg-orange-500 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm'
                   : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
               <span>Chiến dịch của tôi ({myCampaignsCount})</span>
+            </button>
+          )}
+
+          {/* Sau khi đăng nhập: Hồ sơ KOC (Mobile) */}
+          {currentUser && currentUser.role !== 'admin' && (
+            <button
+              onClick={() => onSelectTab('profile')}
+              className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                currentTab === 'profile'
+                  ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm'
+                  : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">badge</span>
+              <span>Hồ sơ KOC</span>
             </button>
           )}
         </div>
@@ -373,7 +482,7 @@ export const Header: React.FC<HeaderProps> = ({
           {!currentUser && (
             <button
               onClick={() => onOpenLogin('login')}
-              className="flex items-center gap-1 rounded-xl bg-orange-500 hover:bg-orange-600 px-2.5 py-1.5 text-[11px] font-bold text-white whitespace-nowrap shadow-sm cursor-pointer"
+              className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:opacity-95 px-2.5 py-1.5 text-[11px] font-bold text-white whitespace-nowrap shadow-sm cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">login</span>
               Đăng nhập

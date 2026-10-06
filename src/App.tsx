@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Campaign, KOCApplication, KOCUser } from './types';
 import { INITIAL_CAMPAIGNS, INITIAL_APPLICATIONS, INITIAL_NOTIFICATIONS } from './data/mockData';
 import { Header } from './components/Header';
@@ -13,13 +13,41 @@ import { KOCProfileView } from './components/KOCProfileView';
 import { ZaloCommunityWidget } from './components/ZaloCommunityWidget';
 import { Toast, ToastNotification } from './components/Toast';
 import { BrandContactModal } from './components/BrandContactModal';
+import { AdminView } from './components/AdminView';
+import { isSupabaseConfigured } from './lib/supabase';
+import {
+  getCampaignsFromSupabase,
+  getApplicationsFromSupabase,
+  submitApplicationToSupabase,
+  updateApplicationStatusOnSupabase,
+  createCampaignOnSupabase,
+  subscribeToApplicationsRealtime,
+} from './services/supabaseService';
 
 export const App: React.FC = () => {
   // Authentication state: KOC starts as a guest explorer or loads saved profile
   const [currentUser, setCurrentUser] = useState<KOCUser | null>(() => {
     try {
+      // Dọn dẹp nếu còn dính tài khoản KOC mẫu cũ
+      const resetCleanKey = 'kocity_clean_slate_reset_v1';
+      if (localStorage.getItem(resetCleanKey) !== 'true') {
+        const saved = localStorage.getItem('koctrend_koc_profile');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.role !== 'admin') {
+            localStorage.removeItem('koctrend_koc_profile');
+          }
+        }
+        localStorage.removeItem('koctrend_registered_users');
+        localStorage.removeItem('koctrend_bookmarked_ids');
+        localStorage.setItem(resetCleanKey, 'true');
+      }
+
       const saved = localStorage.getItem('koctrend_koc_profile');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      // Chỉ giữ lại nếu là Admin, còn tài khoản KOC mẫu ban đầu đều reset về null
+      return parsed.role === 'admin' ? parsed : null;
     } catch {
       return null;
     }
@@ -38,18 +66,76 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<string>('marketplace');
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
-  // Core Data State
+  // Core Data State: Sạch hoàn toàn, chưa có KOC nào đăng ký
   const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
   const [applications, setApplications] = useState<KOCApplication[]>(INITIAL_APPLICATIONS);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
-  // Bookmarks State (persisted in localStorage)
+  // Kết nối Supabase: Tải dữ liệu đám mây khi khởi động & lắng nghe cập nhật Realtime
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      return;
+    }
+
+    // 1. Tải chiến dịch thật từ Supabase (hợp nhất với dữ liệu khởi tạo để giữ ảnh 4K & danh sách sản phẩm mẫu)
+    getCampaignsFromSupabase().then((data) => {
+      if (data && data.length > 0) {
+        setCampaigns(() => {
+          const map = new Map(INITIAL_CAMPAIGNS.map((c) => [c.id, c]));
+          data.forEach((supaCamp) => {
+            const local = map.get(supaCamp.id);
+            if (local) {
+              map.set(supaCamp.id, {
+                ...supaCamp,
+                productHeroImage: local.productHeroImage,
+                galleryImages: local.galleryImages,
+                brandLogo: local.brandLogo,
+                sampleProducts: local.sampleProducts || supaCamp.sampleProducts,
+              });
+            } else {
+              map.set(supaCamp.id, supaCamp);
+            }
+          });
+          return Array.from(map.values());
+        });
+      }
+    });
+
+    // 2. Tải danh sách đơn nộp từ Supabase
+    getApplicationsFromSupabase().then((data) => {
+      if (data && data.length > 0) {
+        setApplications(data);
+      }
+    });
+
+    // 3. Đăng ký nhận thông báo thời gian thực Realtime (không cần F5)
+    const unsubscribe = subscribeToApplicationsRealtime(
+      (newApp) => {
+        setApplications((prev) => {
+          if (prev.some((a) => a.id === newApp.id)) return prev;
+          return [newApp, ...prev];
+        });
+        showToast('Đơn ứng tuyển mới!', `${newApp.kocName} vừa nộp đơn tham gia ${newApp.campaignName}`, 'info');
+      },
+      (updatedApp) => {
+        setApplications((prev) =>
+          prev.map((a) => (a.id === updatedApp.id ? { ...a, ...updatedApp } : a))
+        );
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Bookmarks State (persisted in localStorage, mặc định rỗng chưa lưu chiến dịch nào)
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('koctrend_bookmarked_ids');
-      return saved ? JSON.parse(saved) : ['camp-1', 'camp-4'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['camp-1', 'camp-4'];
+      return [];
     }
   });
 
@@ -92,6 +178,7 @@ export const App: React.FC = () => {
 
   // Modals
   const [applyCampaign, setApplyCampaign] = useState<Campaign | null>(null);
+  const [pendingApplyCampaign, setPendingApplyCampaign] = useState<Campaign | null>(null);
   const [isGuidelinesOpen, setIsGuidelinesOpen] = useState(false);
   const [isBrandContactOpen, setIsBrandContactOpen] = useState(false);
 
@@ -110,13 +197,25 @@ export const App: React.FC = () => {
   // Handler: Open Apply Registration Form
   const handleOpenApplyModal = (campaign: Campaign) => {
     if (!currentUser) {
-      handleOpenLogin('login', 'Vui lòng đăng nhập hoặc tạo tài khoản KOC để đăng ký nhận mẫu chiến dịch này.');
+      setPendingApplyCampaign(campaign);
+      handleOpenLogin(
+        'register',
+        `Vui lòng đăng ký tài khoản KOC hoặc đăng nhập để đăng ký nhận mẫu chiến dịch "${campaign.title}".`
+      );
+      return;
+    }
+    if (currentUser.role === 'admin') {
+      showToast(
+        'Tài khoản Quản Trị Viên',
+        'Bạn đang đăng nhập tài khoản Admin. Hãy sử dụng tài khoản KOC để đăng ký nhận mẫu chiến dịch.',
+        'info'
+      );
       return;
     }
     setApplyCampaign(campaign);
   };
 
-  // Handler: Login Success (both login and register)
+  // Handler: Login Success (both login and register with strict role routing)
   const handleLoginSuccess = (user: KOCUser, isNewRegistration?: boolean) => {
     setCurrentUser(user);
     try {
@@ -125,12 +224,35 @@ export const App: React.FC = () => {
       console.warn(e);
     }
     setIsLoginModalOpen(false);
-
-    const hadPrompt = Boolean(loginModalPrompt);
     setLoginModalPrompt(null);
 
-    // If new registration or user clicked "Tạo hồ sơ KOC", redirect them to profile!
-    if (isNewRegistration || hadPrompt) {
+    // 1. Phân quyền ADMIN: Chuyển thẳng vào Admin Dashboard
+    if (user.role === 'admin') {
+      setCurrentTab('admin');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast(
+        'Đăng nhập Quản Trị Viên thành công!',
+        `Chào mừng ${user.name} đến với Admin Dashboard KOCITY.`,
+        'success'
+      );
+      return;
+    }
+
+    // 2. Phân quyền KOC: Mở form đăng ký campaign nếu trước đó đang chờ nộp
+    if (pendingApplyCampaign) {
+      const campToApply = pendingApplyCampaign;
+      setPendingApplyCampaign(null);
+      setApplyCampaign(campToApply);
+      showToast(
+        'Đăng nhập KOC thành công!',
+        `Tiếp tục hoàn tất đăng ký nhận mẫu cho "${campToApply.title}".`,
+        'success'
+      );
+      return;
+    }
+
+    // Nếu là đăng ký tài khoản mới: chuyển đến trang hồ sơ để hoàn tất Media Kit
+    if (isNewRegistration) {
       setCurrentTab('profile');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -138,8 +260,8 @@ export const App: React.FC = () => {
     showToast(
       isNewRegistration ? 'Đăng ký tài khoản KOC thành công!' : 'Đăng nhập thành công!',
       isNewRegistration
-        ? `Chào mừng ${user.name}! Bạn đã được kích hoạt mục Chiến dịch của tôi và Hồ sơ KOC.`
-        : `Xin chào trở lại ${user.name}! Đã mở khóa mục Chiến dịch của tôi.`,
+        ? `Chào mừng ${user.name}! Bạn đã được kích hoạt mục "Chiến dịch của tôi" và Hồ sơ KOC.`
+        : `Xin chào trở lại ${user.name}! Đã mở khóa mục "Chiến dịch của tôi".`,
       'success'
     );
 
@@ -204,6 +326,9 @@ export const App: React.FC = () => {
   const handleApplicationSubmitSuccess = (newApp: KOCApplication) => {
     setApplications((prev) => [newApp, ...prev]);
 
+    // Gửi lên cơ sở dữ liệu Supabase đám mây
+    submitApplicationToSupabase(newApp);
+
     // Update campaign spots
     setCampaigns((prev) =>
       prev.map((c) =>
@@ -255,23 +380,36 @@ export const App: React.FC = () => {
         return app;
       })
     );
+
+    // Đồng bộ lên Supabase
+    updateApplicationStatusOnSupabase(appId, {
+      videoLink: link,
+      videoViews: 'Đang quét chỉ số...',
+      status: 'Đã lên bài',
+    });
   };
+
+  // Chuẩn hóa chuỗi so khớp tài khoản KOC
+  const normalizeHandle = (h?: string) => (h ? h.toLowerCase().replace(/[@\s]/g, '') : '');
+  const normalizePhone = (p?: string) => (p ? p.replace(/[\s.-]/g, '') : '');
 
   // Count recorded campaigns for current logged-in KOC
   const userApplicationsCount = currentUser
-    ? applications.filter(
-        (a) =>
-          a.kocName.toLowerCase().includes(currentUser.name.toLowerCase()) ||
-          a.tiktokHandle.toLowerCase().includes(currentUser.tiktokHandle.toLowerCase()) ||
-          (currentUser.tiktokHandle.includes('minhthu') &&
-            (a.kocName.includes('Minh Thư') ||
-              a.status === 'Đã duyệt gửi mẫu' ||
-              a.status === 'Chờ duyệt'))
-      ).length
+    ? applications.filter((a) => {
+        const userHandle = normalizeHandle(currentUser.tiktokHandle);
+        const appHandle = normalizeHandle(a.tiktokHandle);
+        if (userHandle && appHandle && userHandle === appHandle) return true;
+
+        const userPhone = normalizePhone(currentUser.phone);
+        const appPhone = normalizePhone(a.phone);
+        if (userPhone && appPhone && userPhone.length >= 9 && userPhone === appPhone) return true;
+
+        return false;
+      }).length
     : 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex flex-col bg-[#faf2f8] text-slate-900">
       {/* 1. Header Navigation Bar (KOC-tailored, with Guest/Logged-in state) */}
       <Header
         currentUser={currentUser}
@@ -289,43 +427,6 @@ export const App: React.FC = () => {
         myCampaignsCount={userApplicationsCount}
       />
 
-      {/* Guest Exploration Banner Notice (subtle top alert for new KOC visitors) */}
-      {!currentUser && currentTab === 'marketplace' && (
-        <div className="bg-orange-50/70 border-b border-orange-200/80 px-4 py-2.5 text-xs text-orange-950 transition-all">
-          <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-orange-600 shrink-0">
-                info
-              </span>
-              <span>
-                <strong>Bạn đang ở chế độ khách:</strong> Tự do khám phá 500+ chiến dịch và xem quy trình hướng dẫn nhận mẫu 0đ.
-              </span>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={() =>
-                  handleOpenLogin(
-                    'register',
-                    'Đăng ký tài khoản KOC để kích hoạt Chiến dịch của tôi và tạo Hồ sơ KOC!'
-                  )
-                }
-                className="font-bold text-orange-700 hover:text-orange-900 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>Đăng ký KOC</span>
-              </button>
-              <span className="text-orange-300">|</span>
-              <button
-                onClick={() => handleOpenLogin('login')}
-                className="font-bold text-orange-900 hover:text-orange-600 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>Đăng nhập</span>
-                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 2. Main Content Area */}
       <main className="flex-1">
         {currentTab === 'marketplace' && (
@@ -337,6 +438,7 @@ export const App: React.FC = () => {
             onSearchChange={setSearchQuery}
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
+            currentUser={currentUser}
           />
         )}
 
@@ -384,13 +486,26 @@ export const App: React.FC = () => {
             onShowToast={showToast}
           />
         )}
+
+        {currentTab === 'admin' && (
+          <AdminView
+            campaigns={campaigns}
+            onUpdateCampaigns={setCampaigns}
+            applications={applications}
+            onUpdateApplications={setApplications}
+            onShowToast={showToast}
+            onBackToMarketplace={handleBackToMarketplace}
+          />
+        )}
       </main>
 
-      {/* 3. Footer */}
-      <Footer
-        onOpenBrandContact={() => setIsBrandContactOpen(true)}
-        onOpenGuidelines={() => setIsGuidelinesOpen(true)}
-      />
+      {/* 3. Footer (Hide on admin dashboard for clean experience) */}
+      {currentTab !== 'admin' && (
+        <Footer
+          onOpenBrandContact={() => setIsBrandContactOpen(true)}
+          onOpenGuidelines={() => setIsGuidelinesOpen(true)}
+        />
+      )}
 
       {/* 3.1 Brand Contact Modal */}
       <BrandContactModal
@@ -399,7 +514,7 @@ export const App: React.FC = () => {
         onSubmitSuccess={(info) => {
           showToast(
             'Đã gửi thông tin đối tác Brand!',
-            `Đội ngũ Ki ô xây sẽ liên hệ với ${info.brandName} qua số ${info.phone} sớm nhất.`,
+            `Đội ngũ Kocity sẽ liên hệ với ${info.brandName} qua số ${info.phone} sớm nhất.`,
             'success'
           );
         }}
@@ -447,14 +562,16 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 7. Floating Action Buttons (Zalo Community + Job mới cập nhật !) */}
-      <ZaloCommunityWidget
-        onNavigateToMarketplace={() => {
-          setSelectedCampaign(null);
-          setCurrentTab('marketplace');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-      />
+      {/* 7. Floating Action Buttons (Zalo Community + Job mới cập nhật !) - Chỉ hiển thị ở trang chủ Khám phá chiến dịch */}
+      {currentTab === 'marketplace' && (
+        <ZaloCommunityWidget
+          onNavigateToMarketplace={() => {
+            setSelectedCampaign(null);
+            setCurrentTab('marketplace');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      )}
 
       {/* 8. Global Toast Notification System */}
       <Toast notification={toast} onClose={() => setToast(null)} />

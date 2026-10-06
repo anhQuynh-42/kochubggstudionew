@@ -76,8 +76,8 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               onClick={() => onToggleBookmark(campaign)}
               className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                 isBookmarked
-                  ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200'
+                  ? 'border-[#6366f1] bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-indigo-50 hover:text-[#6366f1] hover:border-indigo-200'
               }`}
               title={isBookmarked ? 'Bỏ lưu chiến dịch' : 'Lưu chiến dịch'}
             >
@@ -114,8 +114,8 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                 <span className="font-['Plus_Jakarta_Sans'] text-base font-extrabold text-slate-900">
                   {campaign.brandName}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-[11px] font-semibold text-orange-800">
-                  <span className="material-symbols-outlined text-[13px] text-orange-600">verified</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-800">
+                  <span className="material-symbols-outlined text-[13px] text-[#6366f1]">verified</span>
                   Official Mall
                 </span>
                 {campaign.tiktokUrl && (
@@ -139,8 +139,8 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                     Đã hết slot
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-[11px] font-semibold text-orange-800">
-                    <span className="material-symbols-outlined text-[13px] text-orange-600">local_fire_department</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-800">
+                    <span className="material-symbols-outlined text-[13px] text-[#6366f1]">local_fire_department</span>
                     Chiến dịch HOT
                   </span>
                 )}
@@ -153,11 +153,11 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                 <button
                   onClick={handleCopyCode}
-                  className="group inline-flex items-center gap-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-200 px-2.5 py-1 font-semibold text-orange-800 transition-colors cursor-pointer"
+                  className="group inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 font-semibold text-indigo-800 transition-colors cursor-pointer"
                   title="Nhấp để sao chép mã chiến dịch"
                 >
-                  <span>Mã: <b className="text-orange-900">{campaign.code}</b></span>
-                  <span className="material-symbols-outlined text-[13px] text-orange-600 group-hover:text-orange-900">content_copy</span>
+                  <span>Mã: <b className="text-indigo-900">{campaign.code}</b></span>
+                  <span className="material-symbols-outlined text-[13px] text-[#6366f1] group-hover:text-indigo-900">content_copy</span>
                 </button>
                 <span className="rounded-lg bg-slate-100 border border-slate-200/80 px-2.5 py-1 font-semibold text-slate-700">
                   Nền tảng: <b className="text-slate-900">{campaign.platform}</b>
@@ -184,13 +184,13 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
             ) : (
               <button
                 onClick={() => onOpenApplyModal(campaign)}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
                 <span>Đăng ký nhận mẫu</span>
               </button>
             )}
-            <div className={`text-center text-[11px] font-semibold ${isFull ? 'text-slate-500' : 'text-orange-700'}`}>
+            <div className={`text-center text-[11px] font-semibold ${isFull ? 'text-slate-500' : 'text-[#6366f1]'}`}>
               {isFull ? 'Chiến dịch đã đủ số lượng' : `Còn ${spotsLeft} suất cuối cùng`}
             </div>
           </div>
@@ -229,8 +229,8 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                     onClick={() => setActivePhotoIdx(idx)}
                     className={`relative flex-1 h-24 sm:h-auto overflow-hidden rounded-xl border-2 transition-all cursor-pointer ${
                       activePhotoIdx === idx
-                        ? 'border-orange-500 ring-2 ring-orange-500/20'
-                        : 'border-transparent hover:border-orange-300'
+                        ? 'border-[#6366f1] ring-2 ring-indigo-500/20'
+                        : 'border-transparent hover:border-indigo-300'
                     }`}
                   >
                     <img src={imgUrl} alt="Thumbnail" className="h-full w-full object-cover" />
@@ -240,10 +240,84 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
             </div>
           </section>
 
+          {/* 1.5. Danh sách sản phẩm mẫu tài trợ (Freecast 0đ) trích xuất từ Brand */}
+          {campaign.sampleProducts && campaign.sampleProducts.length > 0 && (
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#6366f1]">inventory_2</span>
+                    Danh sách sản phẩm mẫu tài trợ ({campaign.sampleProducts.length} sản phẩm)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tài trợ 100% mẫu miễn phí (Freecast). Bạn có thể chọn sản phẩm muốn nhận khi điền đơn đăng ký.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    Mẫu 0đ • HH {campaign.commissionRate || 'ưu đãi'}
+                  </span>
+                </div>
+              </div>
+
+              {campaign.contentRequirement && (
+                <div className="mb-4 rounded-xl bg-amber-50/80 border border-amber-200 p-3 text-xs text-amber-900 flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-amber-700 shrink-0 mt-0.5">
+                    warning
+                  </span>
+                  <div>
+                    <b>Yêu cầu video từ Brand:</b> {campaign.contentRequirement}. Hạn nộp bài: <b>{campaign.videoDeadline || '10 ngày sau khi nhận mẫu'}</b> (tối thiểu {campaign.minVideos || 2} video/sản phẩm).
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
+                {campaign.sampleProducts.map((sp, idx) => (
+                  <div
+                    key={sp.code || idx}
+                    className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/60 p-4 hover:border-indigo-300 hover:bg-indigo-50/20 transition-all"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-100/80 px-2 py-0.5 text-[11px] font-bold text-indigo-700">
+                          Mã: {sp.code}
+                        </span>
+                        {sp.category && (
+                          <span className="text-[10px] font-medium text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-0.5">
+                            {sp.category}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 leading-snug">
+                        {sp.name}
+                      </h4>
+                      {sp.shortDesc && (
+                        <p className="mt-1.5 text-[11px] text-slate-600 leading-relaxed">
+                          {sp.shortDesc}
+                        </p>
+                      )}
+                    </div>
+
+                    {sp.reviewTips && (
+                      <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-start gap-1.5 text-[10px] text-indigo-900 bg-indigo-50/50 p-2 rounded-xl">
+                        <span className="material-symbols-outlined text-[14px] text-indigo-600 shrink-0 mt-0.5">
+                          lightbulb
+                        </span>
+                        <span>
+                          <strong className="font-semibold text-indigo-800">Gợi ý góc quay:</strong> {sp.reviewTips}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* 2. USP Highlights */}
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-orange-600">verified</span>
+              <span className="material-symbols-outlined text-[#6366f1]">verified</span>
               Điểm nhấn sản phẩm (USP bắt buộc nhắc trong video)
             </h3>
 
@@ -251,9 +325,9 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               {campaign.uspList.map((usp, idx) => (
                 <div
                   key={idx}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition-colors hover:bg-orange-50/50 hover:border-orange-200"
+                  className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition-colors hover:bg-indigo-50/50 hover:border-indigo-200"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-[#6366f1] mb-3">
                     <span className="material-symbols-outlined text-[20px]">{usp.icon}</span>
                   </div>
                   <h4 className="text-xs font-bold text-slate-900">{usp.title}</h4>
@@ -348,10 +422,10 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6366f1] text-white font-bold text-xs shadow-sm">
                     1
                   </span>
-                  <span className="text-[10px] font-semibold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
                     Duyệt 12h
                   </span>
                 </div>
@@ -363,10 +437,10 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b5cf6] text-white font-bold text-xs shadow-sm">
                     2
                   </span>
-                  <span className="text-[10px] font-semibold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold text-violet-800 bg-violet-100 px-2 py-0.5 rounded-full">
                     Free 100%
                   </span>
                 </div>
@@ -378,10 +452,10 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6366f1] text-white font-bold text-xs shadow-sm">
                     3
                   </span>
-                  <span className="text-[10px] font-semibold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
                     Nghiệm thu
                   </span>
                 </div>
@@ -393,10 +467,10 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-xs shadow-sm">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6366f1] text-white font-bold text-xs shadow-sm">
                     4
                   </span>
-                  <span className="text-[10px] font-semibold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
                     Về tài khoản
                   </span>
                 </div>
@@ -419,7 +493,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                       <span className="font-['Plus_Jakarta_Sans'] font-bold text-slate-900">
                         {step.stepNum}
                       </span>
-                      <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[9px] font-semibold text-orange-800">
+                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[9px] font-semibold text-indigo-800">
                         {step.status}
                       </span>
                     </div>
@@ -441,7 +515,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Quyền lợi & Thù lao KOC
                 </span>
-                <span className="rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
+                <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-semibold text-indigo-800">
                   Cam kết KOCHub
                 </span>
               </div>
@@ -451,7 +525,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               {/* Itemized benefits breakdown */}
               <div className="mt-5 space-y-3">
                 <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 border border-slate-200">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-[#6366f1]">
                     <span className="material-symbols-outlined text-[18px]">inventory_2</span>
                   </div>
                   <div>
@@ -464,7 +538,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
 
 
                 <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 border border-slate-200">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-[#6366f1]">
                     <span className="material-symbols-outlined text-[18px]">trending_up</span>
                   </div>
                   <div>
@@ -482,11 +556,11 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                   <span className="font-medium text-slate-600">
                     Đã đăng ký: <b className="text-slate-900">{campaign.registeredSpots}/{campaign.totalSpots}</b> KOC
                   </span>
-                  <span className="font-semibold text-orange-700">Còn {spotsLeft} suất</span>
+                  <span className="font-semibold text-[#6366f1]">Còn {spotsLeft} suất</span>
                 </div>
                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className="h-full rounded-full bg-orange-500"
+                    className="h-full rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6]"
                     style={{ width: `${quotaPercent}%` }}
                   ></div>
                 </div>
@@ -506,7 +580,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                 <button
                   id="dossier-apply-btn"
                   onClick={() => onOpenApplyModal(campaign)}
-                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 py-4 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] py-4 text-center text-sm font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
                   <span>ĐĂNG KÝ THAM GIA NGAY (MỞ FORM)</span>
@@ -517,7 +591,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
                   onClick={handleShare}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 transition-colors cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-[#6366f1] hover:border-indigo-200 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">
                     {copiedLink ? 'check' : 'share'}
@@ -528,7 +602,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                   href={ZALO_GROUP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 transition-colors"
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-[#6366f1] hover:border-indigo-200 transition-colors"
                   title={`Trao đổi trực tiếp với đại diện ${campaign.brandName}`}
                 >
                   <span className="material-symbols-outlined text-[16px]">chat</span>
@@ -539,12 +613,12 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               {/* Direct Zalo Group Support */}
               <a
                 id="detail-zalo-group-btn"
-                href={ZALO_GROUP_URL}
+                href={campaign.zaloGroupUrl || ZALO_GROUP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-orange-50 border border-orange-200 py-2.5 px-3 text-xs font-semibold text-orange-900 hover:bg-orange-100 transition-all shadow-sm"
+                className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-indigo-50 border border-indigo-200 py-2.5 px-3 text-xs font-semibold text-indigo-900 hover:bg-indigo-100 transition-all shadow-sm"
               >
-                <span className="flex h-4 w-4 items-center justify-center rounded bg-orange-500 text-[8px] font-black text-white">
+                <span className="flex h-4 w-4 items-center justify-center rounded bg-[#6366f1] text-[8px] font-black text-white">
                   Z
                 </span>
                 <span>Vào nhóm Zalo KOC trao đổi về chiến dịch</span>
@@ -557,7 +631,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                   shield
                 </span>
                 <span>
-                  <b>Ki ô xây Escrow:</b> Thù lao booking được ký quỹ 100% tại Ki ô xây trước khi khởi chạy chiến dịch.
+                  <b>Kocity Escrow:</b> Thù lao booking được ký quỹ 100% tại Kocity trước khi khởi chạy chiến dịch.
                 </span>
               </div>
             </div>
@@ -589,7 +663,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                 onClick={() => onToggleBookmark(campaign)}
                 className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-all cursor-pointer ${
                   isBookmarked
-                    ? 'border-orange-500 bg-orange-500 text-white'
+                    ? 'border-[#6366f1] bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white'
                     : 'border-slate-200 bg-white text-slate-500'
                 }`}
                 title={isBookmarked ? 'Bỏ lưu' : 'Lưu chiến dịch'}
@@ -613,7 +687,7 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
               <button
                 id="mobile-sticky-apply-btn"
                 onClick={() => onOpenApplyModal(campaign)}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-4 py-3 text-xs font-bold text-white shadow-sm hover:bg-orange-600 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-3 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
                 <span>Đăng ký nhận mẫu</span>

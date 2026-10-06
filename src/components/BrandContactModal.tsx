@@ -76,7 +76,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
         {/* Header decoration */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-md shadow-orange-500/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#613bd1] to-[#316bbf] text-white shadow-md shadow-indigo-500/20">
               <span className="material-symbols-outlined text-xl">storefront</span>
             </div>
             <div>
@@ -84,13 +84,13 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                 Liên hệ hợp tác dành cho Brand
               </h3>
               <p className="text-xs text-slate-500">
-                Gửi mẫu sản phẩm & tuyển KOC lên bài viral cùng Ki ô xây
+                Gửi mẫu sản phẩm & tuyển KOC lên bài viral cùng Kocity
               </p>
             </div>
           </div>
           <button
             onClick={handleResetAndClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
@@ -106,7 +106,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                 Gửi yêu cầu thành công!
               </h4>
               <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
-                Cảm ơn <b>{brandName}</b> đã tin tưởng Ki ô xây. Đội ngũ Partnership của chúng tôi sẽ liên hệ lại với bạn qua số <b>{phone}</b> trong vòng 2 giờ làm việc.
+                Cảm ơn <b>{brandName}</b> đã tin tưởng Kocity. Đội ngũ Partnership của chúng tôi sẽ liên hệ lại với bạn qua số <b>{phone}</b> trong vòng 2 giờ làm việc.
               </p>
             </div>
 
@@ -126,7 +126,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
               <button
                 type="button"
                 onClick={handleResetAndClose}
-                className="w-full rounded-2xl bg-orange-500 py-3 text-sm font-extrabold text-white shadow-lg shadow-orange-500/25 hover:bg-orange-600 transition-all cursor-pointer"
+                className="w-full rounded-2xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] py-3 text-sm font-extrabold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all cursor-pointer"
               >
                 Đã hiểu
               </button>
@@ -144,7 +144,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="VD: Cỏ Mềm Lab, The Cocoon, Torano..."
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#613bd1] focus:outline-none focus:ring-2 focus:ring-purple-500/20"
               />
             </div>
 
@@ -159,7 +159,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                   value={contactPerson}
                   onChange={(e) => setContactPerson(e.target.value)}
                   placeholder="Họ và tên bạn"
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#613bd1] focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
               <div>
@@ -172,7 +172,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="VD: 0987654321"
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#613bd1] focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
             </div>
@@ -187,7 +187,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="brand@congty.com"
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#613bd1] focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
               <div>
@@ -197,7 +197,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                 <select
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-800 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 bg-white"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs text-slate-800 focus:border-[#613bd1] focus:outline-none focus:ring-2 focus:ring-purple-500/20 bg-white"
                 >
                   <option value="Chỉ tặng mẫu Freecast (0đ phí)">Chỉ tặng mẫu 0đ (Freecast)</option>
                   <option value="5tr - 20tr">Từ 5 - 20 triệu VNĐ</option>
@@ -216,17 +216,17 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
                 value={requirements}
                 onChange={(e) => setRequirements(e.target.value)}
                 placeholder="Tên sản phẩm muốn gửi mẫu, số lượng KOC cần tuyển, ngành hàng..."
-                className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
+                className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#613bd1] focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none"
               />
             </div>
 
             {/* Support hotline pill */}
-            <div className="flex items-center justify-between rounded-xl bg-orange-50/70 border border-orange-200/60 p-2.5 text-xs text-orange-950">
+            <div className="flex items-center justify-between rounded-xl bg-purple-50/70 border border-purple-200/60 p-2.5 text-xs text-purple-950">
               <div className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-orange-600">headset_mic</span>
+                <span className="material-symbols-outlined text-[16px] text-[#613bd1]">headset_mic</span>
                 <span className="font-semibold">Hotline Brand Partnership:</span>
               </div>
-              <a href="tel:0988889999" className="font-extrabold text-orange-600 hover:underline">
+              <a href="tel:0988889999" className="font-extrabold text-[#613bd1] hover:underline">
                 098.888.9999 (Zalo/Call)
               </a>
             </div>
@@ -242,7 +242,7 @@ export const BrandContactModal: React.FC<BrandContactModalProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 rounded-2xl bg-orange-500 py-2.5 text-xs font-extrabold text-white shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-all disabled:opacity-50 cursor-pointer"
+                className="flex-1 rounded-2xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] py-2.5 text-xs font-extrabold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? 'Đang gửi thông tin...' : 'Gửi yêu cầu hợp tác'}
               </button>
