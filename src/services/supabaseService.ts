@@ -44,6 +44,49 @@ export async function createCampaignOnSupabase(campaign: Campaign): Promise<bool
   }
 }
 
+// 2.1 Cập nhật chiến dịch trên Supabase
+export async function updateCampaignOnSupabase(
+  campaignId: string,
+  updatedData: Partial<Campaign>
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('campaigns')
+      .update(updatedData)
+      .eq('id', campaignId);
+    if (error) {
+      console.error('Lỗi khi cập nhật chiến dịch trên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Lỗi cập nhật chiến dịch:', err);
+    return false;
+  }
+}
+
+// 2.2 Xóa chiến dịch trên Supabase
+export async function deleteCampaignOnSupabase(campaignId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase
+      .from('campaigns')
+      .delete()
+      .eq('id', campaignId);
+    if (error) {
+      console.error('Lỗi khi xóa chiến dịch trên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Lỗi xóa chiến dịch:', err);
+    return false;
+  }
+}
+
 // 3. Lấy danh sách hồ sơ KOC ứng tuyển từ Supabase
 export async function getApplicationsFromSupabase(): Promise<KOCApplication[] | null> {
   if (!isSupabaseConfigured()) return null;

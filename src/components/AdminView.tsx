@@ -1,6 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Campaign, KOCApplication, ApplicationStatus } from '../types';
-import { updateApplicationStatusOnSupabase, createCampaignOnSupabase } from '../services/supabaseService';
+import {
+  updateApplicationStatusOnSupabase,
+  createCampaignOnSupabase,
+  updateCampaignOnSupabase,
+  deleteCampaignOnSupabase,
+} from '../services/supabaseService';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 interface AdminViewProps {
@@ -46,6 +51,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [isAddCampaignModalOpen, setIsAddCampaignModalOpen] = useState(false);
   const [isPreviewDraftOpen, setIsPreviewDraftOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit Campaign Form Modal State
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [isEditCampaignModalOpen, setIsEditCampaignModalOpen] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const [newCampaignData, setNewCampaignData] = useState({
     title: '',
@@ -428,6 +438,69 @@ export const AdminView: React.FC<AdminViewProps> = ({
     });
 
     onShowToast('Tạo chiến dịch mới thành công!', `Chiến dịch "${newCamp.title}" đã được hiển thị lên trang chủ KOC.`, 'success');
+  };
+
+  // Action: Open Edit Campaign Modal
+  const handleOpenEditCampaign = (camp: Campaign) => {
+    setEditingCampaign({ ...camp });
+    setIsEditCampaignModalOpen(true);
+  };
+
+  // Action: Save Edited Campaign
+  const handleSaveEditCampaign = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editingCampaign) return;
+
+    if (!editingCampaign.title.trim() || !editingCampaign.brandName.trim()) {
+      onShowToast('Thiếu thông tin', 'Vui lòng nhập tên chiến dịch và tên nhãn hàng', 'warning');
+      return;
+    }
+
+    const updatedList = campaigns.map((c) =>
+      c.id === editingCampaign.id ? editingCampaign : c
+    );
+    onUpdateCampaigns(updatedList);
+
+    // Đồng bộ lên Supabase nếu có kết nối
+    updateCampaignOnSupabase(editingCampaign.id, editingCampaign);
+
+    onShowToast(
+      'Cập nhật thành công!',
+      `Đã lưu thay đổi cho chiến dịch "${editingCampaign.brandName}".`,
+      'success'
+    );
+    setIsEditCampaignModalOpen(false);
+    setEditingCampaign(null);
+  };
+
+  const handleEditProcessImageFile = (file: File) => {
+    if (file.size > 6 * 1024 * 1024) {
+      onShowToast('Ảnh quá lớn', 'Vui lòng chọn ảnh dung lượng dưới 6MB', 'warning');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string' && editingCampaign) {
+        setEditingCampaign((prev) => (prev ? { ...prev, productHeroImage: reader.result as string } : prev));
+        onShowToast('Tải ảnh thành công', 'Ảnh mới đã sẵn sàng cho chiến dịch', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditImagePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          handleEditProcessImageFile(file);
+          e.preventDefault();
+          break;
+        }
+      }
+    }
   };
 
   // Action: Export to CSV
@@ -2357,29 +2430,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <span className="font-mono text-[11px] text-slate-400">{camp.code}</span>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => {
-                          const newTotal = prompt('Nhập số lượng slot mới cho chiến dịch:', String(camp.totalSpots));
-                          if (newTotal && !isNaN(Number(newTotal))) {
-                            onUpdateCampaigns(
-                              campaigns.map((c) => (c.id === camp.id ? { ...c, totalSpots: Number(newTotal) } : c))
-                            );
-                            onShowToast('Đã cập nhật slot!', `Chiến dịch ${camp.brandName} giờ có ${newTotal} slot.`, 'success');
-                          }
-                        }}
-                        className="rounded-lg border border-blue-200 bg-white px-2.5 py-1 font-semibold text-blue-700 hover:bg-blue-50 transition-all cursor-pointer"
+                        onClick={() => handleOpenEditCampaign(camp)}
+                        className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 transition-all cursor-pointer shadow-2xs"
+                        title="Chỉnh sửa toàn bộ thông tin chiến dịch"
                       >
-                        Sửa slot
+                        <span className="material-symbols-outlined text-[15px]">edit</span>
+                        <span>Sửa</span>
                       </button>
                       <button
                         onClick={() => {
                           if (confirm(`Bạn có chắc muốn xoá chiến dịch "${camp.title}"?`)) {
                             onUpdateCampaigns(campaigns.filter((c) => c.id !== camp.id));
+                            deleteCampaignOnSupabase(camp.id);
                             onShowToast('Đã xoá chiến dịch', camp.title, 'info');
                           }
                         }}
-                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-1.5 font-semibold text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shadow-2xs"
+                        title="Xoá chiến dịch"
                       >
-                        Xoá
+                        <span className="material-symbols-outlined text-[15px]">delete</span>
+                        <span>Xoá</span>
                       </button>
                     </div>
                   </div>
@@ -2935,6 +3005,322 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     Đăng chiến dịch
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: CHỈNH SỬA CHIẾN DỊCH (EDIT CAMPAIGN)
+          ========================================================================= */}
+      {isEditCampaignModalOpen && editingCampaign && (
+        <div
+          onPaste={handleEditImagePaste}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+        >
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-100">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-blue-50/70">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
+                  <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                </span>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    Chỉnh Sửa Chiến Dịch: {editingCampaign.brandName}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-mono">Mã: {editingCampaign.code}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsEditCampaignModalOpen(false);
+                  setEditingCampaign(null);
+                }}
+                className="rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCampaign} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div>
+                <label className="text-xs font-bold text-slate-700">Tên chiến dịch *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingCampaign.title}
+                  onChange={(e) => setEditingCampaign({ ...editingCampaign, title: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Tên Nhãn Hàng (Brand) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCampaign.brandName}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, brandName: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Ngành hàng / Danh mục</label>
+                  <select
+                    value={editingCampaign.category}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, category: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="Mỹ phẩm & Chăm sóc da">Mỹ phẩm & Skincare</option>
+                    <option value="Chăm sóc cá nhân & Răng miệng">Chăm sóc cá nhân & Răng miệng</option>
+                    <option value="Đồ công nghệ & Setup">Đồ công nghệ & Setup</option>
+                    <option value="Thời trang & Phụ kiện">Thời trang & Phụ kiện</option>
+                    <option value="Đồ gia dụng & Đời sống">Đồ gia dụng & Đời sống</option>
+                    <option value="F&B & Đồ uống">F&B & Ăn uống</option>
+                    <option value="Mẹ & Bé">Mẹ & Bé</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Tổng số slot</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingCampaign.totalSpots}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, totalSpots: Number(e.target.value) })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Đã đăng ký</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingCampaign.registeredSpots}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, registeredSpots: Number(e.target.value) })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Hoa hồng (%)</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.commissionRate || ''}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, commissionRate: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Số ngày còn</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingCampaign.daysLeft}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, daysLeft: Number(e.target.value) })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Yêu cầu Follower</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.followerRequirement}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, followerRequirement: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                    placeholder="VD: >1.000 Followers"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Quà tặng / Booking Fee</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.bookingFee || ''}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, bookingFee: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                    placeholder="VD: Freecast (Mẫu 0đ)"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Nền tảng</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.platform}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, platform: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                    placeholder="VD: TikTok Shop"
+                  />
+                </div>
+              </div>
+
+              {/* Ảnh sản phẩm (Hero) */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Ảnh sản phẩm đại diện *
+                  <span className="font-normal text-slate-400 ml-1">(Dán ảnh Ctrl+V/Cmd+V hoặc chọn từ máy tính)</span>
+                </label>
+                <input
+                  type="file"
+                  ref={editFileInputRef}
+                  accept="image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleEditProcessImageFile(f);
+                  }}
+                  className="hidden"
+                />
+
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  {editingCampaign.productHeroImage && (
+                    <img
+                      src={editingCampaign.productHeroImage}
+                      alt="Hero"
+                      className="h-20 w-28 rounded-xl object-cover border border-slate-200 shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 w-full space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Dán URL link ảnh trực tiếp tại đây..."
+                      value={editingCampaign.productHeroImage}
+                      onChange={(e) => setEditingCampaign({ ...editingCampaign, productHeroImage: e.target.value })}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => editFileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                      Chọn ảnh khác từ máy tính
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Links & Zalo group */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Link nhóm Zalo hỗ trợ</label>
+                  <input
+                    type="text"
+                    placeholder="https://zalo.me/g/..."
+                    value={editingCampaign.zaloGroupUrl || ''}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, zaloGroupUrl: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Link Form đăng ký gốc (nếu có)</label>
+                  <input
+                    type="text"
+                    placeholder="https://forms.gle/..."
+                    value={editingCampaign.registrationFormUrl || ''}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, registrationFormUrl: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Yêu cầu video & Deadline */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Yêu cầu nội dung video</label>
+                  <input
+                    type="text"
+                    placeholder="VD: Review lộ mặt, có lồng tiếng, không lắc SP"
+                    value={editingCampaign.contentRequirement || ''}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, contentRequirement: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Hạn nộp video</label>
+                  <input
+                    type="text"
+                    placeholder="VD: 10 ngày từ khi nhận SP"
+                    value={editingCampaign.videoDeadline || ''}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, videoDeadline: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Hashtags & Cart Store */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Tên gian hàng TikTok Shop gắn giỏ</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.cartBrandName || ''}
+                    onChange={(e) => setEditingCampaign({ ...editingCampaign, cartBrandName: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700">Hashtags (cách nhau bởi dấu phẩy)</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.hashtags?.join(', ') || ''}
+                    onChange={(e) => {
+                      const tags = e.target.value.split(',').map((t) => t.trim()).filter(Boolean);
+                      setEditingCampaign({ ...editingCampaign, hashtags: tags });
+                    }}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Checkbox Urgent */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="urgent-edit-checkbox"
+                  checked={Boolean(editingCampaign.urgent)}
+                  onChange={(e) => setEditingCampaign({ ...editingCampaign, urgent: e.target.checked })}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                />
+                <label htmlFor="urgent-edit-checkbox" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                  Đánh dấu là chiến dịch Gấp / Hot (Hiển thị nhãn lửa 🔥)
+                </label>
+              </div>
+
+              {/* Mô tả */}
+              <div>
+                <label className="text-xs font-bold text-slate-700">Mô tả chiến dịch</label>
+                <textarea
+                  rows={3}
+                  value={editingCampaign.description || ''}
+                  onChange={(e) => setEditingCampaign({ ...editingCampaign, description: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none resize-none"
+                ></textarea>
+              </div>
+
+              {/* Actions footer */}
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditCampaignModalOpen(false);
+                    setEditingCampaign(null);
+                  }}
+                  className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-sm transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Lưu thay đổi</span>
+                </button>
               </div>
             </form>
           </div>
