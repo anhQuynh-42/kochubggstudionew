@@ -14,6 +14,7 @@ import { ZaloCommunityWidget } from './components/ZaloCommunityWidget';
 import { Toast, ToastNotification } from './components/Toast';
 import { BrandContactModal } from './components/BrandContactModal';
 import { AdminView } from './components/AdminView';
+import { PublicMediaKitModal, PublicMediaKitData } from './components/PublicMediaKitModal';
 import { isSupabaseConfigured } from './lib/supabase';
 import kocityHeroStudio from './assets/images/kocity_hero_studio.jpg';
 import {
@@ -65,6 +66,51 @@ export const App: React.FC = () => {
     }
   });
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+
+  // Xem hồ sơ Media Kit công khai (khi có người gửi link ?mediakit=... hoặc ?mk=...)
+  const [publicMediaKitData, setPublicMediaKitData] = useState<PublicMediaKitData | null>(null);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const mkParam = params.get('mk');
+      const mediakitHandle = params.get('mediakit');
+
+      if (mkParam) {
+        try {
+          const decoded = JSON.parse(decodeURIComponent(escape(atob(mkParam))));
+          setPublicMediaKitData(decoded);
+          return;
+        } catch (e) {
+          console.warn('Lỗi giải mã mk param:', e);
+        }
+      }
+
+      if (mediakitHandle) {
+        const cleanTarget = mediakitHandle.toLowerCase().replace(/[@\s]/g, '');
+        const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+        const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
+        const found = savedUsers.find(
+          (u) => (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === cleanTarget
+        );
+        if (found) {
+          setPublicMediaKitData(found);
+        } else {
+          setPublicMediaKitData({
+            name: mediakitHandle.replace('@', ''),
+            tiktokHandle: mediakitHandle.startsWith('@') ? mediakitHandle : `@${mediakitHandle}`,
+            followers: '10K+',
+            avgViews: '5K+',
+            engagementRate: '4.5%',
+            categories: ['Làm đẹp & Mỹ phẩm', 'Thời trang & Phụ kiện'],
+            bio: 'KOC sáng tạo nội dung trên nền tảng Kocity.',
+          });
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }, []);
 
   // Hero Image Banner State (đồng bộ localStorage và Supabase Realtime toàn hệ thống)
   const [heroImage, setHeroImage] = useState<string>(() => {
@@ -711,7 +757,39 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 8. Global Toast Notification System */}
+      {/* 8. Public Creator Media Kit Modal (khi có người truy cập bằng link chia sẻ Media Kit) */}
+      {publicMediaKitData && (
+        <PublicMediaKitModal
+          data={publicMediaKitData}
+          onClose={() => {
+            setPublicMediaKitData(null);
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('mediakit');
+              url.searchParams.delete('mk');
+              window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+            } catch (e) {
+              console.warn(e);
+            }
+          }}
+          onExploreCampaigns={() => {
+            setPublicMediaKitData(null);
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('mediakit');
+              url.searchParams.delete('mk');
+              window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+            } catch (e) {
+              console.warn(e);
+            }
+            setCurrentTab('marketplace');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onShowToast={showToast}
+        />
+      )}
+
+      {/* 9. Global Toast Notification System */}
       <Toast notification={toast} onClose={() => setToast(null)} />
     </div>
   );

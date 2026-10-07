@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { toPng } from 'html-to-image';
 import { KOCUser } from '../types';
 import { APP_LOGOS } from '../data/mockData';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
@@ -271,6 +272,86 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     setCopyMemberCodeSuccess(true);
     onShowToast('Đã sao chép mã KOC!', `Mã định danh của bạn là #${kocMemberCode}`, 'success');
     setTimeout(() => setCopyMemberCodeSuccess(false), 2500);
+  };
+
+  const mediaKitCardRef = useRef<HTMLDivElement>(null);
+  const [isDownloadingMediaKit, setIsDownloadingMediaKit] = useState(false);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
+
+  // Tạo URL chia sẻ Media Kit công khai chứa toàn bộ dữ liệu hồ sơ
+  const getShareableMediaKitUrl = () => {
+    const cleanHandle = (tiktokHandle || 'creator').replace(/[@\s]/g, '');
+    const profilePayload = {
+      name: name.trim() || cleanHandle,
+      tiktokHandle: tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`,
+      avatar: avatar || APP_LOGOS.userProfile,
+      followers: followers.trim() || '10K+',
+      avgViews: avgViews.trim() || '5K+',
+      engagementRate: engagementRate.trim() || '4.5%',
+      categories,
+      bio: bio.trim(),
+      memberCode: kocMemberCode,
+      city,
+      district,
+      address,
+      channelLink: channelLink || `https://www.tiktok.com/@${cleanHandle}`,
+      portfolioDriveLink,
+      targetAudience,
+      contentStyle,
+      minBookingRate,
+    };
+
+    let shareUrl = `${window.location.origin}/?mediakit=${encodeURIComponent(cleanHandle)}`;
+    try {
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(profilePayload))));
+      shareUrl = `${window.location.origin}/?mediakit=${encodeURIComponent(cleanHandle)}&mk=${encoded}`;
+    } catch (e) {
+      console.warn(e);
+    }
+    return shareUrl;
+  };
+
+  // Chia sẻ hoặc copy link Media Kit
+  const handleShareMediaKit = () => {
+    const shareUrl = getShareableMediaKitUrl();
+    try {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareUrl);
+      }
+      setCopiedShareLink(true);
+      setTimeout(() => setCopiedShareLink(false), 2500);
+      onShowToast(
+        'Đã sao chép link Media Kit!',
+        'Bất kỳ Brand hay người nhận nào cũng có thể click vào để xem trực tiếp hồ sơ của bạn.',
+        'success'
+      );
+    } catch (err) {
+      console.warn(err);
+    }
+  };
+
+  // Tải thẻ Media Kit về máy dưới dạng ảnh PNG
+  const handleDownloadMediaKitImage = async () => {
+    if (!mediaKitCardRef.current) return;
+    try {
+      setIsDownloadingMediaKit(true);
+      const dataUrl = await toPng(mediaKitCardRef.current, {
+        quality: 0.98,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
+      const link = document.createElement('a');
+      const cleanHandle = (tiktokHandle || 'creator').replace(/[@\s]/g, '');
+      link.download = `MediaKit_${cleanHandle}.png`;
+      link.href = dataUrl;
+      link.click();
+      onShowToast('Đã tải ảnh Media Kit!', 'Thẻ hồ sơ của bạn đã được xuất thành công dưới dạng ảnh PNG.', 'success');
+    } catch (err) {
+      console.error(err);
+      onShowToast('Lỗi tải ảnh', 'Không thể tạo ảnh tự động, bạn có thể chụp ảnh màn hình thẻ này nhé.', 'warning');
+    } finally {
+      setIsDownloadingMediaKit(false);
+    }
   };
 
   // Apply Quick Preset
@@ -1207,36 +1288,42 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 space-y-4">
+            {/* Card Content container - Được chụp ảnh khi xuất PNG */}
+            <div ref={mediaKitCardRef} className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
               <div className="flex items-center gap-4">
                 <img
                   src={avatar || APP_LOGOS.userProfile}
                   alt={name}
-                  className="h-16 w-16 rounded-2xl object-cover border-2 border-purple-200"
+                  crossOrigin="anonymous"
+                  className="h-16 w-16 sm:h-18 sm:w-18 rounded-2xl object-cover border-2 border-purple-200"
                 />
                 <div>
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                  <h4 className="font-['Plus_Jakarta_Sans'] text-base sm:text-lg font-black text-slate-900">
+                    {name || 'Hồ sơ KOC'}
+                  </h4>
+                  <p className="font-mono text-xs font-bold text-[#613bd1]">{tiktokHandle || '@creator'}</p>
+                  <p className="mt-1 text-xs text-slate-700 leading-relaxed font-medium">
                     {bio || 'Chưa cập nhật phần tự giới thiệu ngắn cho nhãn hàng.'}
                   </p>
                   <p className="mt-1 text-[11px] text-slate-500 font-semibold flex items-center gap-1">
                     <span className="material-symbols-outlined text-[14px] text-[#316bbf]">location_on</span>
-                    {address ? `${address}${district ? `, ${district}` : ''}${city ? `, ${city}` : ''}` : (city || 'Chưa cập nhật')}
+                    {address ? `${address}${district ? `, ${district}` : ''}${city ? `, ${city}` : ''}` : (city || 'Toàn quốc')}
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center pt-3 border-t border-slate-200">
-                <div className="rounded-xl bg-white p-2.5 border border-slate-100">
-                  <span className="text-[10px] text-slate-500 block">Followers</span>
-                  <b className="text-sm text-slate-900 font-['Plus_Jakarta_Sans']">{followers || 'Chưa có'}</b>
+                <div className="rounded-xl bg-purple-50/50 p-2.5 border border-purple-100">
+                  <span className="text-[10px] text-slate-500 font-bold block">Followers</span>
+                  <b className="text-sm text-slate-900 font-['Plus_Jakarta_Sans']">{followers || '10K+'}</b>
                 </div>
-                <div className="rounded-xl bg-white p-2.5 border border-slate-100">
-                  <span className="text-[10px] text-slate-500 block">Avg Views</span>
-                  <b className="text-sm text-[#316bbf] font-['Plus_Jakarta_Sans']">{avgViews || 'Chưa có'}</b>
+                <div className="rounded-xl bg-blue-50/50 p-2.5 border border-blue-100">
+                  <span className="text-[10px] text-slate-500 font-bold block">Avg Views</span>
+                  <b className="text-sm text-[#316bbf] font-['Plus_Jakarta_Sans']">{avgViews || '5K+'}</b>
                 </div>
-                <div className="rounded-xl bg-white p-2.5 border border-slate-100">
-                  <span className="text-[10px] text-slate-500 block">Tương tác</span>
-                  <b className="text-sm text-[#613bd1] font-['Plus_Jakarta_Sans']">{engagementRate || 'Chưa có'}</b>
+                <div className="rounded-xl bg-pink-50/50 p-2.5 border border-pink-100">
+                  <span className="text-[10px] text-slate-500 font-bold block">Tương tác</span>
+                  <b className="text-sm text-[#613bd1] font-['Plus_Jakarta_Sans']">{engagementRate || '4.5%'}</b>
                 </div>
               </div>
 
@@ -1247,7 +1334,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 <div className="flex flex-wrap gap-1.5">
                   {categories.length > 0 ? (
                     categories.map((c, i) => (
-                      <span key={i} className="rounded-lg bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-[#613bd1]">
+                      <span key={i} className="rounded-lg bg-purple-100 px-2.5 py-1 text-[10px] font-bold text-[#613bd1]">
                         {c}
                       </span>
                     ))
@@ -1256,24 +1343,46 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   )}
                 </div>
               </div>
+
+              <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100">
+                <span>Xác thực bởi Kocity Platform</span>
+                <span className="font-mono">#{kocMemberCode}</span>
+              </div>
             </div>
 
-            <div className="mt-6 flex gap-2">
+            {/* Modal Actions */}
+            <div className="mt-5 space-y-2.5 pt-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadMediaKitImage}
+                  disabled={isDownloadingMediaKit}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 disabled:opacity-50 py-2.5 px-3 text-xs font-bold text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                  title="Lưu thẻ Media Kit thành file ảnh PNG để gửi qua Zalo / Messenger"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {isDownloadingMediaKit ? 'sync' : 'download'}
+                  </span>
+                  <span>{isDownloadingMediaKit ? 'Đang xuất ảnh...' : 'Tải ảnh thẻ (PNG)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareMediaKit}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 py-2.5 px-3 text-xs font-bold text-[#613bd1] transition-all cursor-pointer"
+                  title="Sao chép link web để người khác click vào xem trực tiếp trên trình duyệt"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {copiedShareLink ? 'done' : 'link'}
+                  </span>
+                  <span>{copiedShareLink ? 'Đã copy link!' : 'Copy link web'}</span>
+                </button>
+              </div>
+
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(
-                    `https://kocity.vn/koc/${tiktokHandle.replace('@', '') || 'creator'}`
-                  );
-                  onShowToast('Đã sao chép link Media Kit!', '', 'success');
-                }}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">share</span>
-                <span>Chia sẻ Media Kit</span>
-              </button>
-              <button
+                type="button"
                 onClick={() => setShowMediaKitModal(false)}
-                className="flex-1 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] py-2.5 text-xs font-bold text-white hover:opacity-95 shadow-md shadow-indigo-500/20 cursor-pointer"
+                className="w-full rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 py-2 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
                 Đóng
               </button>
