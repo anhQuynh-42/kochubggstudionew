@@ -74,6 +74,7 @@ export type ApplicationStatus =
 
 export interface KOCApplication {
   id: string;
+  kocId?: string;
   code: string;
   kocName: string;
   avatar: string;

@@ -80,18 +80,48 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     // 2. KIỂM TRA TÀI KHOẢN KOC BÌNH THƯỜNG
     const savedUsersStr = localStorage.getItem('koctrend_registered_users');
-    const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
+    let savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
 
-    let foundUser = null;
+    let foundUser: KOCUser | undefined = undefined;
+
+    const normTargetHandle = cleanHandle.toLowerCase().replace(/[@\s]/g, '');
+    const normTargetPhone = phoneValue.replace(/[\s.-]/g, '');
 
     if (loginMethod === 'tiktok') {
       foundUser = savedUsers.find(
-        (u) => u.tiktokHandle.toLowerCase() === cleanHandle.toLowerCase() && (u.password === enteredPassword || !u.password)
+        (u) =>
+          (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle &&
+          (!enteredPassword || !u.password || u.password === enteredPassword)
       );
     } else {
       foundUser = savedUsers.find(
-        (u) => u.phone === phoneValue && (u.password === enteredPassword || !u.password)
+        (u) =>
+          (u.phone || '').replace(/[\s.-]/g, '') === normTargetPhone &&
+          (!enteredPassword || !u.password || u.password === enteredPassword)
       );
+    }
+
+    // Fallback: nếu chưa có trong savedUsers nhưng có trong hồ sơ đang lưu koctrend_koc_profile
+    if (!foundUser) {
+      try {
+        const activeProfileStr = localStorage.getItem('koctrend_koc_profile');
+        if (activeProfileStr) {
+          const activeUser: KOCUser = JSON.parse(activeProfileStr);
+          const activeHandleNorm = (activeUser.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '');
+          const activePhoneNorm = (activeUser.phone || '').replace(/[\s.-]/g, '');
+          if (
+            (loginMethod === 'tiktok' && activeHandleNorm === normTargetHandle) ||
+            (loginMethod === 'phone' && activePhoneNorm === normTargetPhone)
+          ) {
+            foundUser = activeUser;
+            // Thêm vào savedUsers để lưu trữ bền vững
+            savedUsers = [...savedUsers, activeUser];
+            localStorage.setItem('koctrend_registered_users', JSON.stringify(savedUsers));
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+      }
     }
 
     if (foundUser) {
@@ -112,10 +142,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     const savedUsersStr = localStorage.getItem('koctrend_registered_users');
     const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
 
+    const normRegHandle = cleanHandle.toLowerCase().replace(/[@\s]/g, '');
+    const normRegPhone = regPhone.trim().replace(/[\s.-]/g, '');
+
     const exists = savedUsers.some(
       (u) =>
-        u.tiktokHandle.toLowerCase() === cleanHandle.toLowerCase() ||
-        (u.phone === regPhone.trim() && regPhone.trim() !== '')
+        (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normRegHandle ||
+        (normRegPhone !== '' && (u.phone || '').replace(/[\s.-]/g, '') === normRegPhone)
     );
 
     if (exists) {

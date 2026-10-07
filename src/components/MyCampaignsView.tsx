@@ -129,6 +129,8 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
   // 2. When KOC IS logged in: CHỈ hiển thị đúng các đơn KOC này tự nộp trên web
   const myApps = applications.filter((a) => {
     if (!currentUser) return false;
+    if (a.kocId && currentUser.id && a.kocId === currentUser.id) return true;
+
     const userHandle = normalizeHandle(currentUser.tiktokHandle);
     const appHandle = normalizeHandle(a.tiktokHandle);
     if (userHandle && appHandle && userHandle === appHandle) return true;

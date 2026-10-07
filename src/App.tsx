@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Campaign, KOCApplication, KOCUser } from './types';
+import { Campaign, KOCApplication, KOCUser, ApplicationStatus } from './types';
 import { INITIAL_CAMPAIGNS, INITIAL_APPLICATIONS, INITIAL_NOTIFICATIONS } from './data/mockData';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -28,26 +28,9 @@ export const App: React.FC = () => {
   // Authentication state: KOC starts as a guest explorer or loads saved profile
   const [currentUser, setCurrentUser] = useState<KOCUser | null>(() => {
     try {
-      // Dọn dẹp nếu còn dính tài khoản KOC mẫu cũ
-      const resetCleanKey = 'kocity_clean_slate_reset_v1';
-      if (localStorage.getItem(resetCleanKey) !== 'true') {
-        const saved = localStorage.getItem('koctrend_koc_profile');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.role !== 'admin') {
-            localStorage.removeItem('koctrend_koc_profile');
-          }
-        }
-        localStorage.removeItem('koctrend_registered_users');
-        localStorage.removeItem('koctrend_bookmarked_ids');
-        localStorage.setItem(resetCleanKey, 'true');
-      }
-
       const saved = localStorage.getItem('koctrend_koc_profile');
       if (!saved) return null;
-      const parsed = JSON.parse(saved);
-      // Chỉ giữ lại nếu là Admin, còn tài khoản KOC mẫu ban đầu đều reset về null
-      return parsed.role === 'admin' ? parsed : null;
+      return JSON.parse(saved);
     } catch {
       return null;
     }
@@ -66,9 +49,16 @@ export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<string>('marketplace');
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
-  // Core Data State: Sạch hoàn toàn, chưa có KOC nào đăng ký
+  // Core Data State: Khởi tạo với dữ liệu đã lưu hoặc mặc định
   const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
-  const [applications, setApplications] = useState<KOCApplication[]>(INITIAL_APPLICATIONS);
+  const [applications, setApplications] = useState<KOCApplication[]>(() => {
+    try {
+      const saved = localStorage.getItem('koctrend_applications');
+      return saved ? JSON.parse(saved) : INITIAL_APPLICATIONS;
+    } catch {
+      return INITIAL_APPLICATIONS;
+    }
+  });
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
   // Kết nối Supabase: Tải dữ liệu đám mây khi khởi động & lắng nghe cập nhật Realtime
@@ -101,10 +91,21 @@ export const App: React.FC = () => {
       }
     });
 
-    // 2. Tải danh sách đơn nộp từ Supabase
+    // 2. Tải danh sách đơn nộp từ Supabase và hợp nhất với dữ liệu local
     getApplicationsFromSupabase().then((data) => {
       if (data && data.length > 0) {
-        setApplications(data);
+        setApplications((prev) => {
+          const map = new Map();
+          prev.forEach((app) => map.set(app.id, app));
+          data.forEach((app) => map.set(app.id, { ...(map.get(app.id) || {}), ...app }));
+          const merged = Array.from(map.values()) as KOCApplication[];
+          try {
+            localStorage.setItem('koctrend_applications', JSON.stringify(merged));
+          } catch (e) {
+            console.warn(e);
+          }
+          return merged;
+        });
       }
     });
 
@@ -113,14 +114,26 @@ export const App: React.FC = () => {
       (newApp) => {
         setApplications((prev) => {
           if (prev.some((a) => a.id === newApp.id)) return prev;
-          return [newApp, ...prev];
+          const updated = [newApp, ...prev];
+          try {
+            localStorage.setItem('koctrend_applications', JSON.stringify(updated));
+          } catch (e) {
+            console.warn(e);
+          }
+          return updated;
         });
         showToast('Đơn ứng tuyển mới!', `${newApp.kocName} vừa nộp đơn tham gia ${newApp.campaignName}`, 'info');
       },
       (updatedApp) => {
-        setApplications((prev) =>
-          prev.map((a) => (a.id === updatedApp.id ? { ...a, ...updatedApp } : a))
-        );
+        setApplications((prev) => {
+          const updated = prev.map((a) => (a.id === updatedApp.id ? { ...a, ...updatedApp } : a));
+          try {
+            localStorage.setItem('koctrend_applications', JSON.stringify(updated));
+          } catch (e) {
+            console.warn(e);
+          }
+          return updated;
+        });
       }
     );
 
@@ -285,6 +298,25 @@ export const App: React.FC = () => {
     setCurrentUser(updatedUser);
     try {
       localStorage.setItem('koctrend_koc_profile', JSON.stringify(updatedUser));
+
+      // Cập nhật vào danh sách tài khoản đã đăng ký (koctrend_registered_users) để khi đăng nhập lại không bị mất
+      const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+      const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
+      const userIndex = savedUsers.findIndex(
+        (u) =>
+          u.id === updatedUser.id ||
+          (u.tiktokHandle && updatedUser.tiktokHandle && u.tiktokHandle.toLowerCase().replace(/[@\s]/g, '') === updatedUser.tiktokHandle.toLowerCase().replace(/[@\s]/g, '')) ||
+          (u.phone && updatedUser.phone && u.phone.replace(/[\s.-]/g, '') === updatedUser.phone.replace(/[\s.-]/g, ''))
+      );
+
+      let newUsersList: KOCUser[];
+      if (userIndex >= 0) {
+        newUsersList = [...savedUsers];
+        newUsersList[userIndex] = { ...savedUsers[userIndex], ...updatedUser };
+      } else {
+        newUsersList = [...savedUsers, updatedUser];
+      }
+      localStorage.setItem('koctrend_registered_users', JSON.stringify(newUsersList));
     } catch (e) {
       console.warn(e);
     }
@@ -324,7 +356,15 @@ export const App: React.FC = () => {
 
   // Handler: On successfully submitting application from form
   const handleApplicationSubmitSuccess = (newApp: KOCApplication) => {
-    setApplications((prev) => [newApp, ...prev]);
+    setApplications((prev) => {
+      const updated = [newApp, ...prev.filter((a) => a.id !== newApp.id)];
+      try {
+        localStorage.setItem('koctrend_applications', JSON.stringify(updated));
+      } catch (e) {
+        console.warn(e);
+      }
+      return updated;
+    });
 
     // Gửi lên cơ sở dữ liệu Supabase đám mây
     submitApplicationToSupabase(newApp);
@@ -367,19 +407,25 @@ export const App: React.FC = () => {
 
   // Handler: Submit video link
   const handleSubmitVideoLink = (appId: string, link: string) => {
-    setApplications((prev) =>
-      prev.map((app) => {
+    setApplications((prev) => {
+      const updated = prev.map((app) => {
         if (app.id === appId) {
           return {
             ...app,
             videoLink: link,
             videoViews: 'Đang quét chỉ số...',
-            status: 'Đã lên bài',
+            status: 'Đã lên bài' as ApplicationStatus,
           };
         }
         return app;
-      })
-    );
+      });
+      try {
+        localStorage.setItem('koctrend_applications', JSON.stringify(updated));
+      } catch (e) {
+        console.warn(e);
+      }
+      return updated;
+    });
 
     // Đồng bộ lên Supabase
     updateApplicationStatusOnSupabase(appId, {
@@ -396,6 +442,8 @@ export const App: React.FC = () => {
   // Count recorded campaigns for current logged-in KOC
   const userApplicationsCount = currentUser
     ? applications.filter((a) => {
+        if (a.kocId && currentUser.id && a.kocId === currentUser.id) return true;
+
         const userHandle = normalizeHandle(currentUser.tiktokHandle);
         const appHandle = normalizeHandle(a.tiktokHandle);
         if (userHandle && appHandle && userHandle === appHandle) return true;

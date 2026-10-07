@@ -168,6 +168,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
       const newApplication: KOCApplication = {
         id: `app-${Date.now()}`,
+        kocId: currentUser?.id,
         code: randomCode,
         kocName: fullName.trim(),
         avatar: currentUser?.avatar || APP_LOGOS.userProfile,

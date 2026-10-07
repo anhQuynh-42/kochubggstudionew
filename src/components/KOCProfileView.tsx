@@ -331,7 +331,10 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     const formattedHandle = tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`;
 
     const updatedUser: KOCUser = {
+      ...(currentUser || {}),
       id: currentUser?.id || `koc-${Date.now()}`,
+      role: currentUser?.role || 'koc',
+      password: currentUser?.password,
       name: name.trim(),
       avatar: avatar || APP_LOGOS.userProfile,
       tiktokHandle: formattedHandle,
