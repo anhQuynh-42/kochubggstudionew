@@ -3317,7 +3317,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div className="rounded-2xl border border-indigo-100 bg-linear-to-r from-blue-50/60 to-indigo-50/60 p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="material-symbols-outlined text-[16px] text-blue-600">schedule</span>
                     Cài đặt thời gian chiến dịch (Đếm ngược thời gian thực)
                   </label>
                   <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-xs">

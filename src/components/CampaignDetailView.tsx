@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Campaign, KOCUser } from '../types';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
 

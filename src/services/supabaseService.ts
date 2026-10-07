@@ -52,10 +52,10 @@ export function sanitizeCampaignForSupabase(campaign: Partial<Campaign>): Record
   }
 
   // Đóng gói metadata cho endDate, startDate, sampleProducts vào timeline
-  const existingTimeline = Array.isArray(campaign.timeline) ? [...campaign.timeline] : [];
+  const existingTimeline: unknown[] = Array.isArray(campaign.timeline) ? [...campaign.timeline] : [];
   // Lọc bỏ metadata cũ nếu có
   const cleanTimeline = existingTimeline.filter(
-    (item) => !item || typeof item !== 'object' || !('__metadata' in item)
+    (item) => !item || typeof item !== 'object' || !('__metadata' in (item as Record<string, unknown>))
   );
 
   cleanTimeline.push({
@@ -76,9 +76,10 @@ export function parseCampaignFromSupabase(raw: Record<string, unknown>): Campaig
   const camp = { ...raw } as unknown as Campaign;
 
   if (Array.isArray(camp.timeline)) {
-    const metaItem = camp.timeline.find(
-      (item) => item && typeof item === 'object' && ('__metadata' in item)
-    ) as Record<string, unknown> | undefined;
+    const timelineList = camp.timeline as unknown as Record<string, unknown>[];
+    const metaItem = timelineList.find(
+      (item) => item && typeof item === 'object' && '__metadata' in item
+    );
 
     if (metaItem) {
       if (metaItem.endDate && typeof metaItem.endDate === 'string') {
