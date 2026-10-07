@@ -311,12 +311,28 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="px-3 py-2.5 border-b border-slate-100">
                       <p className="text-xs font-bold text-slate-900">{currentUser.name}</p>
                       <p className="text-[11px] text-slate-600 font-medium">{currentUser.tiktokHandle}</p>
-                      <span className="inline-block mt-1 rounded bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-700 border border-slate-200">
-                        KOC Creator ({currentUser.followers})
+                      <span className="inline-block mt-1 rounded bg-purple-100 text-purple-800 px-2 py-0.5 text-[9px] font-bold border border-purple-200">
+                        {currentUser.role === 'admin' ? '🛡️ Quản Trị Viên Kocity' : `KOC Creator (${currentUser.followers})`}
                       </span>
                     </div>
 
                     <div className="py-1">
+                      {currentUser.role === 'admin' && (
+                        <button
+                          onClick={() => {
+                            onSelectTab('admin');
+                            setShowUserMenu(false);
+                          }}
+                          className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition-colors mb-1 ${
+                            currentTab === 'admin'
+                              ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs'
+                              : 'text-purple-700 bg-purple-50 hover:bg-purple-100'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                          <span>Admin Dashboard</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           onSelectTab('profile');

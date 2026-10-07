@@ -353,6 +353,36 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </button>
               </p>
             </div>
+
+            {/* Lối tắt Đăng nhập Quản Trị Viên Kocity */}
+            <div className="mt-3 pt-2.5 border-t border-dashed border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  const adminUser: KOCUser = {
+                    id: 'admin-kocity-root',
+                    name: 'Quản Trị Viên KOCITY',
+                    role: 'admin',
+                    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+                    tiktokHandle: '@adminwebkocity1235',
+                    followers: 'Quản Trị Viên',
+                    phone: '0999.888.999',
+                    email: 'admin@kocity.vn',
+                    verified: true,
+                    city: 'Hà Nội',
+                    password: 'kocity6102026',
+                  };
+                  onLoginSuccess(adminUser, false);
+                }}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold transition-all border border-purple-200 cursor-pointer shadow-xs"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[17px] text-purple-600">admin_panel_settings</span>
+                  <span>Đăng nhập quyền Quản Trị Viên (Admin)</span>
+                </div>
+                <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full font-bold">1 chạm</span>
+              </button>
+            </div>
           </div>
         ) : (
           /* TAB 2: REGISTER */

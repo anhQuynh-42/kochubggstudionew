@@ -3,11 +3,13 @@ import React from 'react';
 interface FooterProps {
   onOpenBrandContact?: () => void;
   onOpenGuidelines?: () => void;
+  onOpenAdminLogin?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenBrandContact,
   onOpenGuidelines,
+  onOpenAdminLogin,
 }) => {
   return (
     <footer id="footer-section" className="mt-12 border-t border-slate-200 bg-white text-slate-600">
@@ -130,12 +132,25 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Chân trang đáy */}
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400">
           <p>© 2025 Kocity. Nền tảng kết nối KOC & Brand hàng đầu Việt Nam.</p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span>Duyệt mẫu 24/7</span>
             <span>•</span>
             <span>Ký quỹ Escrow minh bạch</span>
             <span>•</span>
             <span>Giao mẫu nhanh</span>
+            {onOpenAdminLogin && (
+              <>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={onOpenAdminLogin}
+                  className="text-purple-600 hover:text-purple-800 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[13px]">shield_person</span>
+                  <span>Cổng Quản trị viên</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

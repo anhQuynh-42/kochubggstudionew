@@ -67,7 +67,31 @@ export const App: React.FC = () => {
   };
 
   // Navigation & Active Screen (KOC-centric)
-  const [currentTab, setCurrentTab] = useState<string>('marketplace');
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    try {
+      const savedTab = localStorage.getItem('koctrend_active_tab');
+      const savedUserStr = localStorage.getItem('koctrend_koc_profile');
+      if (savedUserStr) {
+        const u = JSON.parse(savedUserStr);
+        if (u.role === 'admin') {
+          return savedTab || 'admin';
+        }
+      }
+      return savedTab || 'marketplace';
+    } catch {
+      return 'marketplace';
+    }
+  });
+
+  const handleSelectTab = (tab: string) => {
+    setCurrentTab(tab);
+    try {
+      localStorage.setItem('koctrend_active_tab', tab);
+    } catch (e) {
+      console.warn(e);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [editingCampaignFromExternal, setEditingCampaignFromExternal] = useState<Campaign | null>(null);
 
@@ -380,8 +404,7 @@ export const App: React.FC = () => {
 
     // 1. Phân quyền ADMIN: Chuyển thẳng vào Admin Dashboard
     if (user.role === 'admin') {
-      setCurrentTab('admin');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      handleSelectTab('admin');
       showToast(
         'Đăng nhập Quản Trị Viên thành công!',
         `Chào mừng ${user.name} đến với Admin Dashboard KOCITY.`,
@@ -477,9 +500,11 @@ export const App: React.FC = () => {
     setCurrentUser(null);
     try {
       localStorage.removeItem('koctrend_koc_profile');
+      localStorage.removeItem('koctrend_active_tab');
     } catch (e) {
       console.warn(e);
     }
+    handleSelectTab('marketplace');
     setNotifications((prev) => [
       {
         id: `notif-${Date.now()}`,
@@ -660,10 +685,7 @@ export const App: React.FC = () => {
         onOpenLogin={(mode, prompt) => handleOpenLogin(mode || 'login', prompt)}
         onLogout={handleLogout}
         currentTab={currentTab}
-        onSelectTab={(tab) => {
-          setCurrentTab(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
+        onSelectTab={handleSelectTab}
         notifications={notifications}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -754,6 +776,13 @@ export const App: React.FC = () => {
         <Footer
           onOpenBrandContact={() => setIsBrandContactOpen(true)}
           onOpenGuidelines={() => setIsGuidelinesOpen(true)}
+          onOpenAdminLogin={() => {
+            if (currentUser?.role === 'admin') {
+              handleSelectTab('admin');
+            } else {
+              handleOpenLogin('login');
+            }
+          }}
         />
       )}
 
