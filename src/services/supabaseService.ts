@@ -13,6 +13,7 @@ export async function getCampaignsFromSupabase(): Promise<Campaign[] | null> {
     const { data, error } = await supabase
       .from('campaigns')
       .select('*')
+      .neq('id', '__SITE_CONFIG__')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -181,6 +182,98 @@ export function subscribeToApplicationsRealtime(
     .subscribe();
 
   // Trả về hàm hủy đăng ký khi component unmount
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// 7. Lấy ảnh Banner đầu trang (Hero Image) từ cấu hình đám mây Supabase
+export async function getHeroBannerFromSupabase(): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('productHeroImage')
+      .eq('id', '__SITE_CONFIG__')
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return data.productHeroImage || null;
+  } catch (err) {
+    console.error('Lỗi lấy Hero Banner từ Supabase:', err);
+    return null;
+  }
+}
+
+// 8. Lưu ảnh Banner đầu trang lên Supabase (Đồng bộ cho tất cả người dùng xem web)
+export async function saveHeroBannerToSupabase(imageUrl: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const payload = {
+      id: '__SITE_CONFIG__',
+      code: 'CONFIG',
+      title: 'Site Configuration',
+      brandName: 'KOCITY',
+      category: 'SYSTEM_CONFIG',
+      productHeroImage: imageUrl,
+    };
+
+    const { error } = await supabase.from('campaigns').upsert(payload);
+    if (error) {
+      console.error('Lỗi khi lưu Hero Banner lên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Lỗi lưu Hero Banner:', err);
+    return false;
+  }
+}
+
+// 9. Khôi phục ảnh Banner về mặc định trên Supabase
+export async function deleteHeroBannerFromSupabase(): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { error } = await supabase.from('campaigns').delete().eq('id', '__SITE_CONFIG__');
+    if (error) {
+      console.error('Lỗi khi xóa cấu hình Hero Banner trên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Lỗi xóa cấu hình Hero Banner:', err);
+    return false;
+  }
+}
+
+// 10. Lắng nghe cập nhật Hero Banner theo thời gian thực (Realtime)
+// Khi Quản trị viên đổi ảnh, tất cả người dùng đang mở web sẽ tự đổi ảnh tức thì
+export function subscribeToHeroBannerRealtime(onBannerUpdate: (newUrl: string | null) => void) {
+  if (!isSupabaseConfigured()) return () => {};
+
+  const channel = supabase
+    .channel('realtime_hero_banner_channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'campaigns',
+        filter: 'id=eq.__SITE_CONFIG__',
+      },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          onBannerUpdate(null);
+        } else if (payload.new && (payload.new as { productHeroImage?: string }).productHeroImage) {
+          onBannerUpdate((payload.new as { productHeroImage?: string }).productHeroImage || null);
+        }
+      }
+    )
+    .subscribe();
+
   return () => {
     supabase.removeChannel(channel);
   };

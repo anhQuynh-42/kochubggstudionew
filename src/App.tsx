@@ -15,6 +15,7 @@ import { Toast, ToastNotification } from './components/Toast';
 import { BrandContactModal } from './components/BrandContactModal';
 import { AdminView } from './components/AdminView';
 import { isSupabaseConfigured } from './lib/supabase';
+import kocityHeroStudio from './assets/images/kocity_hero_studio.jpg';
 import {
   getCampaignsFromSupabase,
   getApplicationsFromSupabase,
@@ -22,6 +23,10 @@ import {
   updateApplicationStatusOnSupabase,
   createCampaignOnSupabase,
   subscribeToApplicationsRealtime,
+  getHeroBannerFromSupabase,
+  saveHeroBannerToSupabase,
+  deleteHeroBannerFromSupabase,
+  subscribeToHeroBannerRealtime,
 } from './services/supabaseService';
 
 export const App: React.FC = () => {
@@ -60,6 +65,15 @@ export const App: React.FC = () => {
     }
   });
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+
+  // Hero Image Banner State (đồng bộ localStorage và Supabase Realtime toàn hệ thống)
+  const [heroImage, setHeroImage] = useState<string>(() => {
+    try {
+      return localStorage.getItem('kocity_custom_hero_image') || kocityHeroStudio;
+    } catch {
+      return kocityHeroStudio;
+    }
+  });
 
   // Kết nối Supabase: Tải dữ liệu đám mây khi khởi động & lắng nghe cập nhật Realtime
   useEffect(() => {
@@ -109,8 +123,20 @@ export const App: React.FC = () => {
       }
     });
 
-    // 3. Đăng ký nhận thông báo thời gian thực Realtime (không cần F5)
-    const unsubscribe = subscribeToApplicationsRealtime(
+    // 3. Tải Banner đầu trang từ Supabase
+    getHeroBannerFromSupabase().then((banner) => {
+      if (banner) {
+        setHeroImage(banner);
+        try {
+          localStorage.setItem('kocity_custom_hero_image', banner);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+    });
+
+    // 4. Đăng ký nhận thông báo thời gian thực Realtime cho Đơn ứng tuyển
+    const unsubscribeApps = subscribeToApplicationsRealtime(
       (newApp) => {
         setApplications((prev) => {
           if (prev.some((a) => a.id === newApp.id)) return prev;
@@ -137,8 +163,28 @@ export const App: React.FC = () => {
       }
     );
 
+    // 5. Đăng ký nhận thay đổi thời gian thực cho Banner đầu trang (Hero Image Realtime)
+    const unsubscribeHero = subscribeToHeroBannerRealtime((newBanner) => {
+      if (newBanner) {
+        setHeroImage(newBanner);
+        try {
+          localStorage.setItem('kocity_custom_hero_image', newBanner);
+        } catch (e) {
+          console.warn(e);
+        }
+      } else {
+        setHeroImage(kocityHeroStudio);
+        try {
+          localStorage.removeItem('kocity_custom_hero_image');
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+    });
+
     return () => {
-      unsubscribe();
+      unsubscribeApps();
+      unsubscribeHero();
     };
   }, []);
 
@@ -456,6 +502,47 @@ export const App: React.FC = () => {
       }).length
     : 0;
 
+  // Handlers: Cập nhật & Khôi phục Hero Banner đầu trang (đồng bộ Supabase Realtime)
+  const handleUpdateHeroImage = async (newImg: string) => {
+    setHeroImage(newImg);
+    try {
+      localStorage.setItem('kocity_custom_hero_image', newImg);
+    } catch (e) {
+      console.warn(e);
+    }
+    const ok = await saveHeroBannerToSupabase(newImg);
+    if (ok) {
+      showToast(
+        'Đã cập nhật ảnh Banner!',
+        'Ảnh mới đã được đồng bộ lên toàn hệ thống theo thời gian thực.',
+        'success'
+      );
+    } else {
+      showToast(
+        'Đã lưu ảnh cục bộ!',
+        'Đã lưu trên máy của bạn (kiểm tra lại kết nối Supabase để đồng bộ mọi thiết bị).',
+        'info'
+      );
+    }
+  };
+
+  const handleResetHeroImage = async () => {
+    setHeroImage(kocityHeroStudio);
+    try {
+      localStorage.removeItem('kocity_custom_hero_image');
+    } catch (e) {
+      console.warn(e);
+    }
+    const ok = await deleteHeroBannerFromSupabase();
+    if (ok) {
+      showToast(
+        'Đã khôi phục ảnh mặc định!',
+        'Hệ thống đã chuyển về ảnh gốc unboxing ban đầu.',
+        'info'
+      );
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#faf2f8] text-slate-900">
       {/* 1. Header Navigation Bar (KOC-tailored, with Guest/Logged-in state) */}
@@ -487,6 +574,9 @@ export const App: React.FC = () => {
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
             currentUser={currentUser}
+            heroImage={heroImage}
+            onUpdateHeroImage={handleUpdateHeroImage}
+            onResetHeroImage={handleResetHeroImage}
           />
         )}
 

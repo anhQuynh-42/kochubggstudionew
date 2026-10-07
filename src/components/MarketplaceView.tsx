@@ -12,6 +12,9 @@ interface MarketplaceViewProps {
   bookmarkedIds?: string[];
   onToggleBookmark?: (campaign: Campaign) => void;
   currentUser?: KOCUser | null;
+  heroImage?: string;
+  onUpdateHeroImage?: (newImg: string) => Promise<boolean | void> | void;
+  onResetHeroImage?: () => Promise<boolean | void> | void;
 }
 
 const TICKER_ITEMS = [
@@ -56,59 +59,108 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   bookmarkedIds = [],
   onToggleBookmark,
   currentUser,
+  heroImage: propHeroImage,
+  onUpdateHeroImage,
+  onResetHeroImage,
 }) => {
   // Hero Image customisation (Admin can change or reset to default)
-  const [heroImage, setHeroImage] = useState<string>(() => {
+  const [localHeroImage, setLocalHeroImage] = useState<string>(() => {
     try {
       return localStorage.getItem('kocity_custom_hero_image') || kocityHeroStudio;
     } catch {
       return kocityHeroStudio;
     }
   });
+
+  const activeHeroImage = propHeroImage || localHeroImage;
+
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [tempImageUrl, setTempImageUrl] = useState('');
   const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
+  const [isSavingHero, setIsSavingHero] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 6 * 1024 * 1024) {
-        alert('Vui lòng chọn ảnh dung lượng dưới 6MB');
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Vui lòng chọn ảnh dung lượng dưới 10MB');
         return;
       }
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
-          setTempImagePreview(reader.result);
+          // Nén tối ưu ảnh để đồng bộ Supabase & Realtime mượt mà
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1920;
+            let width = img.width;
+            let height = img.height;
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressed = canvas.toDataURL('image/jpeg', 0.85);
+              setTempImagePreview(compressed);
+            } else {
+              setTempImagePreview(reader.result as string);
+            }
+          };
+          img.src = reader.result;
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSaveHeroImage = () => {
+  const handleSaveHeroImage = async () => {
     const newImg = tempImagePreview || tempImageUrl.trim();
     if (newImg) {
-      setHeroImage(newImg);
+      setIsSavingHero(true);
+      setLocalHeroImage(newImg);
       try {
         localStorage.setItem('kocity_custom_hero_image', newImg);
       } catch (err) {
         console.warn('Could not save to localStorage', err);
       }
+
+      if (onUpdateHeroImage) {
+        try {
+          await onUpdateHeroImage(newImg);
+        } catch (err) {
+          console.error('Error saving hero to Supabase:', err);
+        }
+      }
+      setIsSavingHero(false);
       setIsImageModalOpen(false);
     }
   };
 
-  const handleResetToDefault = () => {
-    setHeroImage(kocityHeroStudio);
+  const handleResetToDefault = async () => {
+    setIsSavingHero(true);
+    setLocalHeroImage(kocityHeroStudio);
     try {
       localStorage.removeItem('kocity_custom_hero_image');
     } catch (err) {
       console.warn('Could not remove from localStorage', err);
     }
+
+    if (onResetHeroImage) {
+      try {
+        await onResetHeroImage();
+      } catch (err) {
+        console.error('Error resetting hero on Supabase:', err);
+      }
+    }
     setTempImagePreview(null);
     setTempImageUrl('');
+    setIsSavingHero(false);
     setIsImageModalOpen(false);
   };
 
@@ -253,7 +305,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
       <section className="relative overflow-hidden rounded-3xl min-h-[500px] sm:min-h-[540px] p-6 sm:p-10 lg:p-12 mb-4 border border-purple-100/90 shadow-md transition-shadow flex flex-col justify-center">
         {/* Full-Cover Background Image: Positioned so the subject is front and center on the right, 100% razor sharp */}
         <img
-          src={heroImage}
+          src={activeHeroImage}
           alt="Kocity Hero Studio"
           className="absolute inset-0 h-full w-full object-cover object-center lg:object-[75%_center] transition-transform duration-700"
         />
@@ -1111,7 +1163,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
               </label>
               <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                 <img
-                  src={tempImagePreview || tempImageUrl.trim() || heroImage}
+                  src={tempImagePreview || tempImageUrl.trim() || activeHeroImage}
                   alt="Hero Preview"
                   className="h-full w-full object-cover object-center"
                 />
@@ -1163,7 +1215,8 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
               <button
                 type="button"
                 onClick={handleResetToDefault}
-                className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                disabled={isSavingHero}
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 disabled:opacity-50 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
                 title="Khôi phục lại bức ảnh Studio unboxing mặc định"
               >
                 <span className="material-symbols-outlined text-[16px] text-amber-500">replay</span>
@@ -1174,18 +1227,21 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsImageModalOpen(false)}
-                  className="flex-1 sm:flex-none rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  disabled={isSavingHero}
+                  className="flex-1 sm:flex-none rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveHeroImage}
-                  disabled={!tempImagePreview && !tempImageUrl.trim()}
+                  disabled={isSavingHero || (!tempImagePreview && !tempImageUrl.trim())}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:opacity-95 disabled:opacity-50 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px]">check</span>
-                  <span>Lưu thay đổi</span>
+                  <span className="material-symbols-outlined text-[16px]">
+                    {isSavingHero ? 'sync' : 'check'}
+                  </span>
+                  <span>{isSavingHero ? 'Đang lưu lên hệ thống...' : 'Lưu & Đồng bộ Realtime'}</span>
                 </button>
               </div>
             </div>
