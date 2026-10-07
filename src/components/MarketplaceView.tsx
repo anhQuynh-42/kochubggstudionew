@@ -15,6 +15,7 @@ interface MarketplaceViewProps {
   heroImage?: string;
   onUpdateHeroImage?: (newImg: string) => Promise<boolean | void> | void;
   onResetHeroImage?: () => Promise<boolean | void> | void;
+  onEditCampaign?: (campaign: Campaign) => void;
 }
 
 const TICKER_ITEMS = [
@@ -62,7 +63,23 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   heroImage: propHeroImage,
   onUpdateHeroImage,
   onResetHeroImage,
+  onEditCampaign,
 }) => {
+  // Hàm tính số ngày còn lại theo thời gian thực
+  const calculateDaysLeft = (endDateStr?: string, defaultDays: number = 15): number => {
+    if (!endDateStr) return defaultDays;
+    try {
+      const end = new Date(endDateStr);
+      const now = new Date();
+      end.setHours(23, 59, 59, 999);
+      now.setHours(0, 0, 0, 0);
+      const diffTime = end.getTime() - now.getTime();
+      return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    } catch {
+      return defaultDays;
+    }
+  };
+
   // Hero Image customisation (Admin can change or reset to default)
   const [localHeroImage, setLocalHeroImage] = useState<string>(() => {
     try {
@@ -753,11 +770,31 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                       </span>
                     </button>
 
-                    {/* Top-Right Badges: Countdown + Bookmark */}
-                    <div className="absolute right-3.5 top-3.5 flex items-center gap-2">
+                    {/* Top-Right Badges: Countdown + Edit (dành cho Admin) + Bookmark */}
+                    <div className="absolute right-3.5 top-3.5 flex items-center gap-1.5 z-10">
+                      {currentUser?.role === 'admin' && onEditCampaign && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditCampaign(camp);
+                          }}
+                          className="flex items-center gap-1 rounded-xl bg-blue-600 hover:bg-blue-700 backdrop-blur-md px-2.5 py-1.5 text-xs font-bold text-white shadow-md transition-all cursor-pointer"
+                          title="Chỉnh sửa chiến dịch này (Đổi ảnh, sửa thông tin, ngày đếm ngược...)"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
+                          <span>Sửa</span>
+                        </button>
+                      )}
+
                       <div className="flex items-center gap-1 rounded-xl bg-black/60 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-white shadow-xs">
                         <span className="material-symbols-outlined text-[14px] text-amber-400">timer</span>
-                        <span>Còn {camp.daysLeft} ngày</span>
+                        <span>
+                          {(() => {
+                            const days = calculateDaysLeft(camp.endDate, camp.daysLeft);
+                            return days > 0 ? `Còn ${days} ngày` : 'Hết hạn';
+                          })()}
+                        </span>
                       </div>
 
                       {onToggleBookmark && (

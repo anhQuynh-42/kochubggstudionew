@@ -26,6 +26,8 @@ export interface Campaign {
   brandLogo: string;
   category: string;
   daysLeft: number;
+  startDate?: string;
+  endDate?: string;
   platform: string;
   followerRequirement: string;
   benefits: Benefit[];

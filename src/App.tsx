@@ -30,6 +30,21 @@ import {
   subscribeToHeroBannerRealtime,
 } from './services/supabaseService';
 
+// Hàm tính số ngày còn lại theo thời gian thực dựa vào ngày kết thúc (endDate)
+export const calculateDaysLeft = (endDateStr?: string, defaultDays: number = 15): number => {
+  if (!endDateStr) return defaultDays;
+  try {
+    const end = new Date(endDateStr);
+    const now = new Date();
+    end.setHours(23, 59, 59, 999);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  } catch {
+    return defaultDays;
+  }
+};
+
 export const App: React.FC = () => {
   // Authentication state: KOC starts as a guest explorer or loads saved profile
   const [currentUser, setCurrentUser] = useState<KOCUser | null>(() => {
@@ -54,9 +69,27 @@ export const App: React.FC = () => {
   // Navigation & Active Screen (KOC-centric)
   const [currentTab, setCurrentTab] = useState<string>('marketplace');
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [editingCampaignFromExternal, setEditingCampaignFromExternal] = useState<Campaign | null>(null);
 
-  // Core Data State: Khởi tạo với dữ liệu đã lưu hoặc mặc định
-  const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
+  // Core Data State: Khởi tạo với dữ liệu đã lưu hoặc mặc định, tự động tính số ngày còn lại theo thời gian thực
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
+    try {
+      const saved = localStorage.getItem('koctrend_campaigns');
+      if (saved) {
+        const parsed: Campaign[] = JSON.parse(saved);
+        return parsed.map((c) => ({
+          ...c,
+          daysLeft: calculateDaysLeft(c.endDate, c.daysLeft),
+        }));
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    return INITIAL_CAMPAIGNS.map((c) => ({
+      ...c,
+      daysLeft: calculateDaysLeft(c.endDate, c.daysLeft),
+    }));
+  });
   const [applications, setApplications] = useState<KOCApplication[]>(() => {
     try {
       const saved = localStorage.getItem('koctrend_applications');
@@ -134,19 +167,33 @@ export const App: React.FC = () => {
           const map = new Map(INITIAL_CAMPAIGNS.map((c) => [c.id, c]));
           data.forEach((supaCamp) => {
             const local = map.get(supaCamp.id);
+            const calculatedDays = calculateDaysLeft(supaCamp.endDate, supaCamp.daysLeft);
             if (local) {
               map.set(supaCamp.id, {
                 ...supaCamp,
-                productHeroImage: local.productHeroImage,
-                galleryImages: local.galleryImages,
-                brandLogo: local.brandLogo,
-                sampleProducts: local.sampleProducts || supaCamp.sampleProducts,
+                daysLeft: calculatedDays,
+                productHeroImage: supaCamp.productHeroImage || local.productHeroImage,
+                galleryImages:
+                  supaCamp.galleryImages && supaCamp.galleryImages.length > 0
+                    ? supaCamp.galleryImages
+                    : local.galleryImages,
+                brandLogo: supaCamp.brandLogo || local.brandLogo,
+                sampleProducts: supaCamp.sampleProducts || local.sampleProducts,
               });
             } else {
-              map.set(supaCamp.id, supaCamp);
+              map.set(supaCamp.id, {
+                ...supaCamp,
+                daysLeft: calculatedDays,
+              });
             }
           });
-          return Array.from(map.values());
+          const result = Array.from(map.values());
+          try {
+            localStorage.setItem('koctrend_campaigns', JSON.stringify(result));
+          } catch (e) {
+            console.warn(e);
+          }
+          return result;
         });
       }
     });
@@ -589,6 +636,22 @@ export const App: React.FC = () => {
     }
   };
 
+  // Handlers: Cập nhật danh sách chiến dịch (Lưu state & localStorage)
+  const handleUpdateCampaigns = (newCampList: Campaign[]) => {
+    setCampaigns(newCampList);
+    try {
+      localStorage.setItem('koctrend_campaigns', JSON.stringify(newCampList));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const handleEditCampaignFromMarketplace = (camp: Campaign) => {
+    setEditingCampaignFromExternal(camp);
+    setCurrentTab('admin');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#faf2f8] text-slate-900">
       {/* 1. Header Navigation Bar (KOC-tailored, with Guest/Logged-in state) */}
@@ -623,6 +686,7 @@ export const App: React.FC = () => {
             heroImage={heroImage}
             onUpdateHeroImage={handleUpdateHeroImage}
             onResetHeroImage={handleResetHeroImage}
+            onEditCampaign={handleEditCampaignFromMarketplace}
           />
         )}
 
@@ -674,8 +738,10 @@ export const App: React.FC = () => {
         {currentTab === 'admin' && (
           <AdminView
             campaigns={campaigns}
-            onUpdateCampaigns={setCampaigns}
+            onUpdateCampaigns={handleUpdateCampaigns}
             applications={applications}
+            initialEditingCampaign={editingCampaignFromExternal}
+            onClearInitialEditingCampaign={() => setEditingCampaignFromExternal(null)}
             onUpdateApplications={setApplications}
             onShowToast={showToast}
             onBackToMarketplace={handleBackToMarketplace}

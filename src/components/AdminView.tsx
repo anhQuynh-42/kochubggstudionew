@@ -8,6 +8,28 @@ import {
 } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../lib/supabase';
 
+// Hàm tính số ngày còn lại theo thời gian thực từ chuỗi ngày kết thúc
+export const calculateDaysLeftFromDate = (endDateStr?: string, fallbackDays: number = 15): number => {
+  if (!endDateStr) return fallbackDays;
+  try {
+    const end = new Date(endDateStr);
+    const now = new Date();
+    end.setHours(23, 59, 59, 999);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  } catch {
+    return fallbackDays;
+  }
+};
+
+// Hàm lấy chuỗi YYYY-MM-DD sau N ngày
+export const getDefaultEndDateString = (daysAhead: number = 15): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return d.toISOString().split('T')[0];
+};
+
 interface AdminViewProps {
   campaigns: Campaign[];
   onUpdateCampaigns: (campaigns: Campaign[]) => void;
@@ -15,6 +37,8 @@ interface AdminViewProps {
   onUpdateApplications: (apps: KOCApplication[]) => void;
   onShowToast: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
   onBackToMarketplace: () => void;
+  initialEditingCampaign?: Campaign | null;
+  onClearInitialEditingCampaign?: () => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -24,6 +48,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onUpdateApplications,
   onShowToast,
   onBackToMarketplace,
+  initialEditingCampaign,
+  onClearInitialEditingCampaign,
 }) => {
   // Navigation inside Admin (Sidebar Tab)
   const [activeAdminTab, setActiveAdminTab] = useState<
@@ -392,7 +418,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
       brandName: newCampaignData.brandName,
       brandLogo: 'https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=100&auto=format&fit=crop&q=60',
       category: newCampaignData.category,
-      daysLeft: Number(newCampaignData.daysLeft) || 15,
+      daysLeft: newCampaignData.endDate
+        ? calculateDaysLeftFromDate(newCampaignData.endDate, Number(newCampaignData.daysLeft) || 15)
+        : Number(newCampaignData.daysLeft) || 15,
+      endDate: newCampaignData.endDate || getDefaultEndDateString(Number(newCampaignData.daysLeft) || 15),
+      startDate: new Date().toISOString().split('T')[0],
       platform: newCampaignData.platform,
       followerRequirement: newCampaignData.followerRequirement,
       totalSpots: Number(newCampaignData.totalSpots) || 50,
@@ -433,6 +463,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       commissionRate: '10%',
       bookingFee: 'Freecast (Mẫu 0đ)',
       daysLeft: 20,
+      endDate: getDefaultEndDateString(20),
       description: '',
       productHeroImage: '',
     });
@@ -442,8 +473,65 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Action: Open Edit Campaign Modal
   const handleOpenEditCampaign = (camp: Campaign) => {
-    setEditingCampaign({ ...camp });
+    const effectiveDays = camp.endDate ? calculateDaysLeftFromDate(camp.endDate, camp.daysLeft) : camp.daysLeft;
+    const effectiveEndDate = camp.endDate || getDefaultEndDateString(effectiveDays);
+    setEditingCampaign({
+      ...camp,
+      daysLeft: effectiveDays,
+      endDate: effectiveEndDate,
+    });
     setIsEditCampaignModalOpen(true);
+  };
+
+  // Lắng nghe khi có yêu cầu sửa chiến dịch từ bên ngoài (ví dụ MarketplaceView)
+  useEffect(() => {
+    if (initialEditingCampaign) {
+      setActiveAdminTab('campaigns');
+      handleOpenEditCampaign(initialEditingCampaign);
+      onClearInitialEditingCampaign?.();
+    }
+  }, [initialEditingCampaign]);
+
+  // Handler đổi ngày kết thúc trong form sửa
+  const handleEditEndDateChange = (newDate: string) => {
+    if (!editingCampaign) return;
+    const newDays = calculateDaysLeftFromDate(newDate, editingCampaign.daysLeft);
+    setEditingCampaign({
+      ...editingCampaign,
+      endDate: newDate,
+      daysLeft: newDays,
+    });
+  };
+
+  // Handler đổi số ngày còn lại trong form sửa
+  const handleEditDaysLeftChange = (newDays: number) => {
+    if (!editingCampaign) return;
+    const newDate = getDefaultEndDateString(newDays);
+    setEditingCampaign({
+      ...editingCampaign,
+      daysLeft: newDays,
+      endDate: newDate,
+    });
+  };
+
+  // Handler đổi ngày kết thúc trong form tạo mới
+  const handleCreateEndDateChange = (newDate: string) => {
+    const newDays = calculateDaysLeftFromDate(newDate, newCampaignData.daysLeft);
+    setNewCampaignData({
+      ...newCampaignData,
+      endDate: newDate,
+      daysLeft: newDays,
+    });
+  };
+
+  // Handler đổi số ngày còn lại trong form tạo mới
+  const handleCreateDaysLeftChange = (newDays: number) => {
+    const newDate = getDefaultEndDateString(newDays);
+    setNewCampaignData({
+      ...newCampaignData,
+      daysLeft: newDays,
+      endDate: newDate,
+    });
   };
 
   // Action: Save Edited Campaign
@@ -456,17 +544,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
+    const calculatedDays = editingCampaign.endDate
+      ? calculateDaysLeftFromDate(editingCampaign.endDate, editingCampaign.daysLeft)
+      : editingCampaign.daysLeft;
+
+    const finalEditedCamp: Campaign = {
+      ...editingCampaign,
+      daysLeft: calculatedDays,
+    };
+
     const updatedList = campaigns.map((c) =>
-      c.id === editingCampaign.id ? editingCampaign : c
+      c.id === finalEditedCamp.id ? finalEditedCamp : c
     );
     onUpdateCampaigns(updatedList);
 
     // Đồng bộ lên Supabase nếu có kết nối
-    updateCampaignOnSupabase(editingCampaign.id, editingCampaign);
+    updateCampaignOnSupabase(finalEditedCamp.id, finalEditedCamp);
 
     onShowToast(
-      'Cập nhật thành công!',
-      `Đã lưu thay đổi cho chiến dịch "${editingCampaign.brandName}".`,
+      'Cập nhật chiến dịch thành công!',
+      `Đã lưu thay đổi cho chiến dịch "${finalEditedCamp.brandName}" (Thời hạn còn ${finalEditedCamp.daysLeft} ngày).`,
       'success'
     );
     setIsEditCampaignModalOpen(false);
@@ -2372,18 +2469,32 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 >
                   <div>
                     {/* Header Image */}
-                    <div className="relative h-40 w-full overflow-hidden bg-slate-100">
+                    <div className="relative h-44 w-full overflow-hidden bg-slate-100 group">
                       <img
                         src={camp.productHeroImage}
                         alt={camp.title}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
-                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-lg bg-blue-900/80 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-white border border-blue-700/40">
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-lg bg-blue-900/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-white border border-blue-700/40">
                         <span>{camp.brandName}</span>
                       </div>
-                      <div className="absolute top-2.5 right-2.5 rounded-lg bg-blue-600 px-2 py-0.5 text-[11px] font-bold text-white">
-                        Còn {camp.daysLeft} ngày
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs">
+                        <span className="material-symbols-outlined text-[13px]">timer</span>
+                        <span>
+                          {(() => {
+                            const days = calculateDaysLeftFromDate(camp.endDate, camp.daysLeft);
+                            return days > 0 ? `Còn ${days} ngày` : 'Hết hạn';
+                          })()}
+                        </span>
                       </div>
+                      {/* Nút sửa ảnh nhanh khi hover ảnh */}
+                      <button
+                        onClick={() => handleOpenEditCampaign(camp)}
+                        className="absolute inset-0 bg-black/45 backdrop-blur-2xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-bold cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                        <span>Đổi ảnh / Sửa chiến dịch</span>
+                      </button>
                     </div>
 
                     {/* Content */}
@@ -2426,16 +2537,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </div>
 
                   {/* Actions footer */}
-                  <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50/50">
-                    <span className="font-mono text-[11px] text-slate-400">{camp.code}</span>
+                  <div className="p-3.5 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50/70">
+                    <span className="font-mono text-[11px] text-slate-400 font-bold">{camp.code}</span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleOpenEditCampaign(camp)}
-                        className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-50 transition-all cursor-pointer shadow-2xs"
-                        title="Chỉnh sửa toàn bộ thông tin chiến dịch"
+                        className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 font-bold transition-all cursor-pointer shadow-sm shadow-blue-600/20 active:scale-95"
+                        title="Chỉnh sửa thông tin chiến dịch, đổi ảnh, cài đặt ngày đếm ngược"
                       >
-                        <span className="material-symbols-outlined text-[15px]">edit</span>
-                        <span>Sửa</span>
+                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                        <span>Sửa chiến dịch</span>
                       </button>
                       <button
                         onClick={() => {
@@ -2445,7 +2556,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             onShowToast('Đã xoá chiến dịch', camp.title, 'info');
                           }
                         }}
-                        className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-1.5 font-semibold text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shadow-2xs"
+                        className="flex items-center gap-1 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 px-2.5 py-1.5 font-bold transition-all cursor-pointer"
                         title="Xoá chiến dịch"
                       >
                         <span className="material-symbols-outlined text-[15px]">delete</span>
@@ -2885,6 +2996,46 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </div>
 
+              {/* Ngày kết thúc & Thời gian đếm ngược theo thời gian thực */}
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[17px] text-blue-600">timer</span>
+                    <span>Cài đặt thời hạn & Đếm ngược theo thời gian thực</span>
+                  </label>
+                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                    {calculateDaysLeftFromDate(newCampaignData.endDate, newCampaignData.daysLeft) > 0
+                      ? `Còn ${calculateDaysLeftFromDate(newCampaignData.endDate, newCampaignData.daysLeft)} ngày`
+                      : 'Hết hạn'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      1. Chọn ngày kết thúc chiến dịch:
+                    </span>
+                    <input
+                      type="date"
+                      value={newCampaignData.endDate}
+                      onChange={(e) => handleCreateEndDateChange(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      2. Hoặc nhập số ngày đếm ngược:
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newCampaignData.daysLeft}
+                      onChange={(e) => handleCreateDaysLeftChange(Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* =========================================================================
                   KHU VỰC TẢI ẢNH TRỰC TIẾP HOẶC DÁN (PASTE) TỪ CLIPBOARD
                   ========================================================================= */}
@@ -3084,7 +3235,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-700">Tổng số slot</label>
                   <input
@@ -3114,15 +3265,45 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700">Số ngày còn</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editingCampaign.daysLeft}
-                    onChange={(e) => setEditingCampaign({ ...editingCampaign, daysLeft: Number(e.target.value) })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:bg-white focus:outline-none"
-                  />
+              </div>
+
+              {/* Cài đặt thời hạn & Đếm ngược thời gian thực */}
+              <div className="rounded-2xl border border-indigo-100 bg-linear-to-r from-blue-50/60 to-indigo-50/60 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    Cài đặt thời gian chiến dịch (Đếm ngược thời gian thực)
+                  </label>
+                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
+                    {calculateDaysLeftFromDate(editingCampaign.endDate, editingCampaign.daysLeft) > 0
+                      ? `Còn ${calculateDaysLeftFromDate(editingCampaign.endDate, editingCampaign.daysLeft)} ngày`
+                      : 'Hết hạn'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      1. Chọn ngày kết thúc chiến dịch:
+                    </span>
+                    <input
+                      type="date"
+                      value={editingCampaign.endDate || getDefaultEndDateString(editingCampaign.daysLeft)}
+                      onChange={(e) => handleEditEndDateChange(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      2. Hoặc chỉnh số ngày đếm ngược:
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editingCampaign.daysLeft}
+                      onChange={(e) => handleEditDaysLeftChange(Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
