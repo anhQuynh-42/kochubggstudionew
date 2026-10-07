@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Campaign } from '../types';
+import { Campaign, KOCUser } from '../types';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
 
 interface CampaignDetailViewProps {
@@ -9,6 +8,8 @@ interface CampaignDetailViewProps {
   isBookmarked?: boolean;
   onToggleBookmark?: (campaign: Campaign) => void;
   onShowToast?: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
+  currentUser?: KOCUser | null;
+  onEditCampaign?: (campaign: Campaign) => void;
 }
 
 export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
@@ -18,6 +19,8 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
   isBookmarked = false,
   onToggleBookmark,
   onShowToast,
+  currentUser,
+  onEditCampaign,
 }) => {
   const [copiedTag, setCopiedTag] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -71,6 +74,17 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
         </nav>
 
         <div className="flex items-center gap-2">
+          {currentUser?.role === 'admin' && onEditCampaign && (
+            <button
+              onClick={() => onEditCampaign(campaign)}
+              className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+              title="Chỉnh sửa thông tin chiến dịch, đổi ảnh, cài ngày kết thúc"
+            >
+              <span className="material-symbols-outlined text-[16px]">edit</span>
+              <span>Sửa chiến dịch</span>
+            </button>
+          )}
+
           {onToggleBookmark && (
             <button
               onClick={() => onToggleBookmark(campaign)}
@@ -624,6 +638,23 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                 <span>Vào nhóm Zalo KOC trao đổi về chiến dịch</span>
                 <span className="material-symbols-outlined text-[14px]">open_in_new</span>
               </a>
+
+              {/* Dành riêng cho Quản trị viên */}
+              {currentUser?.role === 'admin' && onEditCampaign && (
+                <div className="mt-4 pt-4 border-t border-dashed border-blue-200">
+                  <button
+                    type="button"
+                    onClick={() => onEditCampaign(campaign)}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 py-3.5 text-center text-xs font-bold text-white shadow-md shadow-blue-500/20 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                    <span>SỬA CHIẾN DỊCH (QUẢN TRỊ VIÊN)</span>
+                  </button>
+                  <p className="mt-1.5 text-center text-[10px] text-slate-500">
+                    Bấm để đổi ảnh, sửa tiêu đề, số slot, hoa hồng hoặc ngày kết thúc.
+                  </p>
+                </div>
+              )}
 
               {/* Escrow Guarantee Pill */}
               <div className="mt-5 flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-[11px] font-medium text-slate-700 border border-slate-200">

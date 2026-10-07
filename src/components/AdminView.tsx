@@ -515,12 +515,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setIsEditCampaignModalOpen(true);
   };
 
-  // Lắng nghe khi có yêu cầu sửa chiến dịch từ bên ngoài (ví dụ MarketplaceView)
+  // Lắng nghe khi có yêu cầu sửa chiến dịch từ bên ngoài (ví dụ MarketplaceView hoặc CampaignDetailView)
   useEffect(() => {
     if (initialEditingCampaign) {
       setActiveAdminTab('campaigns');
       handleOpenEditCampaign(initialEditingCampaign);
-      onClearInitialEditingCampaign?.();
+      const timer = setTimeout(() => {
+        onClearInitialEditingCampaign?.();
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [initialEditingCampaign]);
 
@@ -1125,6 +1128,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
               >
                 <span className="material-symbols-outlined text-[18px]">summarize</span>
                 <span>Xuất Báo Cáo Kỳ Này (A4)</span>
+              </button>
+            )}
+
+            {/* Nút "Quản Lý / Sửa Chiến Dịch" khi đang ở tab Tổng quan */}
+            {activeAdminTab === 'dashboard' && (
+              <button
+                onClick={() => {
+                  setActiveAdminTab('campaigns');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="flex items-center gap-1.5 rounded-xl border-2 border-blue-600 bg-white px-3.5 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                title="Mở danh sách các chiến dịch để Sửa thông tin, đổi ảnh hoặc cài ngày kết thúc"
+              >
+                <span className="material-symbols-outlined text-[18px]">edit_document</span>
+                <span>Quản Lý & Sửa Chiến Dịch ({metrics.totalActiveCampaigns})</span>
               </button>
             )}
 

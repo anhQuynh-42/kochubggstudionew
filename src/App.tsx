@@ -771,6 +771,8 @@ export const App: React.FC = () => {
             isBookmarked={bookmarkedIds.includes(selectedCampaign.id)}
             onToggleBookmark={handleToggleBookmark}
             onShowToast={showToast}
+            currentUser={currentUser}
+            onEditCampaign={handleEditCampaignFromMarketplace}
           />
         )}
 
