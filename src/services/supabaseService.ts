@@ -3,7 +3,102 @@ import { Campaign, KOCApplication } from '../types';
 
 /**
  * Service giao tiếp với cơ sở dữ liệu Supabase đám mây cho Kocity
+ * Hỗ trợ đồng bộ dữ liệu thời gian thực (Realtime 2 chiều) giữa Quản trị viên và KOC
  */
+
+// Danh sách các cột thực tế có trong bảng public.campaigns trên Supabase
+const VALID_CAMPAIGN_COLUMNS = new Set([
+  'id',
+  'code',
+  'title',
+  'brandName',
+  'brandLogo',
+  'category',
+  'daysLeft',
+  'platform',
+  'followerRequirement',
+  'benefits',
+  'totalSpots',
+  'registeredSpots',
+  'urgent',
+  'approvalRate',
+  'description',
+  'fullPrice',
+  'bookingFee',
+  'commissionRate',
+  'productHeroImage',
+  'galleryImages',
+  'uspList',
+  'storySteps',
+  'hashtags',
+  'cartBrandName',
+  'tiktokUrl',
+  'tiktokHandle',
+  'timeline',
+  'created_at',
+]);
+
+/**
+ * Lọc sạch payload trước khi gửi lên Supabase để tránh lỗi PGRST204 (Cột không tồn tại)
+ * Bảo toàn các trường mở rộng (endDate, startDate, sampleProducts) bằng cách đóng gói vào timeline metadata
+ */
+export function sanitizeCampaignForSupabase(campaign: Partial<Campaign>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(campaign)) {
+    if (VALID_CAMPAIGN_COLUMNS.has(key)) {
+      payload[key] = value;
+    }
+  }
+
+  // Đóng gói metadata cho endDate, startDate, sampleProducts vào timeline
+  const existingTimeline = Array.isArray(campaign.timeline) ? [...campaign.timeline] : [];
+  // Lọc bỏ metadata cũ nếu có
+  const cleanTimeline = existingTimeline.filter(
+    (item) => !item || typeof item !== 'object' || !('__metadata' in item)
+  );
+
+  cleanTimeline.push({
+    __metadata: true,
+    endDate: campaign.endDate || null,
+    startDate: campaign.startDate || null,
+    sampleProducts: campaign.sampleProducts || [],
+  });
+
+  payload.timeline = cleanTimeline;
+  return payload;
+}
+
+/**
+ * Phục hồi các trường mở rộng (endDate, startDate, sampleProducts) từ Supabase về Campaign
+ */
+export function parseCampaignFromSupabase(raw: Record<string, unknown>): Campaign {
+  const camp = { ...raw } as unknown as Campaign;
+
+  if (Array.isArray(camp.timeline)) {
+    const metaItem = camp.timeline.find(
+      (item) => item && typeof item === 'object' && ('__metadata' in item)
+    ) as Record<string, unknown> | undefined;
+
+    if (metaItem) {
+      if (metaItem.endDate && typeof metaItem.endDate === 'string') {
+        camp.endDate = metaItem.endDate;
+      }
+      if (metaItem.startDate && typeof metaItem.startDate === 'string') {
+        camp.startDate = metaItem.startDate;
+      }
+      if (Array.isArray(metaItem.sampleProducts) && metaItem.sampleProducts.length > 0) {
+        camp.sampleProducts = metaItem.sampleProducts as Campaign['sampleProducts'];
+      }
+      // Dọn dẹp metadata khỏi timeline hiển thị
+      camp.timeline = camp.timeline.filter(
+        (item) => !item || typeof item !== 'object' || !('__metadata' in item)
+      );
+    }
+  }
+
+  return camp;
+}
 
 // 1. Lấy danh sách chiến dịch từ Supabase
 export async function getCampaignsFromSupabase(): Promise<Campaign[] | null> {
@@ -21,7 +116,8 @@ export async function getCampaignsFromSupabase(): Promise<Campaign[] | null> {
       return null;
     }
 
-    return (data as unknown as Campaign[]) || [];
+    if (!data) return [];
+    return data.map((item) => parseCampaignFromSupabase(item as Record<string, unknown>));
   } catch (err) {
     console.error('Lỗi kết nối Supabase campaigns:', err);
     return null;
@@ -33,7 +129,8 @@ export async function createCampaignOnSupabase(campaign: Campaign): Promise<bool
   if (!isSupabaseConfigured()) return false;
 
   try {
-    const { error } = await supabase.from('campaigns').insert([campaign]);
+    const payload = sanitizeCampaignForSupabase(campaign);
+    const { error } = await supabase.from('campaigns').insert([payload]);
     if (error) {
       console.error('Lỗi khi thêm chiến dịch lên Supabase:', error.message);
       return false;
@@ -53,10 +150,15 @@ export async function updateCampaignOnSupabase(
   if (!isSupabaseConfigured()) return false;
 
   try {
+    const payload = sanitizeCampaignForSupabase(updatedData);
+    // Bỏ trường id khỏi payload update để an toàn
+    delete payload.id;
+
     const { error } = await supabase
       .from('campaigns')
-      .update(updatedData)
+      .update(payload)
       .eq('id', campaignId);
+
     if (error) {
       console.error('Lỗi khi cập nhật chiến dịch trên Supabase:', error.message);
       return false;
@@ -86,6 +188,97 @@ export async function deleteCampaignOnSupabase(campaignId: string): Promise<bool
     console.error('Lỗi xóa chiến dịch:', err);
     return false;
   }
+}
+
+// 2.3 Tăng số lượng KOC đã đăng ký (registeredSpots) của chiến dịch trên Supabase
+export async function incrementCampaignRegisteredSpotsOnSupabase(
+  campaignId: string
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const { data: currentCamp } = await supabase
+      .from('campaigns')
+      .select('registeredSpots, totalSpots')
+      .eq('id', campaignId)
+      .maybeSingle();
+
+    if (currentCamp) {
+      const nextSpots = Math.min(
+        currentCamp.totalSpots || 999,
+        (currentCamp.registeredSpots || 0) + 1
+      );
+      await supabase
+        .from('campaigns')
+        .update({ registeredSpots: nextSpots })
+        .eq('id', campaignId);
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Lỗi tăng registeredSpots trên Supabase:', err);
+    return false;
+  }
+}
+
+// 2.4 Lắng nghe thay đổi thời gian thực cho Bảng Chiến Dịch (Realtime Campaigns)
+// Khi Admin sửa chiến dịch/đổi ảnh hoặc KOC đăng ký, tất cả mọi người đang mở web đều thấy ngay
+export function subscribeToCampaignsRealtime(
+  onInsert?: (newCampaign: Campaign) => void,
+  onUpdate?: (updatedCampaign: Campaign) => void,
+  onDelete?: (deletedId: string) => void
+) {
+  if (!isSupabaseConfigured()) return () => {};
+
+  const channel = supabase
+    .channel('realtime_campaigns_channel')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'campaigns',
+      },
+      (payload) => {
+        if (payload.new && (payload.new as { id?: string }).id !== '__SITE_CONFIG__') {
+          const parsed = parseCampaignFromSupabase(payload.new as Record<string, unknown>);
+          if (onInsert) onInsert(parsed);
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'campaigns',
+      },
+      (payload) => {
+        if (payload.new && (payload.new as { id?: string }).id !== '__SITE_CONFIG__') {
+          const parsed = parseCampaignFromSupabase(payload.new as Record<string, unknown>);
+          if (onUpdate) onUpdate(parsed);
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'campaigns',
+      },
+      (payload) => {
+        if (payload.old && (payload.old as { id?: string }).id !== '__SITE_CONFIG__') {
+          const delId = (payload.old as { id?: string }).id;
+          if (delId && onDelete) onDelete(delId);
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 // 3. Lấy danh sách hồ sơ KOC ứng tuyển từ Supabase
@@ -151,7 +344,7 @@ export async function updateApplicationStatusOnSupabase(
   }
 }
 
-// 6. Lắng nghe cập nhật thời gian thực (Realtime Subscription)
+// 6. Lắng nghe cập nhật thời gian thực (Realtime Subscription) cho Đơn ứng tuyển
 // Khi có KOC nộp đơn mới hoặc Admin duyệt đơn, màn hình tự cập nhật mà không cần F5
 export function subscribeToApplicationsRealtime(
   onInsert?: (newApp: KOCApplication) => void,
@@ -250,7 +443,6 @@ export async function deleteHeroBannerFromSupabase(): Promise<boolean> {
 }
 
 // 10. Lắng nghe cập nhật Hero Banner theo thời gian thực (Realtime)
-// Khi Quản trị viên đổi ảnh, tất cả người dùng đang mở web sẽ tự đổi ảnh tức thì
 export function subscribeToHeroBannerRealtime(onBannerUpdate: (newUrl: string | null) => void) {
   if (!isSupabaseConfigured()) return () => {};
 

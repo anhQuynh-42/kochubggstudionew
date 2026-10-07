@@ -24,6 +24,8 @@ import {
   updateApplicationStatusOnSupabase,
   createCampaignOnSupabase,
   subscribeToApplicationsRealtime,
+  subscribeToCampaignsRealtime,
+  incrementCampaignRegisteredSpotsOnSupabase,
   getHeroBannerFromSupabase,
   saveHeroBannerToSupabase,
   deleteHeroBannerFromSupabase,
@@ -299,9 +301,56 @@ export const App: React.FC = () => {
       }
     });
 
+    // 6. Đăng ký nhận thay đổi thời gian thực cho Bảng Chiến Dịch (Realtime Campaigns)
+    // Khi Admin sửa/đổi ảnh chiến dịch, giao diện KOC tự cập nhật tức thì
+    const unsubscribeCampaigns = subscribeToCampaignsRealtime(
+      (newCamp) => {
+        setCampaigns((prev) => {
+          if (prev.some((c) => c.id === newCamp.id)) return prev;
+          const calculatedDays = calculateDaysLeft(newCamp.endDate, newCamp.daysLeft);
+          const fullCamp = { ...newCamp, daysLeft: calculatedDays };
+          const updated = [fullCamp, ...prev];
+          try {
+            localStorage.setItem('koctrend_campaigns', JSON.stringify(updated));
+          } catch (e) {
+            console.warn(e);
+          }
+          return updated;
+        });
+        showToast('Chiến dịch mới vừa xuất hiện!', `${newCamp.brandName} - ${newCamp.title}`, 'info');
+      },
+      (updatedCamp) => {
+        const calculatedDays = calculateDaysLeft(updatedCamp.endDate, updatedCamp.daysLeft);
+        const fullCamp = { ...updatedCamp, daysLeft: calculatedDays };
+        setCampaigns((prev) => {
+          const updated = prev.map((c) => (c.id === fullCamp.id ? { ...c, ...fullCamp } : c));
+          try {
+            localStorage.setItem('koctrend_campaigns', JSON.stringify(updated));
+          } catch (e) {
+            console.warn(e);
+          }
+          return updated;
+        });
+        // Cập nhật cả màn hình chi tiết nếu đang mở xem
+        setSelectedCampaign((prev) => (prev && prev.id === fullCamp.id ? { ...prev, ...fullCamp } : prev));
+      },
+      (deletedId) => {
+        setCampaigns((prev) => {
+          const updated = prev.filter((c) => c.id !== deletedId);
+          try {
+            localStorage.setItem('koctrend_campaigns', JSON.stringify(updated));
+          } catch (e) {
+            console.warn(e);
+          }
+          return updated;
+        });
+      }
+    );
+
     return () => {
       unsubscribeApps();
       unsubscribeHero();
+      unsubscribeCampaigns();
     };
   }, []);
 
@@ -532,6 +581,8 @@ export const App: React.FC = () => {
 
     // Gửi lên cơ sở dữ liệu Supabase đám mây
     submitApplicationToSupabase(newApp);
+    // Tự động tăng số lượng đăng ký của chiến dịch trên Supabase để Admin và KOC khác thấy ngay
+    incrementCampaignRegisteredSpotsOnSupabase(newApp.campaignId);
 
     // Update campaign spots
     setCampaigns((prev) =>

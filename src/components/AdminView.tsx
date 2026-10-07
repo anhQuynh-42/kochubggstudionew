@@ -352,20 +352,52 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   // Image Upload helper functions (File Select, Drag & Drop, Paste)
+  // Helper nén ảnh bằng Canvas trước khi tải lên Supabase để đồng bộ cực nhanh
+  const compressImageFile = (file: File, callback: (compressedUrl: string) => void) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.85));
+        } else {
+          callback(dataUrl);
+        }
+      };
+      img.onerror = () => callback(dataUrl);
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleProcessImageFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
       onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hoặc dán hình ảnh (PNG, JPG, WEBP,...)', 'warning');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result) {
-        setNewCampaignData((prev) => ({ ...prev, productHeroImage: result }));
-        onShowToast('Tải ảnh thành công!', file.name || 'Đã thêm ảnh sản phẩm', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
+    compressImageFile(file, (optimizedUrl) => {
+      setNewCampaignData((prev) => ({ ...prev, productHeroImage: optimizedUrl }));
+      onShowToast('Tải ảnh thành công!', file.name || 'Đã thêm ảnh sản phẩm', 'success');
+    });
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -571,18 +603,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   const handleEditProcessImageFile = (file: File) => {
-    if (file.size > 6 * 1024 * 1024) {
-      onShowToast('Ảnh quá lớn', 'Vui lòng chọn ảnh dung lượng dưới 6MB', 'warning');
+    if (!file.type.startsWith('image/')) {
+      onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hình ảnh hợp lệ (JPG, PNG, WEBP,...)', 'warning');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string' && editingCampaign) {
-        setEditingCampaign((prev) => (prev ? { ...prev, productHeroImage: reader.result as string } : prev));
-        onShowToast('Tải ảnh thành công', 'Ảnh mới đã sẵn sàng cho chiến dịch', 'success');
-      }
-    };
-    reader.readAsDataURL(file);
+    compressImageFile(file, (optimizedUrl) => {
+      setEditingCampaign((prev) => (prev ? { ...prev, productHeroImage: optimizedUrl } : prev));
+      onShowToast('Tải ảnh thành công!', 'Ảnh mới đã sẵn sàng cho chiến dịch', 'success');
+    });
   };
 
   const handleEditImagePaste = (e: React.ClipboardEvent) => {
