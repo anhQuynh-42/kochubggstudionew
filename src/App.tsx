@@ -827,13 +827,6 @@ export const App: React.FC = () => {
         <Footer
           onOpenBrandContact={() => setIsBrandContactOpen(true)}
           onOpenGuidelines={() => setIsGuidelinesOpen(true)}
-          onOpenAdminLogin={() => {
-            if (currentUser?.role === 'admin') {
-              handleSelectTab('admin');
-            } else {
-              handleOpenLogin('login');
-            }
-          }}
         />
       )}
 
