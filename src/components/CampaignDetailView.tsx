@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Campaign, KOCUser } from '../types';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
 
@@ -11,6 +11,7 @@ interface CampaignDetailViewProps {
   onShowToast?: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
   currentUser?: KOCUser | null;
   onEditCampaign?: (campaign: Campaign) => void;
+  onUpdateCampaign?: (campaign: Campaign) => void;
 }
 
 export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
@@ -22,10 +23,222 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
   onShowToast,
   currentUser,
   onEditCampaign,
+  onUpdateCampaign,
 }) => {
+  const isAdmin = currentUser?.role === 'admin';
+  const galleryList = Array.isArray(campaign.galleryImages) && campaign.galleryImages.length > 0
+    ? campaign.galleryImages
+    : (campaign.productHeroImage ? [campaign.productHeroImage] : []);
+
   const [copiedTag, setCopiedTag] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+  const [targetReplaceIdx, setTargetReplaceIdx] = useState<number | null>(null);
+
+  // Modal dán URL ảnh trực tiếp
+  const [urlModal, setUrlModal] = useState<{
+    isOpen: boolean;
+    mode: 'replace' | 'add' | 'logo';
+    targetIdx?: number;
+    url: string;
+  }>({
+    isOpen: false,
+    mode: 'replace',
+    url: '',
+  });
+
+  // Refs cho các input file ẩn
+  const replacePhotoInputRef = useRef<HTMLInputElement>(null);
+  const addPhotoInputRef = useRef<HTMLInputElement>(null);
+  const brandLogoInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper nén ảnh bằng HTML5 Canvas xuống ~1200px chất lượng 85% trước khi lưu
+  const compressImageFile = (file: File, callback: (compressedUrl: string) => void) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.85));
+        } else {
+          callback(dataUrl);
+        }
+      };
+      img.onerror = () => callback(dataUrl);
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Kích hoạt đổi ảnh tại vị trí cụ thể (idx)
+  const handleTriggerReplace = (idx: number) => {
+    setTargetReplaceIdx(idx);
+    if (replacePhotoInputRef.current) {
+      replacePhotoInputRef.current.value = '';
+      replacePhotoInputRef.current.click();
+    }
+  };
+
+  // Xử lý đổi tệp ảnh từ máy
+  const handleReplacePhotoFile = (file: File) => {
+    if (targetReplaceIdx === null) return;
+    if (!file.type.startsWith('image/')) {
+      if (onShowToast) onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hình ảnh (JPG, PNG, WEBP,...)', 'warning');
+      return;
+    }
+    compressImageFile(file, (optimizedUrl) => {
+      const nextGallery = [...galleryList];
+      nextGallery[targetReplaceIdx] = optimizedUrl;
+      const updatedCamp: Campaign = {
+        ...campaign,
+        galleryImages: nextGallery,
+        productHeroImage: (targetReplaceIdx === 0 || campaign.productHeroImage === galleryList[targetReplaceIdx])
+          ? optimizedUrl
+          : campaign.productHeroImage
+      };
+      if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+      if (onShowToast) onShowToast('Đã đổi ảnh thành công!', 'Ảnh mới đã được cập nhật cho chiến dịch.', 'success');
+      setTargetReplaceIdx(null);
+    });
+  };
+
+  // Xử lý thêm nhiều ảnh mới từ máy tính
+  const handleAddPhotosFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (fileArray.length === 0) {
+      if (onShowToast) onShowToast('Tệp không hợp lệ', 'Vui lòng chọn file ảnh hợp lệ.', 'warning');
+      return;
+    }
+
+    let processedCount = 0;
+    const newCompressedUrls: string[] = [];
+
+    fileArray.forEach(file => {
+      compressImageFile(file, (compressedUrl) => {
+        newCompressedUrls.push(compressedUrl);
+        processedCount++;
+        if (processedCount === fileArray.length) {
+          const nextGallery = [...galleryList, ...newCompressedUrls];
+          const updatedCamp: Campaign = {
+            ...campaign,
+            galleryImages: nextGallery,
+            productHeroImage: campaign.productHeroImage || nextGallery[0]
+          };
+          if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+          setActivePhotoIdx(nextGallery.length - 1);
+          if (onShowToast) onShowToast('Thêm ảnh thành công!', `Đã thêm ${newCompressedUrls.length} ảnh mới vào album.`, 'success');
+        }
+      });
+    });
+  };
+
+  // Xóa ảnh khỏi album
+  const handleDeletePhoto = (idx: number) => {
+    if (galleryList.length <= 1) {
+      if (onShowToast) onShowToast('Không thể xóa', 'Chiến dịch cần ít nhất 1 ảnh để hiển thị.', 'warning');
+      return;
+    }
+    const targetUrl = galleryList[idx];
+    const nextGallery = galleryList.filter((_, i) => i !== idx);
+    const updatedCamp: Campaign = {
+      ...campaign,
+      galleryImages: nextGallery,
+      productHeroImage: campaign.productHeroImage === targetUrl ? nextGallery[0] : campaign.productHeroImage
+    };
+    if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+    setActivePhotoIdx(Math.max(0, Math.min(idx, nextGallery.length - 1)));
+    if (onShowToast) onShowToast('Đã xóa ảnh!', 'Ảnh đã được xóa khỏi album.', 'info');
+  };
+
+  // Đặt làm ảnh đại diện chính (productHeroImage)
+  const handleSetHeroImage = (idx: number) => {
+    const heroUrl = galleryList[idx];
+    if (!heroUrl) return;
+    const updatedCamp: Campaign = {
+      ...campaign,
+      productHeroImage: heroUrl
+    };
+    if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+    if (onShowToast) onShowToast('Đã đặt làm ảnh chính!', 'Ảnh này sẽ làm ảnh đại diện trên trang khám phá chiến dịch.', 'success');
+  };
+
+  // Thay Logo nhãn hàng
+  const handleReplaceBrandLogoFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      if (onShowToast) onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hình ảnh hợp lệ.', 'warning');
+      return;
+    }
+    compressImageFile(file, (optimizedUrl) => {
+      const updatedCamp: Campaign = {
+        ...campaign,
+        brandLogo: optimizedUrl
+      };
+      if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+      if (onShowToast) onShowToast('Đã đổi Logo nhãn hàng!', 'Logo mới đã được cập nhật thành công.', 'success');
+    });
+  };
+
+  // Xác nhận nhập link URL ảnh
+  const handleConfirmUrlModal = () => {
+    const url = urlModal.url.trim();
+    if (!url) {
+      setUrlModal({ ...urlModal, isOpen: false });
+      return;
+    }
+
+    if (urlModal.mode === 'replace' && typeof urlModal.targetIdx === 'number') {
+      const nextGallery = [...galleryList];
+      nextGallery[urlModal.targetIdx] = url;
+      const updatedCamp: Campaign = {
+        ...campaign,
+        galleryImages: nextGallery,
+        productHeroImage: (urlModal.targetIdx === 0 || campaign.productHeroImage === galleryList[urlModal.targetIdx])
+          ? url
+          : campaign.productHeroImage
+      };
+      if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+      if (onShowToast) onShowToast('Đã đổi link ảnh thành công!', 'Ảnh mới đã sẵn sàng.', 'success');
+    } else if (urlModal.mode === 'add') {
+      const nextGallery = [...galleryList, url];
+      const updatedCamp: Campaign = {
+        ...campaign,
+        galleryImages: nextGallery,
+        productHeroImage: campaign.productHeroImage || url
+      };
+      if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+      setActivePhotoIdx(nextGallery.length - 1);
+      if (onShowToast) onShowToast('Đã thêm ảnh từ link!', 'Ảnh mới đã được thêm vào album.', 'success');
+    } else if (urlModal.mode === 'logo') {
+      const updatedCamp: Campaign = {
+        ...campaign,
+        brandLogo: url
+      };
+      if (onUpdateCampaign) onUpdateCampaign(updatedCamp);
+      if (onShowToast) onShowToast('Đã đổi link Logo thành công!', 'Logo mới đã được áp dụng.', 'success');
+    }
+
+    setUrlModal({ isOpen: false, mode: 'replace', url: '' });
+  };
 
   const quotaPercent = Math.min(100, Math.round((campaign.registeredSpots / campaign.totalSpots) * 100));
   const spotsLeft = Math.max(0, campaign.totalSpots - campaign.registeredSpots);
@@ -117,12 +330,33 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
       <section className="mt-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
-            <div className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+            <div className="relative group/logo h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
               <img
                 src={campaign.brandLogo}
                 alt={campaign.brandName}
                 className="h-full w-full object-contain"
               />
+              {isAdmin && (
+                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/logo:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => brandLogoInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center text-white hover:text-indigo-200 transition-colors cursor-pointer"
+                    title="Đổi logo từ máy tính"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">photo_camera</span>
+                    <span className="text-[9px] font-bold">Đổi logo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUrlModal({ isOpen: true, mode: 'logo', url: campaign.brandLogo || '' })}
+                    className="text-[9px] text-white/90 underline hover:text-white cursor-pointer"
+                    title="Dán link logo"
+                  >
+                    Link URL
+                  </button>
+                </div>
+              )}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -218,39 +452,188 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
         <div className="lg:col-span-8 flex flex-col gap-8">
           {/* 1. Bento Photo Moodboard */}
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-slate-700">photo_library</span>
-              Hình ảnh & Moodboard sản phẩm mẫu
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 className="font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-indigo-600">photo_library</span>
+                Hình ảnh & Moodboard sản phẩm mẫu
+              </h3>
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsGalleryModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 text-xs font-bold text-indigo-700 transition-colors shadow-sm cursor-pointer"
+                    title="Mở bảng quản lý toàn bộ album ảnh"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">edit_square</span>
+                    <span>Quản lý album ({galleryList.length} ảnh)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addPhotoInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white px-3 py-1.5 text-xs font-bold transition-all shadow-sm hover:opacity-95 active:scale-95 cursor-pointer"
+                    title="Tải thêm ảnh từ máy tính vào album"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                    <span>+ Thêm ảnh</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isAdmin && (
+              <div className="mb-3.5 flex items-center justify-between gap-2 rounded-xl bg-indigo-50/70 border border-indigo-150 px-3.5 py-2 text-xs text-indigo-950">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#6366f1] text-[18px]">admin_panel_settings</span>
+                  <span><b>Chế độ Quản trị viên:</b> Bạn có thể bấm trực tiếp các nút trên ảnh để đổi ảnh, đặt làm ảnh đại diện hoặc xóa ảnh.</span>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Main large photo */}
-              <div className="sm:col-span-2 relative h-72 sm:h-80 overflow-hidden rounded-2xl bg-slate-100">
-                <img
-                  src={campaign.galleryImages[activePhotoIdx] || campaign.productHeroImage}
-                  alt={campaign.title}
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute bottom-3 left-3 rounded-lg bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
-                  Gói tài trợ: Fullset sản phẩm mẫu
-                </div>
+              <div className="sm:col-span-2 relative h-72 sm:h-80 overflow-hidden rounded-2xl bg-slate-100 group">
+                {(() => {
+                  const safeActiveIdx = Math.min(activePhotoIdx, Math.max(0, galleryList.length - 1));
+                  const currentPhotoUrl = galleryList[safeActiveIdx] || campaign.productHeroImage;
+                  const isCurrentHero = currentPhotoUrl === campaign.productHeroImage;
+
+                  return (
+                    <>
+                      <img
+                        src={currentPhotoUrl}
+                        alt={campaign.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                      />
+
+                      {/* Admin Quick Action Floating Bar on Large Photo */}
+                      {isAdmin && (
+                        <div className="absolute top-3 right-3 flex flex-wrap items-center gap-1.5 bg-black/65 backdrop-blur-md p-1.5 rounded-xl border border-white/20 shadow-lg z-10">
+                          <button
+                            type="button"
+                            onClick={() => handleTriggerReplace(safeActiveIdx)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-white/95 hover:bg-white text-slate-800 px-2.5 py-1 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+                            title="Chọn tệp ảnh khác từ máy để thay ảnh đang xem"
+                          >
+                            <span className="material-symbols-outlined text-[15px] text-[#6366f1]">swap_horiz</span>
+                            <span>Đổi ảnh này</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setUrlModal({ isOpen: true, mode: 'replace', targetIdx: safeActiveIdx, url: currentPhotoUrl })}
+                            className="inline-flex items-center gap-1 rounded-lg bg-white/85 hover:bg-white text-slate-800 px-2 py-1 text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                            title="Dán link URL ảnh"
+                          >
+                            <span className="material-symbols-outlined text-[15px] text-slate-600">link</span>
+                            <span>URL</span>
+                          </button>
+                          {isCurrentHero ? (
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-amber-400 text-slate-900 px-2.5 py-1 text-[11px] font-bold shadow-sm">
+                              <span className="material-symbols-outlined text-[13px]">star</span>
+                              Ảnh chính
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSetHeroImage(safeActiveIdx)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-black/40 hover:bg-amber-400 hover:text-slate-900 text-white border border-white/20 px-2 py-1 text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                              title="Đặt ảnh này làm ảnh đại diện chính của chiến dịch"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">star</span>
+                              <span>Đặt làm ảnh chính</span>
+                            </button>
+                          )}
+                          {galleryList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePhoto(safeActiveIdx)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-600/90 hover:bg-red-600 text-white px-2 py-1 text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                              title="Xóa ảnh này khỏi album"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="absolute bottom-3 left-3 rounded-lg bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
+                        Ảnh {safeActiveIdx + 1}/{galleryList.length} • {isCurrentHero ? 'Ảnh đại diện chính' : 'Gói tài trợ: Fullset mẫu'}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Thumbnails grid */}
-              <div className="flex sm:flex-col gap-3">
-                {campaign.galleryImages.map((imgUrl, idx) => (
-                  <button
+              <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
+                {galleryList.map((imgUrl, idx) => (
+                  <div
                     key={idx}
-                    onClick={() => setActivePhotoIdx(idx)}
-                    className={`relative flex-1 h-24 sm:h-auto overflow-hidden rounded-xl border-2 transition-all cursor-pointer ${
+                    className={`group/thumb relative flex-1 min-w-[76px] sm:min-w-0 h-24 sm:h-auto overflow-hidden rounded-xl border-2 transition-all ${
                       activePhotoIdx === idx
                         ? 'border-[#6366f1] ring-2 ring-indigo-500/20'
                         : 'border-transparent hover:border-indigo-300'
                     }`}
                   >
-                    <img src={imgUrl} alt="Thumbnail" className="h-full w-full object-cover" />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePhotoIdx(idx)}
+                      className="h-full w-full block cursor-pointer"
+                    >
+                      <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
+                    </button>
+
+                    {/* Badge nếu là ảnh hero */}
+                    {imgUrl === campaign.productHeroImage && (
+                      <div className="absolute bottom-1 left-1 bg-amber-400 text-slate-900 rounded px-1 text-[9px] font-extrabold flex items-center pointer-events-none shadow">
+                        <span className="material-symbols-outlined text-[10px]">star</span>
+                      </div>
+                    )}
+
+                    {/* Admin quick actions on thumbnail */}
+                    {isAdmin && (
+                      <div className="absolute top-1 right-1 hidden group-hover/thumb:flex items-center gap-1 bg-black/80 backdrop-blur-sm p-1 rounded-lg z-10">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTriggerReplace(idx);
+                          }}
+                          className="h-6 w-6 rounded bg-white hover:bg-slate-100 text-slate-800 flex items-center justify-center text-[12px] cursor-pointer shadow active:scale-90"
+                          title="Thay ảnh này"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
+                        </button>
+                        {galleryList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePhoto(idx);
+                            }}
+                            className="h-6 w-6 rounded bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-[12px] cursor-pointer shadow active:scale-90"
+                            title="Xóa ảnh này"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))}
+
+                {/* Admin Add Photo Thumbnail Card */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => addPhotoInputRef.current?.click()}
+                    className="flex-1 min-w-[76px] sm:min-w-0 min-h-[70px] sm:h-20 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-indigo-300 hover:border-[#6366f1] bg-indigo-50/50 hover:bg-indigo-50 text-indigo-600 transition-all cursor-pointer group active:scale-95"
+                    title="Thêm ảnh mới vào album"
+                  >
+                    <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">add_photo_alternate</span>
+                    <span className="text-[11px] font-bold mt-0.5">+ Thêm ảnh</span>
+                  </button>
+                )}
               </div>
             </div>
           </section>
@@ -728,6 +1111,254 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Hidden file inputs for Admin */}
+      {isAdmin && (
+        <>
+          <input
+            type="file"
+            ref={replacePhotoInputRef}
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleReplacePhotoFile(file);
+            }}
+          />
+          <input
+            type="file"
+            ref={addPhotoInputRef}
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = e.target.files;
+              if (files && files.length > 0) handleAddPhotosFiles(files);
+            }}
+          />
+          <input
+            type="file"
+            ref={brandLogoInputRef}
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleReplaceBrandLogoFile(file);
+            }}
+          />
+        </>
+      )}
+
+      {/* Modal nhập link URL ảnh */}
+      {isAdmin && urlModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="font-['Plus_Jakarta_Sans'] text-base font-bold text-slate-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#6366f1]">link</span>
+                {urlModal.mode === 'replace'
+                  ? 'Đổi ảnh bằng link URL'
+                  : urlModal.mode === 'add'
+                  ? 'Thêm ảnh mới bằng link URL'
+                  : 'Đổi Logo nhãn hàng bằng link URL'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setUrlModal({ ...urlModal, isOpen: false })}
+                className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Đường dẫn (URL) hình ảnh:
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://images.unsplash.com/... hoặc link ảnh bất kỳ"
+                  value={urlModal.url}
+                  onChange={(e) => setUrlModal({ ...urlModal, url: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:border-[#6366f1] focus:bg-white focus:outline-none"
+                  autoFocus
+                />
+              </div>
+
+              {urlModal.url && (
+                <div className="relative h-40 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center">
+                  <img
+                    src={urlModal.url}
+                    alt="Xem trước"
+                    className="h-full w-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setUrlModal({ ...urlModal, isOpen: false })}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmUrlModal}
+                  className="rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 cursor-pointer"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Quản lý Album ảnh chi tiết (Full Gallery Modal) */}
+      {isAdmin && isGalleryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="font-['Plus_Jakarta_Sans'] text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#6366f1]">photo_library</span>
+                  Quản lý Album ảnh & Moodboard chiến dịch
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Chiến dịch: <b className="text-slate-800">{campaign.title}</b> • Nhãn hàng: <b className="text-slate-800">{campaign.brandName}</b>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGalleryModalOpen(false)}
+                className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Quick Add Area */}
+            <div className="mt-5 p-4 rounded-2xl bg-indigo-50/60 border border-indigo-150 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px] text-[#6366f1]">cloud_upload</span>
+                  Thêm ảnh mới vào Album
+                </h4>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Tải lên từ máy tính (ảnh được tự động nén tối ưu) hoặc dán link URL trực tiếp.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => addPhotoInputRef.current?.click()}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                  <span>Tải ảnh từ máy</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUrlModal({ isOpen: true, mode: 'add', url: '' })}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-white border border-indigo-200 px-3.5 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">link</span>
+                  <span>Nhập URL</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Gallery Grid */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-slate-800">
+                  Danh sách ảnh trong album ({galleryList.length} ảnh):
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  ⭐ = Ảnh đại diện hiển thị ngoài trang chủ
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 max-h-[420px] overflow-y-auto pr-1">
+                {galleryList.map((imgUrl, idx) => {
+                  const isHero = imgUrl === campaign.productHeroImage;
+                  return (
+                    <div
+                      key={idx}
+                      className={`group relative rounded-2xl border-2 overflow-hidden bg-slate-50 flex flex-col justify-between transition-all ${
+                        isHero ? 'border-amber-400 ring-2 ring-amber-300/30' : 'border-slate-200 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="relative h-32 w-full overflow-hidden bg-slate-100">
+                        <img src={imgUrl} alt={`Ảnh ${idx + 1}`} className="h-full w-full object-cover" />
+                        {isHero && (
+                          <div className="absolute top-2 left-2 rounded-md bg-amber-400 text-slate-900 px-1.5 py-0.5 text-[10px] font-extrabold flex items-center gap-1 shadow-sm">
+                            <span className="material-symbols-outlined text-[12px]">star</span>
+                            Ảnh đại diện chính
+                          </div>
+                        )}
+                        <div className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+                          #{idx + 1}
+                        </div>
+                      </div>
+
+                      <div className="p-2 bg-white flex items-center justify-between gap-1 border-t border-slate-100">
+                        {!isHero && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetHeroImage(idx)}
+                            className="p-1 rounded-lg text-slate-600 hover:text-amber-600 hover:bg-amber-50 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                            title="Đặt làm ảnh đại diện chính"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">star</span>
+                            <span>Đặt làm chính</span>
+                          </button>
+                        )}
+                        <div className="flex items-center gap-1 ml-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleTriggerReplace(idx)}
+                            className="h-7 w-7 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center cursor-pointer"
+                            title="Thay ảnh này"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">edit</span>
+                          </button>
+                          {galleryList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePhoto(idx)}
+                              className="h-7 w-7 rounded-lg text-slate-600 hover:text-red-600 hover:bg-red-50 flex items-center justify-center cursor-pointer"
+                              title="Xóa ảnh này"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setIsGalleryModalOpen(false)}
+                className="rounded-xl bg-slate-900 hover:bg-slate-800 px-6 py-2.5 text-xs font-bold text-white shadow-sm cursor-pointer transition-all"
+              >
+                Xong & Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

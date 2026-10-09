@@ -23,6 +23,7 @@ import {
   submitApplicationToSupabase,
   updateApplicationStatusOnSupabase,
   createCampaignOnSupabase,
+  updateCampaignOnSupabase,
   subscribeToApplicationsRealtime,
   subscribeToCampaignsRealtime,
   incrementCampaignRegisteredSpotsOnSupabase,
@@ -728,6 +729,25 @@ export const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleUpdateSingleCampaign = (updatedCamp: Campaign) => {
+    setCampaigns((prev) => {
+      const next = prev.map((c) => (c.id === updatedCamp.id ? updatedCamp : c));
+      try {
+        localStorage.setItem('koctrend_campaigns', JSON.stringify(next));
+      } catch (e) {
+        console.warn(e);
+      }
+      return next;
+    });
+    setSelectedCampaign(updatedCamp);
+    // Đồng bộ lên Supabase realtime
+    updateCampaignOnSupabase(updatedCamp.id, updatedCamp).then((success) => {
+      if (success) {
+        showToast('Đã lưu ảnh chiến dịch!', 'Ảnh mới đã được đồng bộ trực tiếp lên hệ thống và Supabase.', 'success');
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#faf2f8] text-slate-900">
       {/* 1. Header Navigation Bar (KOC-tailored, with Guest/Logged-in state) */}
@@ -773,6 +793,7 @@ export const App: React.FC = () => {
             onShowToast={showToast}
             currentUser={currentUser}
             onEditCampaign={handleEditCampaignFromMarketplace}
+            onUpdateCampaign={handleUpdateSingleCampaign}
           />
         )}
 

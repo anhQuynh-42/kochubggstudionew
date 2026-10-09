@@ -82,6 +82,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [isEditCampaignModalOpen, setIsEditCampaignModalOpen] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const editGalleryFileInputRef = useRef<HTMLInputElement>(null);
+  const [editGalleryUrlInput, setEditGalleryUrlInput] = useState('');
 
   const [newCampaignData, setNewCampaignData] = useState({
     title: '',
@@ -629,6 +631,59 @@ export const AdminView: React.FC<AdminViewProps> = ({
         }
       }
     }
+  };
+
+  const handleEditProcessGalleryImages = (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (fileArray.length === 0) {
+      onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hình ảnh hợp lệ', 'warning');
+      return;
+    }
+    let count = 0;
+    const newUrls: string[] = [];
+    fileArray.forEach((file) => {
+      compressImageFile(file, (optimizedUrl) => {
+        newUrls.push(optimizedUrl);
+        count++;
+        if (count === fileArray.length) {
+          setEditingCampaign((prev) => {
+            if (!prev) return prev;
+            const current = Array.isArray(prev.galleryImages) ? prev.galleryImages : [];
+            return {
+              ...prev,
+              galleryImages: [...current, ...newUrls],
+            };
+          });
+          onShowToast('Tải ảnh thành công!', `Đã thêm ${newUrls.length} ảnh vào album chi tiết.`, 'success');
+        }
+      });
+    });
+  };
+
+  const handleDeleteGalleryImageInEdit = (idx: number) => {
+    setEditingCampaign((prev) => {
+      if (!prev) return prev;
+      const current = Array.isArray(prev.galleryImages) ? prev.galleryImages : [];
+      return {
+        ...prev,
+        galleryImages: current.filter((_, i) => i !== idx),
+      };
+    });
+  };
+
+  const handleAddGalleryUrlInEdit = () => {
+    const url = editGalleryUrlInput.trim();
+    if (!url) return;
+    setEditingCampaign((prev) => {
+      if (!prev) return prev;
+      const current = Array.isArray(prev.galleryImages) ? prev.galleryImages : [];
+      return {
+        ...prev,
+        galleryImages: [...current, url],
+      };
+    });
+    setEditGalleryUrlInput('');
+    onShowToast('Thêm ảnh thành công!', 'Đã thêm ảnh vào album chi tiết.', 'success');
   };
 
   // Action: Export to CSV
@@ -3429,6 +3484,109 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Album ảnh chi tiết & Moodboard (Gallery Images) */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-blue-600">photo_library</span>
+                      Album ảnh chi tiết & Moodboard ({editingCampaign.galleryImages?.length || 0} ảnh)
+                    </label>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Các ảnh này hiển thị khi KOC bấm "Xem chi tiết" chiến dịch.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      ref={editGalleryFileInputRef}
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) handleEditProcessGalleryImages(files);
+                      }}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => editGalleryFileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">add_photo_alternate</span>
+                      <span>+ Thêm từ máy</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Dán URL ảnh */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Hoặc dán URL link ảnh cần thêm vào album..."
+                    value={editGalleryUrlInput}
+                    onChange={(e) => setEditGalleryUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddGalleryUrlInEdit();
+                      }
+                    }}
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddGalleryUrlInEdit}
+                    disabled={!editGalleryUrlInput.trim()}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 cursor-pointer"
+                  >
+                    Thêm link
+                  </button>
+                </div>
+
+                {/* Thumbnails list */}
+                {editingCampaign.galleryImages && editingCampaign.galleryImages.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 max-h-48 overflow-y-auto p-1 bg-white rounded-xl border border-slate-200">
+                    {editingCampaign.galleryImages.map((imgUrl, gIdx) => (
+                      <div
+                        key={gIdx}
+                        className="group relative h-20 rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                      >
+                        <img src={imgUrl} alt={`Ảnh ${gIdx + 1}`} className="h-full w-full object-cover" />
+                        <div className="absolute top-1 left-1 rounded bg-black/60 px-1 text-[9px] text-white">
+                          #{gIdx + 1}
+                        </div>
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCampaign({ ...editingCampaign, productHeroImage: imgUrl });
+                              onShowToast('Đã chọn ảnh đại diện!', 'Ảnh này sẽ được dùng làm ảnh chính', 'success');
+                            }}
+                            className="p-1 rounded bg-amber-400 text-slate-900 hover:bg-amber-300 text-[10px] font-bold cursor-pointer"
+                            title="Đặt làm ảnh đại diện chính"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">star</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGalleryImageInEdit(gIdx)}
+                            className="p-1 rounded bg-red-600 text-white hover:bg-red-700 text-[10px] font-bold cursor-pointer"
+                            title="Xóa ảnh này khỏi album"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">
+                    Chưa có ảnh nào trong album chi tiết. Hãy tải ảnh lên hoặc thêm link để KOC xem trọn bộ sản phẩm!
+                  </div>
+                )}
               </div>
 
               {/* Links & Zalo group */}
