@@ -71,8 +71,8 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Khám phá chiến dịch</span>
             </button>
 
-            {/* 2. Quy trình và hướng dẫn (đưa lên trước) */}
-            {onOpenGuidelines && (
+            {/* 2. Quy trình và hướng dẫn (chỉ dành cho KOC / Khách, ẩn ở tài khoản Admin) */}
+            {onOpenGuidelines && currentUser?.role !== 'admin' && (
               <button
                 id="nav-guidelines-btn"
                 onClick={onOpenGuidelines}
@@ -437,8 +437,8 @@ export const Header: React.FC<HeaderProps> = ({
             Khám phá chiến dịch
           </button>
 
-          {/* 2. Quy trình & hướng dẫn */}
-          {onOpenGuidelines && (
+          {/* 2. Quy trình & hướng dẫn (chỉ dành cho KOC / Khách, ẩn ở tài khoản Admin) */}
+          {onOpenGuidelines && currentUser?.role !== 'admin' && (
             <button
               onClick={onOpenGuidelines}
               className="flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"

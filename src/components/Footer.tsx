@@ -1,13 +1,16 @@
 import React from 'react';
+import { KOCUser } from '../types';
 
 interface FooterProps {
   onOpenBrandContact?: () => void;
   onOpenGuidelines?: () => void;
+  currentUser?: KOCUser | null;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenBrandContact,
   onOpenGuidelines,
+  currentUser,
 }) => {
   return (
     <footer id="footer-section" className="mt-12 border-t border-slate-200 bg-white text-slate-600">
@@ -27,7 +30,7 @@ export const Footer: React.FC<FooterProps> = ({
             <p className="text-xs text-slate-500 leading-relaxed">
               Cổng nhận mẫu sản phẩm 0đ và booking KOC hàng đầu Việt Nam.
             </p>
-            {onOpenGuidelines && (
+            {onOpenGuidelines && currentUser?.role !== 'admin' && (
               <button
                 type="button"
                 onClick={onOpenGuidelines}

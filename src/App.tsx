@@ -850,6 +850,7 @@ export const App: React.FC = () => {
         <Footer
           onOpenBrandContact={() => setIsBrandContactOpen(true)}
           onOpenGuidelines={() => setIsGuidelinesOpen(true)}
+          currentUser={currentUser}
         />
       )}
 
