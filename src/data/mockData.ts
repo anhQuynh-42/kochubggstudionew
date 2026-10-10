@@ -1053,5 +1053,49 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
 
 export const INITIAL_APPLICATIONS: KOCApplication[] = [];
 
-export const INITIAL_NOTIFICATIONS: AppNotification[] = [];
+export const INITIAL_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'admin-notif-1',
+    title: 'Hồ sơ KOC mới cần xét duyệt',
+    message: 'KOC @mai.desksetup vừa gửi hồ sơ đăng ký nhận mẫu chiến dịch Cỏ Mềm 20/10.',
+    time: '10 phút trước',
+    read: false,
+    type: 'approval',
+    targetRole: 'admin',
+    linkTab: 'admin',
+    adminSubTab: 'applications',
+  },
+  {
+    id: 'admin-notif-2',
+    title: 'Yêu cầu hợp tác nhãn hàng mới',
+    message: 'Nhãn hàng ViSecret đã gửi form kết nối chiến dịch đồ lót cao cấp cho KOC nữ.',
+    time: '1 giờ trước',
+    read: false,
+    type: 'campaign',
+    targetRole: 'admin',
+    linkTab: 'admin',
+    adminSubTab: 'dashboard',
+  },
+  {
+    id: 'admin-notif-3',
+    title: 'Video nghiệm thu mới được nộp',
+    message: 'KOC @haidang_tech đã đăng tải link video TikTok cho chiến dịch Tranyoo.',
+    time: '3 giờ trước',
+    read: true,
+    type: 'delivery',
+    targetRole: 'admin',
+    linkTab: 'admin',
+    adminSubTab: 'content',
+  },
+  {
+    id: 'koc-notif-1',
+    title: 'Chào mừng bạn đến với Kocity!',
+    message: 'Khám phá ngay các chiến dịch hot và đăng ký nhận sản phẩm mẫu 100% Freecast.',
+    time: 'Hôm nay',
+    read: false,
+    type: 'campaign',
+    targetRole: 'koc',
+    linkTab: 'marketplace',
+  },
+];
 

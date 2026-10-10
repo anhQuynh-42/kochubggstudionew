@@ -39,6 +39,8 @@ interface AdminViewProps {
   onBackToMarketplace: () => void;
   initialEditingCampaign?: Campaign | null;
   onClearInitialEditingCampaign?: () => void;
+  initialTab?: 'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm';
+  onClearInitialTab?: () => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -50,11 +52,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onBackToMarketplace,
   initialEditingCampaign,
   onClearInitialEditingCampaign,
+  initialTab,
+  onClearInitialTab,
 }) => {
   // Navigation inside Admin (Sidebar Tab)
   const [activeAdminTab, setActiveAdminTab] = useState<
     'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm'
-  >('dashboard');
+  >(initialTab || 'dashboard');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveAdminTab(initialTab);
+      onClearInitialTab?.();
+    }
+  }, [initialTab, onClearInitialTab]);
 
   // Accordion state inside Sidebar for sub-menus
   const [isAppsSubmenuOpen, setIsAppsSubmenuOpen] = useState(true);

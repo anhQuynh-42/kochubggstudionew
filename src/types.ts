@@ -108,6 +108,9 @@ export interface AppNotification {
   time: string;
   read: boolean;
   type: 'campaign' | 'delivery' | 'payout' | 'approval';
+  targetRole?: 'koc' | 'admin' | 'all';
+  linkTab?: 'admin' | 'marketplace' | 'my-campaigns';
+  adminSubTab?: 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'dashboard';
 }
 
 export interface KOCUser {

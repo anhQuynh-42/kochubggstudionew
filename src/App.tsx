@@ -125,7 +125,34 @@ export const App: React.FC = () => {
       return INITIAL_APPLICATIONS;
     }
   });
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    try {
+      const saved = localStorage.getItem('koctrend_notifications');
+      return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    } catch {
+      return INITIAL_NOTIFICATIONS;
+    }
+  });
+
+  const [adminTargetSubTab, setAdminTargetSubTab] = useState<
+    'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | undefined
+  >(undefined);
+
+  // Lưu thông báo vào localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('koctrend_notifications', JSON.stringify(notifications));
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [notifications]);
+
+  // Bảo vệ vai trò Admin: Không cho phép Admin mở trang Hồ sơ KOC hoặc Đơn nhận mẫu của KOC
+  useEffect(() => {
+    if (currentUser?.role === 'admin' && (currentTab === 'my-campaigns' || currentTab === 'profile')) {
+      setCurrentTab('admin');
+    }
+  }, [currentUser, currentTab]);
 
   // Xem hồ sơ Media Kit công khai (khi có người gửi link ?mediakit=... hoặc ?mk=...)
   const [publicMediaKitData, setPublicMediaKitData] = useState<PublicMediaKitData | null>(null);
@@ -601,18 +628,30 @@ export const App: React.FC = () => {
         : prev
     );
 
-    // Add notification
-    setNotifications((prev) => [
-      {
-        id: `notif-${Date.now()}`,
-        title: `Đã nộp hồ sơ ${newApp.code} - Đang chờ Brand duyệt`,
-        message: `Hồ sơ đăng ký ${newApp.campaignName} đã gửi thành công. Brand sẽ xem qua kênh TikTok/Reels để đánh giá độ phù hợp trước khi gửi mẫu.`,
-        time: 'Vừa xong',
-        read: false,
-        type: 'approval',
-      },
-      ...prev,
-    ]);
+    // Add notification: Thông báo cho Admin và KOC
+    const adminNotif: AppNotification = {
+      id: `admin-notif-app-${Date.now()}`,
+      title: `Hồ sơ KOC mới: ${newApp.kocName}`,
+      message: `KOC @${newApp.tiktokHandle} vừa gửi hồ sơ nhận mẫu cho chiến dịch "${newApp.campaignName}". Vui lòng xét duyệt.`,
+      time: 'Vừa xong',
+      read: false,
+      type: 'approval',
+      targetRole: 'admin',
+      linkTab: 'admin',
+      adminSubTab: 'applications',
+    };
+
+    const kocNotif: AppNotification = {
+      id: `koc-notif-${Date.now()}`,
+      title: `Đã nộp hồ sơ ${newApp.code} - Đang chờ Brand duyệt`,
+      message: `Hồ sơ đăng ký ${newApp.campaignName} đã gửi thành công. Brand sẽ xem qua kênh TikTok/Reels để đánh giá độ phù hợp trước khi gửi mẫu.`,
+      time: 'Vừa xong',
+      read: false,
+      type: 'approval',
+      targetRole: 'koc',
+    };
+
+    setNotifications((prev) => [adminNotif, kocNotif, ...prev]);
 
     showToast(
       'Nộp hồ sơ thành công - Đang chờ duyệt',
@@ -642,6 +681,20 @@ export const App: React.FC = () => {
       }
       return updated;
     });
+
+    const targetApp = applications.find((a) => a.id === appId);
+    const videoNotif: AppNotification = {
+      id: `admin-notif-video-${Date.now()}`,
+      title: `Video nghiệm thu mới: ${targetApp ? targetApp.kocName : 'KOC'} nộp bài`,
+      message: `Đã nộp link video cho chiến dịch "${targetApp ? targetApp.campaignName : 'Chiến dịch'}". Vào kiểm tra để nghiệm thu.`,
+      time: 'Vừa xong',
+      read: false,
+      type: 'delivery',
+      targetRole: 'admin',
+      linkTab: 'admin',
+      adminSubTab: 'content',
+    };
+    setNotifications((prev) => [videoNotif, ...prev]);
 
     // Đồng bộ lên Supabase
     updateApplicationStatusOnSupabase(appId, {
@@ -748,6 +801,42 @@ export const App: React.FC = () => {
     });
   };
 
+  // Handlers cho thông báo chuông
+  const handleNotificationClick = (notif: AppNotification) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
+    );
+
+    if (currentUser?.role === 'admin') {
+      if (notif.adminSubTab) {
+        setAdminTargetSubTab(notif.adminSubTab);
+      }
+      setCurrentTab('admin');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      if (notif.linkTab) {
+        setCurrentTab(notif.linkTab);
+      } else {
+        setCurrentTab('my-campaigns');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) =>
+      prev.map((n) => {
+        if (currentUser?.role === 'admin' && n.targetRole === 'admin') {
+          return { ...n, read: true };
+        }
+        if (currentUser?.role !== 'admin' && n.targetRole !== 'admin') {
+          return { ...n, read: true };
+        }
+        return n;
+      })
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#faf2f8] text-slate-900">
       {/* 1. Header Navigation Bar (KOC-tailored, with Guest/Logged-in state) */}
@@ -758,6 +847,8 @@ export const App: React.FC = () => {
         currentTab={currentTab}
         onSelectTab={handleSelectTab}
         notifications={notifications}
+        onNotificationClick={handleNotificationClick}
+        onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenGuidelines={() => setIsGuidelinesOpen(true)}
@@ -838,6 +929,8 @@ export const App: React.FC = () => {
             applications={applications}
             initialEditingCampaign={editingCampaignFromExternal}
             onClearInitialEditingCampaign={() => setEditingCampaignFromExternal(null)}
+            initialTab={adminTargetSubTab}
+            onClearInitialTab={() => setAdminTargetSubTab(undefined)}
             onUpdateApplications={setApplications}
             onShowToast={showToast}
             onBackToMarketplace={handleBackToMarketplace}
@@ -864,6 +957,20 @@ export const App: React.FC = () => {
             `Đội ngũ Kocity sẽ liên hệ với ${info.brandName} qua số ${info.phone} sớm nhất.`,
             'success'
           );
+
+          // Tạo thông báo cho Admin
+          const brandNotif: AppNotification = {
+            id: `admin-notif-brand-${Date.now()}`,
+            title: `Yêu cầu hợp tác mới từ Brand: ${info.brandName}`,
+            message: `Người liên hệ: ${info.contactPerson} (${info.phone}). Ngân sách dự kiến: ${info.budget || 'Chưa định'}. Cần tư vấn chiến dịch.`,
+            time: 'Vừa xong',
+            read: false,
+            type: 'announcement',
+            targetRole: 'admin',
+            linkTab: 'admin',
+            adminSubTab: 'dashboard',
+          };
+          setNotifications((prev) => [brandNotif, ...prev]);
         }}
       />
 

@@ -13,6 +13,8 @@ interface HeaderProps {
   onSearchChange: (q: string) => void;
   onOpenGuidelines?: () => void;
   myCampaignsCount?: number;
+  onNotificationClick?: (notif: AppNotification) => void;
+  onMarkAllNotificationsRead?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,11 +28,23 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   onOpenGuidelines,
   myCampaignsCount = 0,
+  onNotificationClick,
+  onMarkAllNotificationsRead,
 }) => {
   const [showNotif, setShowNotif] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Lọc thông báo phù hợp theo vai trò (Admin hoặc KOC)
+  const visibleNotifications = notifications.filter((n) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') {
+      return n.targetRole === 'admin' || n.targetRole === 'all' || !n.targetRole;
+    } else {
+      return n.targetRole === 'koc' || n.targetRole === 'all' || !n.targetRole;
+    }
+  });
+
+  const unreadCount = visibleNotifications.filter((n) => !n.read).length;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/90 bg-white/95 backdrop-blur-md transition-all">
@@ -211,60 +225,101 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                       <div className="flex items-center gap-2">
                         <span className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-slate-900">
-                          Thông báo của bạn
+                          {currentUser?.role === 'admin' ? 'Thông báo Quản trị viên' : 'Thông báo của bạn'}
                         </span>
-                        <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                          {unreadCount} mới
-                        </span>
+                        {unreadCount > 0 && (
+                          <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                            {unreadCount} mới
+                          </span>
+                        )}
                       </div>
-                      <button
-                        onClick={() => setShowNotif(false)}
-                        className="text-xs text-slate-900 font-medium hover:underline cursor-pointer"
-                      >
-                        Đóng
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {unreadCount > 0 && onMarkAllNotificationsRead && (
+                          <button
+                            type="button"
+                            onClick={onMarkAllNotificationsRead}
+                            className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+                          >
+                            Đã đọc tất cả
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowNotif(false)}
+                          className="text-xs text-slate-500 hover:text-slate-900 font-medium cursor-pointer"
+                        >
+                          Đóng
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-3 divide-y divide-slate-100 max-h-80 overflow-y-auto">
-                      {notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`p-2.5 rounded-xl transition-colors hover:bg-slate-50 ${
-                            !notif.read ? 'bg-slate-50' : ''
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <div
-                              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                                notif.type === 'delivery'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : notif.type === 'payout'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-slate-100 text-slate-900'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[18px]">
-                                {notif.type === 'delivery'
-                                  ? 'local_shipping'
-                                  : notif.type === 'payout'
-                                  ? 'account_balance_wallet'
-                                  : 'campaign'}
-                              </span>
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-xs font-bold text-slate-900 leading-snug">
-                                {notif.title}
-                              </p>
-                              <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
-                                {notif.message}
-                              </p>
-                              <span className="mt-1 block text-[10px] font-medium text-slate-400">
-                                {notif.time}
-                              </span>
+                      {visibleNotifications.length > 0 ? (
+                        visibleNotifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              onNotificationClick?.(notif);
+                              setShowNotif(false);
+                            }}
+                            className={`p-2.5 rounded-xl transition-all cursor-pointer hover:bg-indigo-50/50 ${
+                              !notif.read ? 'bg-indigo-50/30' : ''
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div
+                                className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                                  notif.type === 'delivery'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : notif.type === 'payout'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : notif.type === 'approval'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-purple-100 text-purple-700'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  {notif.type === 'delivery'
+                                    ? 'smart_display'
+                                    : notif.type === 'payout'
+                                    ? 'payments'
+                                    : notif.type === 'approval'
+                                    ? 'how_to_reg'
+                                    : 'campaign'}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between gap-1">
+                                  <p className="text-xs font-bold text-slate-900 leading-snug">
+                                    {notif.title}
+                                  </p>
+                                  {!notif.read && (
+                                    <span className="h-2 w-2 rounded-full bg-[#6366f1] shrink-0" />
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
+                                  {notif.message}
+                                </p>
+                                <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400">
+                                  <span>{notif.time}</span>
+                                  {notif.linkTab && (
+                                    <span className="text-indigo-600 font-semibold flex items-center gap-0.5">
+                                      Xử lý ngay →
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="py-6 text-center text-xs text-slate-400">
+                          <span className="material-symbols-outlined text-3xl text-slate-300 block mb-1">
+                            notifications_off
+                          </span>
+                          Chưa có thông báo mới nào
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 )}
@@ -317,66 +372,87 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     <div className="py-1">
-                      {currentUser.role === 'admin' && (
-                        <button
-                          onClick={() => {
-                            onSelectTab('admin');
-                            setShowUserMenu(false);
-                          }}
-                          className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition-colors mb-1 ${
-                            currentTab === 'admin'
-                              ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs'
-                              : 'text-purple-700 bg-purple-50 hover:bg-purple-100'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                          <span>Admin Dashboard</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          onSelectTab('profile');
-                          setShowUserMenu(false);
-                        }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
-                          currentTab === 'profile'
-                            ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs font-bold'
-                            : 'text-slate-800 hover:bg-indigo-50 hover:text-[#6366f1]'
-                        }`}
-                      >
-                        <span className={`material-symbols-outlined text-[16px] ${currentTab === 'profile' ? 'text-white' : 'text-[#6366f1]'}`}>
-                          badge
-                        </span>
-                        Hồ sơ KOC & Media Kit
-                      </button>
+                      {currentUser.role === 'admin' ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              onSelectTab('admin');
+                              setShowUserMenu(false);
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition-colors mb-1 ${
+                              currentTab === 'admin'
+                                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs'
+                                : 'text-purple-700 bg-purple-50 hover:bg-purple-100'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                            <span>Admin Dashboard</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              onSelectTab('marketplace');
+                              setShowUserMenu(false);
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
+                              currentTab === 'marketplace'
+                                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs font-bold'
+                                : 'text-slate-800 hover:bg-indigo-50 hover:text-[#6366f1]'
+                            }`}
+                          >
+                            <span className={`material-symbols-outlined text-[16px] ${currentTab === 'marketplace' ? 'text-white' : 'text-[#6366f1]'}`}>
+                              explore
+                            </span>
+                            <span>Khám phá chiến dịch</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              onSelectTab('profile');
+                              setShowUserMenu(false);
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
+                              currentTab === 'profile'
+                                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs font-bold'
+                                : 'text-slate-800 hover:bg-indigo-50 hover:text-[#6366f1]'
+                            }`}
+                          >
+                            <span className={`material-symbols-outlined text-[16px] ${currentTab === 'profile' ? 'text-white' : 'text-[#6366f1]'}`}>
+                              badge
+                            </span>
+                            Hồ sơ KOC & Media Kit
+                          </button>
 
-                      <button
-                        onClick={() => {
-                          onSelectTab('my-campaigns');
-                          setShowUserMenu(false);
-                        }}
-                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
-                          currentTab === 'my-campaigns'
-                            ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs font-bold'
-                            : 'text-slate-800 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`material-symbols-outlined text-[16px] ${currentTab === 'my-campaigns' ? 'text-white' : 'text-slate-900'}`}>
-                            inventory_2
-                          </span>
-                          <span>Quản lý đơn nhận mẫu</span>
-                        </div>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            currentTab === 'my-campaigns'
-                              ? 'bg-white/20 text-white'
-                              : 'bg-indigo-50 border border-indigo-100 text-indigo-700'
-                          }`}
-                        >
-                          {myCampaignsCount}
-                        </span>
-                      </button>
+                          <button
+                            onClick={() => {
+                              onSelectTab('my-campaigns');
+                              setShowUserMenu(false);
+                            }}
+                            className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
+                              currentTab === 'my-campaigns'
+                                ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-xs font-bold'
+                                : 'text-slate-800 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={`material-symbols-outlined text-[16px] ${currentTab === 'my-campaigns' ? 'text-white' : 'text-slate-900'}`}>
+                                inventory_2
+                              </span>
+                              <span>Quản lý đơn nhận mẫu</span>
+                            </div>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                currentTab === 'my-campaigns'
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-indigo-50 border border-indigo-100 text-indigo-700'
+                              }`}
+                            >
+                              {myCampaignsCount}
+                            </span>
+                          </button>
+                        </>
+                      )}
 
                       <div className="my-1 border-t border-slate-100"></div>
 
@@ -463,8 +539,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Sau khi đăng nhập: Chiến dịch của tôi */}
-          {currentUser && (
+          {/* Sau khi đăng nhập: Chiến dịch của tôi (chỉ cho KOC) */}
+          {currentUser && currentUser.role !== 'admin' && (
             <button
               onClick={() => onSelectTab('my-campaigns')}
               className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
