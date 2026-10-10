@@ -34,12 +34,30 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotif, setShowNotif] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // Lọc thông báo phù hợp theo vai trò (Admin hoặc KOC)
+  // Lọc thông báo phù hợp theo vai trò (Admin hoặc KOC) và người nhận đích danh
   const visibleNotifications = notifications.filter((n) => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin') {
       return n.targetRole === 'admin' || n.targetRole === 'all' || !n.targetRole;
     } else {
+      // Nếu thông báo có thông tin người nhận đích danh (chỉ dành riêng cho 1 KOC)
+      if (n.targetKocId || n.targetTiktokHandle || n.targetPhone || n.targetEmail) {
+        const norm = (s?: string) => (s ? s.toLowerCase().replace(/[@\s.-]/g, '') : '');
+        const matchId = Boolean(n.targetKocId && currentUser.id && n.targetKocId === currentUser.id);
+        const matchHandle = Boolean(
+          n.targetTiktokHandle &&
+            currentUser.tiktokHandle &&
+            norm(n.targetTiktokHandle) === norm(currentUser.tiktokHandle)
+        );
+        const matchPhone = Boolean(
+          n.targetPhone && currentUser.phone && norm(n.targetPhone) === norm(currentUser.phone)
+        );
+        const matchEmail = Boolean(
+          n.targetEmail && currentUser.email && norm(n.targetEmail) === norm(currentUser.email)
+        );
+        return matchId || matchHandle || matchPhone || matchEmail;
+      }
+
       return n.targetRole === 'koc' || n.targetRole === 'all' || !n.targetRole;
     }
   });

@@ -107,9 +107,13 @@ export interface AppNotification {
   message: string;
   time: string;
   read: boolean;
-  type: 'campaign' | 'delivery' | 'payout' | 'approval';
+  type: 'campaign' | 'delivery' | 'payout' | 'approval' | 'announcement';
   targetRole?: 'koc' | 'admin' | 'all';
-  linkTab?: 'admin' | 'marketplace' | 'my-campaigns';
+  targetKocId?: string;
+  targetTiktokHandle?: string;
+  targetPhone?: string;
+  targetEmail?: string;
+  linkTab?: 'admin' | 'marketplace' | 'my-campaigns' | 'profile';
   adminSubTab?: 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'dashboard';
 }
 

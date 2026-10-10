@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Campaign, KOCApplication, ApplicationStatus } from '../types';
+import { Campaign, KOCApplication, ApplicationStatus, AppNotification } from '../types';
 import {
   updateApplicationStatusOnSupabase,
   createCampaignOnSupabase,
@@ -35,6 +35,7 @@ interface AdminViewProps {
   onUpdateCampaigns: (campaigns: Campaign[]) => void;
   applications: KOCApplication[];
   onUpdateApplications: (apps: KOCApplication[]) => void;
+  onAddNotification?: (notif: AppNotification) => void;
   onShowToast: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
   onBackToMarketplace: () => void;
   initialEditingCampaign?: Campaign | null;
@@ -48,6 +49,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onUpdateCampaigns,
   applications,
   onUpdateApplications,
+  onAddNotification,
   onShowToast,
   onBackToMarketplace,
   initialEditingCampaign,
@@ -343,14 +345,64 @@ export const AdminView: React.FC<AdminViewProps> = ({
       setSelectedApp(updated.find((a) => a.id === appId) || null);
     }
 
-    // Đồng bộ trạng thái đơn lên cơ sở dữ liệu Supabase đám mây
+    // Đồng bộ trạng thái đơn lên cơ sở dữ liệu Supabase đám mây & Bắn thông báo cho KOC
     const target = updated.find((a) => a.id === appId);
+    const prevApp = applications.find((a) => a.id === appId);
+
     if (target) {
       updateApplicationStatusOnSupabase(appId, {
         status: newStatus,
         shippingCode: target.shippingCode,
         shippingStatus: target.shippingStatus,
       });
+
+      // Tự động tạo thông báo gửi tới tài khoản KOC
+      if (prevApp && prevApp.status !== newStatus) {
+        let notifTitle = '';
+        let notifMessage = '';
+        let notifType: AppNotification['type'] = 'approval';
+        let notifLinkTab: AppNotification['linkTab'] = 'my-campaigns';
+
+        if (newStatus === 'Đã duyệt gửi mẫu') {
+          notifTitle = `🎉 Hồ sơ được duyệt: ${target.campaignName}`;
+          notifMessage = `Chúc mừng ${target.kocName}! Hồ sơ đăng ký (${target.code}) đã được duyệt gửi mẫu.${target.shippingCode ? ` Mã vận đơn: ${target.shippingCode}.` : ''} Hãy chuẩn bị nhận hàng và lên bài đúng hạn nhé!`;
+          notifType = 'approval';
+          notifLinkTab = 'my-campaigns';
+        } else if (newStatus === 'Đang giao') {
+          notifTitle = `🚚 Quà mẫu đang được giao: ${target.campaignName}`;
+          notifMessage = `Mẫu sản phẩm cho hồ sơ (${target.code}) đang được chuyển phát đến bạn. Mã vận đơn: ${target.shippingCode || 'GHTK'}.`;
+          notifType = 'delivery';
+          notifLinkTab = 'my-campaigns';
+        } else if (newStatus === 'Đã lên bài') {
+          notifTitle = `🌟 Đã nghiệm thu bài đăng: ${target.campaignName}`;
+          notifMessage = `Video review cho chiến dịch "${target.campaignName}" (${target.code}) đã được nghiệm thu thành công. Cảm ơn sự hợp tác của bạn!`;
+          notifType = 'approval';
+          notifLinkTab = 'my-campaigns';
+        } else if (newStatus === 'Từ chối') {
+          notifTitle = `Kết quả xét duyệt: ${target.campaignName}`;
+          notifMessage = `Rất tiếc hồ sơ đăng ký (${target.code}) chưa phù hợp với tiêu chí xét duyệt đợt này của Brand. Kocity còn nhiều chiến dịch hấp dẫn khác đang chờ bạn!`;
+          notifType = 'approval';
+          notifLinkTab = 'marketplace';
+        }
+
+        if (notifTitle) {
+          const kocNotification: AppNotification = {
+            id: `koc-status-notif-${appId}-${Date.now()}`,
+            title: notifTitle,
+            message: notifMessage,
+            time: 'Vừa xong',
+            read: false,
+            type: notifType,
+            targetRole: 'koc',
+            targetKocId: target.kocId,
+            targetTiktokHandle: target.tiktokHandle,
+            targetPhone: target.phone,
+            targetEmail: target.email,
+            linkTab: notifLinkTab,
+          };
+          onAddNotification?.(kocNotification);
+        }
+      }
     }
 
     onShowToast('Cập nhật thành công!', `Đã chuyển trạng thái hồ sơ sang "${newStatus}"`, 'success');

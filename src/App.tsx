@@ -299,12 +299,84 @@ export const App: React.FC = () => {
       },
       (updatedApp) => {
         setApplications((prev) => {
+          const oldApp = prev.find((a) => a.id === updatedApp.id);
           const updated = prev.map((a) => (a.id === updatedApp.id ? { ...a, ...updatedApp } : a));
           try {
             localStorage.setItem('koctrend_applications', JSON.stringify(updated));
           } catch (e) {
             console.warn(e);
           }
+
+          // Khi có cập nhật trạng thái hồ sơ từ Supabase Realtime (Admin duyệt trên thiết bị khác)
+          if (oldApp && oldApp.status !== updatedApp.status) {
+            let notifTitle = '';
+            let notifMessage = '';
+            let notifType: AppNotification['type'] = 'approval';
+            let notifLinkTab: AppNotification['linkTab'] = 'my-campaigns';
+
+            if (updatedApp.status === 'Đã duyệt gửi mẫu') {
+              notifTitle = `🎉 Hồ sơ được duyệt: ${updatedApp.campaignName}`;
+              notifMessage = `Chúc mừng ${updatedApp.kocName}! Hồ sơ đăng ký (${updatedApp.code}) đã được duyệt gửi mẫu.${updatedApp.shippingCode ? ` Mã vận đơn: ${updatedApp.shippingCode}.` : ''} Hãy chuẩn bị nhận hàng và lên bài đúng hạn nhé!`;
+              notifType = 'approval';
+              notifLinkTab = 'my-campaigns';
+            } else if (updatedApp.status === 'Đang giao') {
+              notifTitle = `🚚 Quà mẫu đang được giao: ${updatedApp.campaignName}`;
+              notifMessage = `Mẫu sản phẩm cho hồ sơ (${updatedApp.code}) đang được chuyển phát đến bạn. Mã vận đơn: ${updatedApp.shippingCode || 'GHTK'}.`;
+              notifType = 'delivery';
+              notifLinkTab = 'my-campaigns';
+            } else if (updatedApp.status === 'Đã lên bài') {
+              notifTitle = `🌟 Đã nghiệm thu bài đăng: ${updatedApp.campaignName}`;
+              notifMessage = `Video review cho chiến dịch "${updatedApp.campaignName}" (${updatedApp.code}) đã được nghiệm thu thành công. Cảm ơn sự hợp tác của bạn!`;
+              notifType = 'approval';
+              notifLinkTab = 'my-campaigns';
+            } else if (updatedApp.status === 'Từ chối') {
+              notifTitle = `Kết quả xét duyệt: ${updatedApp.campaignName}`;
+              notifMessage = `Rất tiếc hồ sơ đăng ký (${updatedApp.code}) chưa phù hợp với tiêu chí xét duyệt đợt này của Brand. Kocity còn nhiều chiến dịch hấp dẫn khác đang chờ bạn!`;
+              notifType = 'approval';
+              notifLinkTab = 'marketplace';
+            }
+
+            if (notifTitle) {
+              const kocNotification: AppNotification = {
+                id: `koc-realtime-notif-${updatedApp.id}-${Date.now()}`,
+                title: notifTitle,
+                message: notifMessage,
+                time: 'Vừa xong',
+                read: false,
+                type: notifType,
+                targetRole: 'koc',
+                targetKocId: updatedApp.kocId,
+                targetTiktokHandle: updatedApp.tiktokHandle,
+                targetPhone: updatedApp.phone,
+                targetEmail: updatedApp.email,
+                linkTab: notifLinkTab,
+              };
+
+              setNotifications((nPrev) => {
+                const next = [kocNotification, ...nPrev.filter((n) => n.id !== kocNotification.id)];
+                try {
+                  localStorage.setItem('koctrend_notifications', JSON.stringify(next));
+                } catch (e) {
+                  console.warn(e);
+                }
+                return next;
+              });
+
+              // Bắn toast ngay lập tức nếu KOC đang xem trên màn hình
+              if (currentUser && currentUser.role !== 'admin') {
+                const norm = (s?: string) => (s ? s.toLowerCase().replace(/[@\s.-]/g, '') : '');
+                const isMyApplication =
+                  (updatedApp.kocId && updatedApp.kocId === currentUser.id) ||
+                  (updatedApp.tiktokHandle && norm(updatedApp.tiktokHandle) === norm(currentUser.tiktokHandle)) ||
+                  (updatedApp.phone && norm(updatedApp.phone) === norm(currentUser.phone));
+
+                if (isMyApplication) {
+                  showToast(notifTitle, notifMessage, 'success');
+                }
+              }
+            }
+          }
+
           return updated;
         });
       }
@@ -776,6 +848,29 @@ export const App: React.FC = () => {
     }
   };
 
+  // Handlers: Cập nhật danh sách đơn từ Admin (Lưu state & localStorage)
+  const handleAdminUpdateApplications = (updatedApps: KOCApplication[]) => {
+    setApplications(updatedApps);
+    try {
+      localStorage.setItem('koctrend_applications', JSON.stringify(updatedApps));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  // Handlers: Thêm thông báo mới vào danh sách chuông thông báo
+  const handleAddNotification = (newNotif: AppNotification) => {
+    setNotifications((prev) => {
+      const next = [newNotif, ...prev.filter((n) => n.id !== newNotif.id)];
+      try {
+        localStorage.setItem('koctrend_notifications', JSON.stringify(next));
+      } catch (e) {
+        console.warn(e);
+      }
+      return next;
+    });
+  };
+
   const handleEditCampaignFromMarketplace = (camp: Campaign) => {
     setEditingCampaignFromExternal(camp);
     setCurrentTab('admin');
@@ -931,7 +1026,8 @@ export const App: React.FC = () => {
             onClearInitialEditingCampaign={() => setEditingCampaignFromExternal(null)}
             initialTab={adminTargetSubTab}
             onClearInitialTab={() => setAdminTargetSubTab(undefined)}
-            onUpdateApplications={setApplications}
+            onUpdateApplications={handleAdminUpdateApplications}
+            onAddNotification={handleAddNotification}
             onShowToast={showToast}
             onBackToMarketplace={handleBackToMarketplace}
           />
