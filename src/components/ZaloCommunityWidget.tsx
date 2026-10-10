@@ -142,9 +142,9 @@ export const ZaloCommunityWidget: React.FC<{
         </div>
       )}
 
-      {/* Floating Action Buttons (Stacked Vertically) */}
+      {/* Floating Action Buttons (Stacked Vertically, Compact Circular Shape) */}
       <div className="flex flex-col items-end gap-2.5">
-        {/* New Job Updated Button - Positioned above Zalo button */}
+        {/* 1. New Job Updated Button - Circular compact shape */}
         <button
           type="button"
           onClick={() => {
@@ -154,56 +154,56 @@ export const ZaloCommunityWidget: React.FC<{
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }
           }}
-          className="group relative flex h-12 items-center gap-2 rounded-full bg-[#0068FF] hover:bg-[#0054cc] px-4 text-white shadow-lg shadow-blue-500/30 transition-all cursor-pointer animate-shake-attention hover:scale-105 active:scale-95"
+          className="group relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 via-rose-600 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shadow-lg shadow-rose-500/30 transition-all cursor-pointer animate-shake-delayed hover:scale-110 active:scale-95"
           title="Xem ngay các chiến dịch và Job mới cập nhật"
+          aria-label="Job mới cập nhật"
         >
           {/* Subtle glowing pulse ring */}
-          <span className="absolute -inset-1 rounded-full bg-[#0068FF]/30 -z-10 animate-pulse-ring pointer-events-none" />
+          <span className="absolute -inset-1 rounded-full bg-rose-500/25 -z-10 animate-pulse-ring pointer-events-none" />
 
-          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#0068FF] shadow-xs">
-            <span className="material-symbols-outlined text-[18px]">campaign</span>
-            {/* New alert notification dot */}
-            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white"></span>
-            </span>
-          </div>
-          <div className="flex flex-col text-left pr-1">
-            <span className="text-[10px] font-medium text-white/85 leading-none">Cơ hội nhận mẫu</span>
-            <span className="text-xs font-extrabold text-white leading-tight whitespace-nowrap">
-              Job mới cập nhật !
-            </span>
-          </div>
-          <span className="material-symbols-outlined text-[16px] text-white/90 group-hover:translate-x-0.5 transition-transform">
-            arrow_forward
+          {/* Icon loa chiến dịch */}
+          <span className="material-symbols-outlined text-[20px] sm:text-[22px] drop-shadow-xs">
+            campaign
+          </span>
+
+          {/* New alert notification dot */}
+          <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400 border-2 border-white shadow-xs"></span>
+          </span>
+
+          {/* Tooltip on hover (Desktop) */}
+          <span className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-900/90 backdrop-blur-xs text-white text-[11px] font-bold rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
+            Job mới cập nhật !
           </span>
         </button>
 
-        {/* Existing Zalo Community Button - Positioned below */}
+        {/* 2. Zalo Community Button - Circular compact shape */}
         <a
           href={ZALO_GROUP_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="group relative flex h-12 items-center gap-2.5 rounded-full bg-[#0068FF] hover:bg-[#0054cc] px-4 text-white shadow-lg shadow-blue-500/30 transition-all cursor-pointer animate-shake-attention hover:scale-105 active:scale-95"
+          className="group relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[#0068FF] hover:bg-[#0054cc] text-white shadow-lg shadow-blue-500/35 transition-all cursor-pointer animate-shake-attention hover:scale-110 active:scale-95"
           title="Nhấp để vào nhóm Zalo KOC trao đổi trực tiếp"
+          aria-label="Nhóm Zalo KOC"
         >
           {/* Subtle glowing ring behind button */}
           <span className="absolute -inset-1 rounded-full bg-[#0068FF]/30 -z-10 animate-pulse-ring pointer-events-none" />
 
-          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#0068FF] font-extrabold text-xs shadow-xs">
+          {/* Chữ Zalo thương hiệu */}
+          <span className="font-black text-[13px] sm:text-[14px] tracking-tight drop-shadow-xs">
             Zalo
-            {/* Online notification dot */}
-            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500 border border-white"></span>
-            </span>
-          </div>
-          <div className="flex flex-col text-left pr-1">
-            <span className="text-[10px] font-medium text-white/85 leading-none">Cộng đồng KOC</span>
-            <span className="text-xs font-extrabold text-white leading-tight whitespace-nowrap">Nhóm Zalo</span>
-          </div>
-          <span className="material-symbols-outlined text-[16px] text-white/90 group-hover:translate-x-0.5 transition-transform">
-            open_in_new
+          </span>
+
+          {/* Online notification dot */}
+          <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white shadow-xs"></span>
+          </span>
+
+          {/* Tooltip on hover (Desktop) */}
+          <span className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-900/90 backdrop-blur-xs text-white text-[11px] font-bold rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
+            Nhóm Zalo KOC
           </span>
         </a>
       </div>

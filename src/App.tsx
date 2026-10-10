@@ -1016,8 +1016,8 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 7. Floating Action Buttons (Zalo Community + Job mới cập nhật !) - Chỉ hiển thị ở trang chủ Khám phá chiến dịch */}
-      {currentTab === 'marketplace' && (
+      {/* 7. Floating Action Buttons (Zalo Community + Job mới cập nhật !) - Hiển thị cho KOC ở trang chủ Khám phá chiến dịch */}
+      {currentTab === 'marketplace' && currentUser?.role !== 'admin' && (
         <ZaloCommunityWidget
           onNavigateToMarketplace={() => {
             setSelectedCampaign(null);

@@ -93,7 +93,12 @@ body {
 
 .animate-shake-attention {
   animation: shake-wiggle 3s ease-in-out infinite;
-  transform-origin: bottom right;
+  transform-origin: center;
+}
+
+.animate-shake-delayed {
+  animation: shake-wiggle 3s ease-in-out 1.5s infinite;
+  transform-origin: center;
 }
 
 @keyframes pulse-ring {
