@@ -141,6 +141,13 @@ export interface KOCUser {
   minBookingRate?: string;
   allowSparkAds?: boolean;
   portfolioDriveLink?: string;
+  portfolioFile?: {
+    name: string;
+    size: string;
+    dataUrl?: string;
+    type?: string;
+    uploadedAt?: string;
+  };
   sampleDeliveredCount?: number;
   completedVideosCount?: number;
 }

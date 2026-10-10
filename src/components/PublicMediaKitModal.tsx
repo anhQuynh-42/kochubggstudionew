@@ -18,11 +18,20 @@ export interface PublicMediaKitData {
   district?: string;
   address?: string;
   channelLink?: string;
+  instagramHandle?: string;
+  youtubeHandle?: string;
   portfolioDriveLink?: string;
+  portfolioFile?: {
+    name: string;
+    size: string;
+    dataUrl?: string;
+    type?: string;
+  };
   targetAudience?: string;
-  contentStyle?: string;
+  contentStyle?: string[] | string;
   minBookingRate?: string;
   allowSparkAds?: boolean;
+  acceptFreecast?: boolean;
 }
 
 interface PublicMediaKitModalProps {
@@ -44,6 +53,10 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
 
   const cleanHandle = (data.tiktokHandle || '@creator').trim();
   const tiktokUrl = data.channelLink || `https://www.tiktok.com/${cleanHandle.startsWith('@') ? cleanHandle : `@${cleanHandle}`}`;
+  const cleanInstagram = data.instagramHandle ? data.instagramHandle.replace(/[@\s]/g, '') : '';
+  const instagramUrl = cleanInstagram ? `https://www.instagram.com/${cleanInstagram}` : '';
+  const cleanYoutube = data.youtubeHandle ? data.youtubeHandle.replace(/[@\s]/g, '') : '';
+  const youtubeUrl = cleanYoutube ? `https://www.youtube.com/@${cleanYoutube}` : '';
 
   // Tải thẻ Media Kit về máy dạng ảnh PNG
   const handleDownloadImage = async () => {
@@ -134,21 +147,55 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
               </span>
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                 <h2 className="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black text-slate-900">
                   {data.name}
                 </h2>
               </div>
-              <a
-                href={tiktokUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-xs font-bold text-[#613bd1] hover:underline mt-0.5"
-              >
-                <span>{cleanHandle}</span>
-                <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-              </a>
+
+              {/* Social Channels Row */}
+              <div className="mt-1.5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                {/* TikTok Handle */}
+                <a
+                  href={tiktokUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-mono text-xs font-bold text-[#613bd1] hover:underline bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100"
+                >
+                  <span className="text-[10px] font-sans font-bold text-slate-500">TikTok:</span>
+                  <span>{cleanHandle}</span>
+                  <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                </a>
+
+                {/* Instagram Handle */}
+                {cleanInstagram && (
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-xs font-bold text-pink-600 hover:underline bg-pink-50 px-2 py-0.5 rounded-lg border border-pink-100"
+                  >
+                    <span className="text-[10px] font-sans font-bold text-slate-500">IG:</span>
+                    <span>@{cleanInstagram}</span>
+                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                  </a>
+                )}
+
+                {/* YouTube Handle */}
+                {cleanYoutube && (
+                  <a
+                    href={youtubeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-xs font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100"
+                  >
+                    <span className="text-[10px] font-sans font-bold text-slate-500">YT:</span>
+                    <span>@{cleanYoutube}</span>
+                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                  </a>
+                )}
+              </div>
 
               {data.bio && (
                 <p className="mt-2 text-xs text-slate-600 leading-relaxed italic bg-purple-50/60 p-2.5 rounded-xl border border-purple-100">
@@ -189,7 +236,7 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
           {/* Categories */}
           <div className="mb-4">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-              Ngành hàng thế mạnh:
+              Lĩnh vực & Chuyên mục thế mạnh:
             </span>
             <div className="flex flex-wrap gap-1.5">
               {data.categories && data.categories.length > 0 ? (
@@ -207,23 +254,66 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
             </div>
           </div>
 
-          {/* Highlights Info */}
-          {(data.city || data.minBookingRate || data.targetAudience) && (
-            <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2">
-              {data.city && (
-                <div className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-[#316bbf]">location_on</span>
-                  <span>{data.city}</span>
-                </div>
-              )}
-              {data.minBookingRate && (
-                <div className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[15px] text-emerald-600">payments</span>
-                  <span>Booking: {data.minBookingRate}</span>
-                </div>
-              )}
+          {/* Portfolio & Case Studies Section (Yêu cầu 14 & 15) */}
+          {(data.portfolioDriveLink || data.portfolioFile) && (
+            <div className="mb-4 rounded-2xl bg-gradient-to-r from-indigo-50/80 to-purple-50/70 p-3.5 border border-indigo-100">
+              <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-[#613bd1]">folder_shared</span>
+                Hồ sơ năng lực & Video mẫu (Portfolio)
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* File Portfolio tải lên */}
+                {data.portfolioFile && (
+                  <a
+                    href={data.portfolioFile.dataUrl}
+                    download={data.portfolioFile.name}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-200 shadow-xs hover:bg-rose-50 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-rose-500">picture_as_pdf</span>
+                    <span className="truncate max-w-[180px]">{data.portfolioFile.name}</span>
+                    <span className="text-[10px] text-slate-400">({data.portfolioFile.size})</span>
+                    <span className="material-symbols-outlined text-[14px]">download</span>
+                  </a>
+                )}
+
+                {/* Link Drive / Notion Portfolio */}
+                {data.portfolioDriveLink && (
+                  <a
+                    href={data.portfolioDriveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#316bbf] border border-blue-200 shadow-xs hover:bg-blue-50 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">link</span>
+                    <span>Mở Portfolio Drive / Notion</span>
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                  </a>
+                )}
+              </div>
             </div>
           )}
+
+          {/* Highlights & Collaboration Terms */}
+          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2">
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-[#316bbf]">location_on</span>
+              <span>{data.city ? `${data.city}${data.district ? `, ${data.district}` : ''}` : 'Toàn quốc'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-emerald-600">payments</span>
+              <span>Rate card: {data.minBookingRate || 'Mẫu 0đ + Hoa hồng'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-[#613bd1]">bolt</span>
+              <span>Spark Ads: {data.allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-amber-600">card_giftcard</span>
+              <span>Mẫu 0đ (Freecast): {data.acceptFreecast !== false ? 'Nhận mẫu' : 'Booking fee'}</span>
+            </div>
+          </div>
 
           {/* Footer watermark */}
           <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100">

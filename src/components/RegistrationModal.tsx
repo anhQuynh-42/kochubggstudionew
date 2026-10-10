@@ -43,12 +43,48 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const [platform, setPlatform] = useState('TikTok');
   const [channelLink, setChannelLink] = useState(
     currentUser?.channelLink ||
-      (currentUser?.tiktokHandle ? `https://www.tiktok.com/${currentUser.tiktokHandle}` : '')
+      (currentUser?.tiktokHandle ? `https://www.tiktok.com/${currentUser.tiktokHandle.startsWith('@') ? currentUser.tiktokHandle : `@${currentUser.tiktokHandle}`}` : '')
   );
   const [tiktokHandle, setTiktokHandle] = useState(currentUser?.tiktokHandle || '');
   const [followers, setFollowers] = useState(currentUser?.followers || '');
   const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '');
-  const [audience, setAudience] = useState(currentUser?.targetAudience || '');
+  const [audience, setAudience] = useState(currentUser?.targetAudience || currentUser?.categories?.join(', ') || '');
+
+  // Tự động điền thông tin từ Hồ sơ KOC (Yêu cầu 16)
+  const [hasAutoFilled, setHasAutoFilled] = useState(Boolean(currentUser));
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.name) setFullName(currentUser.name);
+      if (currentUser.phone) setPhone(currentUser.phone);
+      if (currentUser.email) setEmail(currentUser.email);
+      if (currentUser.city) setCity(currentUser.city);
+      if (currentUser.district) setDistrict(currentUser.district);
+      if (currentUser.address) setAddress(currentUser.address);
+      if (currentUser.shippingNote) setShippingNote(currentUser.shippingNote);
+
+      if (currentUser.tiktokHandle) setTiktokHandle(currentUser.tiktokHandle);
+      if (currentUser.channelLink) {
+        setChannelLink(currentUser.channelLink);
+      } else if (currentUser.tiktokHandle) {
+        setChannelLink(`https://www.tiktok.com/${currentUser.tiktokHandle.startsWith('@') ? currentUser.tiktokHandle : `@${currentUser.tiktokHandle}`}`);
+      }
+      if (currentUser.followers) setFollowers(currentUser.followers);
+      if (currentUser.avgViews) setAvgViews(currentUser.avgViews);
+      if (currentUser.targetAudience) {
+        setAudience(currentUser.targetAudience);
+      } else if (currentUser.categories && currentUser.categories.length > 0) {
+        setAudience(currentUser.categories.join(', '));
+      }
+
+      if (currentUser.allowSparkAds !== undefined) {
+        setAgreeSparkAds(currentUser.allowSparkAds);
+      }
+
+      setHasAutoFilled(true);
+    }
+  }, [currentUser]);
+
   const [hasUploadedProof, setHasUploadedProof] = useState(false);
   const [uploadedProofFile, setUploadedProofFile] = useState<{
     name: string;
@@ -342,6 +378,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             {/* Step 1: Personal & Shipping Address */}
             {step === 1 && (
               <div className="space-y-4">
+                {currentUser && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-[11px] text-indigo-700 font-medium">
+                    <span className="material-symbols-outlined text-[17px] text-indigo-600 shrink-0">auto_fix_high</span>
+                    <span>Đã tự động điền thông tin từ <strong>Hồ sơ KOC</strong> của bạn. Bạn có thể kiểm tra và trực tiếp chỉnh sửa nếu cần.</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-900 mb-1">
@@ -457,6 +499,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
             {/* Step 2: Channel & Analytics Proof */}
             {step === 2 && (
               <div className="space-y-4">
+                {currentUser && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-indigo-50/90 border border-indigo-200/80 text-[11px] text-indigo-700 font-medium">
+                    <span className="material-symbols-outlined text-[17px] text-indigo-600 shrink-0">auto_fix_high</span>
+                    <span>Đã tự động lấy số liệu kênh từ <strong>Hồ sơ KOC</strong> của bạn. Vui lòng kiểm tra và cập nhật chỉ số mới nhất nếu có.</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-900 mb-1">

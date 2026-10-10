@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { KOCUser } from '../types';
 import { APP_LOGOS } from '../data/mockData';
@@ -236,6 +236,72 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
   const [portfolioDriveLink, setPortfolioDriveLink] = useState(
     currentUser?.portfolioDriveLink || ''
   );
+  const [portfolioFile, setPortfolioFile] = useState<{
+    name: string;
+    size: string;
+    dataUrl?: string;
+    type?: string;
+    uploadedAt?: string;
+  } | undefined>(currentUser?.portfolioFile);
+  const portfolioFileInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingPortfolio, setIsDraggingPortfolio] = useState(false);
+
+  // Sync state khi currentUser thay đổi
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.name) setName(currentUser.name);
+      if (currentUser.avatar) setAvatar(currentUser.avatar);
+      if (currentUser.tiktokHandle) setTiktokHandle(currentUser.tiktokHandle);
+      if (currentUser.channelLink) setChannelLink(currentUser.channelLink);
+      if (currentUser.followers) setFollowers(currentUser.followers);
+      if (currentUser.avgViews) setAvgViews(currentUser.avgViews);
+      if (currentUser.engagementRate) setEngagementRate(currentUser.engagementRate);
+      if (currentUser.instagramHandle !== undefined) setInstagramHandle(currentUser.instagramHandle);
+      if (currentUser.youtubeHandle !== undefined) setYoutubeHandle(currentUser.youtubeHandle);
+      if (currentUser.phone) setPhone(currentUser.phone);
+      if (currentUser.email) setEmail(currentUser.email);
+      if (currentUser.city) setCity(currentUser.city);
+      if (currentUser.district) setDistrict(currentUser.district);
+      if (currentUser.address) setAddress(currentUser.address);
+      if (currentUser.shippingNote) setShippingNote(currentUser.shippingNote);
+      if (currentUser.bio) setBio(currentUser.bio);
+      if (currentUser.categories) setCategories(currentUser.categories);
+      if (currentUser.contentStyle) setContentStyle(currentUser.contentStyle);
+      if (currentUser.targetAudience) setTargetAudience(currentUser.targetAudience);
+      if (currentUser.acceptFreecast !== undefined) setAcceptFreecast(currentUser.acceptFreecast);
+      if (currentUser.minBookingRate) setMinBookingRate(currentUser.minBookingRate);
+      if (currentUser.allowSparkAds !== undefined) setAllowSparkAds(currentUser.allowSparkAds);
+      if (currentUser.portfolioDriveLink !== undefined) setPortfolioDriveLink(currentUser.portfolioDriveLink);
+      if (currentUser.portfolioFile !== undefined) setPortfolioFile(currentUser.portfolioFile);
+    }
+  }, [currentUser]);
+
+  // Xử lý tải tệp portfolio (PDF, PPT, DOC, tối đa 20MB)
+  const handlePortfolioFileUpload = (file: File) => {
+    if (!file) return;
+    const maxSize = 20 * 1024 * 1024; // 20MB
+    if (file.size > maxSize) {
+      onShowToast('Tệp quá lớn!', 'Vui lòng tải tệp portfolio dưới 20MB.', 'warning');
+      return;
+    }
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
+    const sizeStr = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(0)} KB` : `${sizeInMB} MB`;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const newFileObj = {
+        name: file.name,
+        size: sizeStr,
+        dataUrl,
+        type: file.type || 'application/pdf',
+        uploadedAt: new Date().toLocaleDateString('vi-VN'),
+      };
+      setPortfolioFile(newFileObj);
+      onShowToast('Đã tải tệp Portfolio!', `Tệp ${file.name} đã được lưu vào hồ sơ năng lực.`, 'success');
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Active Tab within Profile Form
   const [activeTab, setActiveTab] = useState<'channel' | 'address' | 'rates' | 'mediaKit'>('channel');
@@ -294,10 +360,22 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       district,
       address,
       channelLink: channelLink || `https://www.tiktok.com/@${cleanHandle}`,
+      instagramHandle,
+      youtubeHandle,
       portfolioDriveLink,
+      portfolioFile: portfolioFile
+        ? {
+            name: portfolioFile.name,
+            size: portfolioFile.size,
+            type: portfolioFile.type,
+            dataUrl: portfolioFile.dataUrl && portfolioFile.dataUrl.length < 5000 ? portfolioFile.dataUrl : undefined,
+          }
+        : undefined,
       targetAudience,
       contentStyle,
       minBookingRate,
+      allowSparkAds,
+      acceptFreecast,
     };
 
     let shareUrl = `${window.location.origin}/?mediakit=${encodeURIComponent(cleanHandle)}`;
@@ -436,9 +514,9 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       targetAudience,
       contentStyle,
       acceptFreecast,
-      minBookingRate,
       allowSparkAds,
       portfolioDriveLink,
+      portfolioFile,
       sampleDeliveredCount: currentUser?.sampleDeliveredCount || 0,
       completedVideosCount: currentUser?.completedVideosCount || 0,
     };
@@ -561,9 +639,46 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <h3 className="mt-3 font-['Plus_Jakarta_Sans'] text-lg font-extrabold text-slate-900">
                 {name || 'Tên KOC của bạn'}
               </h3>
-              <p className="font-mono text-xs font-semibold text-[#613bd1]">
-                {tiktokHandle ? (tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`) : '@chua_cap_nhat_tiktok'}
-              </p>
+              
+              {/* Omni-channel Social Handles */}
+              <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
+                <a
+                  href={channelLink || (tiktokHandle ? `https://www.tiktok.com/${tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`}` : '#')}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#613bd1] hover:underline bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100"
+                >
+                  <span className="text-[10px] text-slate-500 font-sans">TT:</span>
+                  <span>{tiktokHandle ? (tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`) : '@creator'}</span>
+                  <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                </a>
+
+                {instagramHandle && (
+                  <a
+                    href={`https://www.instagram.com/${instagramHandle.replace(/[@\s]/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-pink-600 hover:underline bg-pink-50 px-2 py-0.5 rounded-md border border-pink-100"
+                  >
+                    <span className="text-[10px] text-slate-500 font-sans">IG:</span>
+                    <span>@{instagramHandle.replace(/[@\s]/g, '')}</span>
+                    <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                  </a>
+                )}
+
+                {youtubeHandle && (
+                  <a
+                    href={`https://www.youtube.com/@${youtubeHandle.replace(/[@\s]/g, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100"
+                  >
+                    <span className="text-[10px] text-slate-500 font-sans">YT:</span>
+                    <span>@{youtubeHandle.replace(/[@\s]/g, '')}</span>
+                    <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                  </a>
+                )}
+              </div>
 
               {/* KOC Member ID Badge with Quick Copy */}
               <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-purple-50/80 px-3 py-1 border border-purple-200">
@@ -635,6 +750,41 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </div>
             </div>
 
+            {/* Portfolio & Case Studies Preview on Card */}
+            {(portfolioDriveLink || portfolioFile) && (
+              <div className="mt-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-left">
+                <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
+                  Portfolio & Video mẫu
+                </span>
+                <div className="space-y-1.5">
+                  {portfolioFile && (
+                    <a
+                      href={portfolioFile.dataUrl}
+                      download={portfolioFile.name}
+                      className="flex items-center gap-1.5 text-xs text-rose-600 font-bold bg-white px-2.5 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 transition-colors shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px] text-rose-500">picture_as_pdf</span>
+                      <span className="truncate max-w-[140px]">{portfolioFile.name}</span>
+                      <span className="text-[10px] text-slate-400 ml-auto">{portfolioFile.size}</span>
+                    </a>
+                  )}
+                  {portfolioDriveLink && (
+                    <a
+                      href={portfolioDriveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-[#316bbf] font-bold bg-white px-2.5 py-1.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">link</span>
+                      <span className="truncate">Drive / Notion / Canva</span>
+                      <span className="material-symbols-outlined text-[13px] ml-auto">open_in_new</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Collaboration terms preview */}
             <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs">
               <div className="flex items-center justify-between text-slate-600">
@@ -653,6 +803,13 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </div>
               <div className="flex items-center justify-between text-slate-600">
                 <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-600">payments</span>
+                  Báo giá booking
+                </span>
+                <b className="text-emerald-700">{minBookingRate || 'Mẫu 0đ + Hoa hồng'}</b>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px] text-slate-500">location_on</span>
                   Khu vực giao mẫu
                 </span>
@@ -662,20 +819,28 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </div>
             </div>
 
-            {/* Quick action button to copy Media Kit link */}
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `https://kochub.vn/koc/${tiktokHandle.replace('@', '') || 'creator'}`
-                );
-                onShowToast('Đã sao chép link Media Kit KOC!', 'Chia sẻ link cho Brand để nhận booking trực tiếp.', 'success');
-              }}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-purple-50 hover:text-[#613bd1] hover:border-purple-200 py-2.5 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">content_copy</span>
-              <span>Sao chép link Media Kit</span>
-            </button>
+            {/* Quick action buttons for Media Kit */}
+            <div className="mt-5 space-y-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowMediaKitModal(true)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] hover:opacity-95 py-2.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">badge</span>
+                <span>Xem & Xuất thẻ Media Kit (PNG)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShareMediaKit}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100 py-2 text-xs font-bold text-[#613bd1] transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {copiedShareLink ? 'done' : 'link'}
+                </span>
+                <span>{copiedShareLink ? 'Đã sao chép link web!' : 'Sao chép link Media Kit'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1163,20 +1328,134 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Link Google Drive Portfolio / Video mẫu tiêu biểu (Nếu có)
-                  </label>
-                  <input
-                    type="url"
-                    value={portfolioDriveLink}
-                    onChange={(e) => setPortfolioDriveLink(e.target.value)}
-                    placeholder="https://drive.google.com/drive/folders/your-koc-portfolio"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
-                  />
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Gắn link Google Drive chứa video review mẫu hoặc ảnh screenshot chỉ số tài khoản TikTok Shop.
+                {/* Upload & Link Portfolio Section (Yêu cầu 14 & 15) */}
+                <div className="space-y-3.5 rounded-2xl bg-gradient-to-r from-purple-50/60 to-blue-50/50 p-4 sm:p-5 border border-purple-200">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[18px] text-[#613bd1]">folder_shared</span>
+                      <span>Hồ sơ năng lực / Portfolio của KOC</span>
+                    </label>
+                    <span className="text-[11px] font-semibold text-[#613bd1] bg-purple-100/80 px-2 py-0.5 rounded-md">
+                      Hiển thị trực tiếp trên Media Kit
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Đính kèm file PDF hoặc liên kết Google Drive/Notion/Canva giới thiệu các video review nổi bật, phong cách quay dựng và kết quả chuyển đổi thực tế để nhãn hàng đánh giá ngay.
                   </p>
+
+                  {/* 1. Tải tệp Portfolio trực tiếp */}
+                  <div className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs space-y-2">
+                    <label className="text-xs font-bold text-slate-800 block">
+                      Cách 1: Tải tệp Portfolio lên hệ thống (PDF, PPT, DOC, tối đa 20MB)
+                    </label>
+                    <input
+                      ref={portfolioFileInputRef}
+                      type="file"
+                      accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handlePortfolioFileUpload(file);
+                      }}
+                    />
+
+                    {portfolioFile ? (
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-purple-50/50 border border-purple-200">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 shadow-2xs">
+                            <span className="material-symbols-outlined text-[22px]">picture_as_pdf</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[320px]">
+                              {portfolioFile.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {portfolioFile.size} • {portfolioFile.uploadedAt || 'Đã tải lên'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {portfolioFile.dataUrl && (
+                            <a
+                              href={portfolioFile.dataUrl}
+                              download={portfolioFile.name}
+                              className="text-xs text-blue-600 font-bold hover:underline px-2.5 py-1 bg-white border border-blue-200 rounded-lg flex items-center gap-1 shadow-2xs"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">download</span>
+                              <span>Tải về</span>
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => portfolioFileInputRef.current?.click()}
+                            className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
+                          >
+                            Đổi tệp
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPortfolioFile(undefined);
+                              if (portfolioFileInputRef.current) portfolioFileInputRef.current.value = '';
+                            }}
+                            className="text-xs text-red-600 font-semibold hover:underline cursor-pointer"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => portfolioFileInputRef.current?.click()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingPortfolio(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) handlePortfolioFileUpload(file);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingPortfolio(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDraggingPortfolio(false);
+                        }}
+                        className={`flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                          isDraggingPortfolio
+                            ? 'border-indigo-500 bg-indigo-50/70'
+                            : 'border-slate-300 bg-slate-50/60 hover:bg-slate-100/70 hover:border-slate-400'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[24px] text-[#613bd1]">upload_file</span>
+                        <div className="text-center sm:text-left">
+                          <span className="text-xs font-bold text-slate-800">
+                            Bấm để tải tệp PDF / Slide Portfolio
+                          </span>
+                          <span className="text-[10px] text-slate-500 block">
+                            Hỗ trợ PDF, PPTX, DOCX tối đa 20MB (Có thể kéo thả tệp vào đây)
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Đường dẫn Google Drive / Notion / Canva */}
+                  <div className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs space-y-1.5">
+                    <label className="text-xs font-bold text-slate-800 block">
+                      Cách 2: Gắn đường dẫn Google Drive / Notion / Canva (Tùy chọn)
+                    </label>
+                    <input
+                      type="url"
+                      value={portfolioDriveLink}
+                      onChange={(e) => setPortfolioDriveLink(e.target.value)}
+                      placeholder="https://drive.google.com/drive/folders/... hoặc https://notion.site/..."
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Link này sẽ hiển thị thành nút bấm trực tiếp trên Media Kit để đối tác Brand bấm vào xem ngay.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Final Verification Checklist */}
@@ -1270,13 +1549,30 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   src={avatar || APP_LOGOS.userProfile}
                   alt={name}
                   crossOrigin="anonymous"
-                  className="h-16 w-16 sm:h-18 sm:w-18 rounded-2xl object-cover border-2 border-purple-200"
+                  className="h-16 w-16 sm:h-18 sm:w-18 rounded-2xl object-cover border-2 border-purple-200 shadow-sm"
                 />
-                <div>
+                <div className="flex-1 min-w-0">
                   <h4 className="font-['Plus_Jakarta_Sans'] text-base sm:text-lg font-black text-slate-900">
                     {name || 'Hồ sơ KOC'}
                   </h4>
-                  <p className="font-mono text-xs font-bold text-[#613bd1]">{tiktokHandle || '@creator'}</p>
+
+                  {/* Social Handles Row */}
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span className="font-mono text-xs font-bold text-[#613bd1] bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
+                      TT: {tiktokHandle || '@creator'}
+                    </span>
+                    {instagramHandle && (
+                      <span className="font-mono text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-md border border-pink-100">
+                        IG: @{instagramHandle.replace(/[@\s]/g, '')}
+                      </span>
+                    )}
+                    {youtubeHandle && (
+                      <span className="font-mono text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+                        YT: @{youtubeHandle.replace(/[@\s]/g, '')}
+                      </span>
+                    )}
+                  </div>
+
                   <p className="mt-1 text-xs text-slate-700 leading-relaxed font-medium">
                     {bio || 'Chưa cập nhật phần tự giới thiệu ngắn cho nhãn hàng.'}
                   </p>
@@ -1302,9 +1598,10 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 </div>
               </div>
 
+              {/* Lĩnh vực & Chuyên mục hoạt động */}
               <div className="pt-2">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Thế mạnh nội dung:
+                  Lĩnh vực & Chuyên mục thế mạnh:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {categories.length > 0 ? (
@@ -1316,6 +1613,43 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   ) : (
                     <span className="text-[11px] text-slate-400 italic">Chưa chọn ngành hàng</span>
                   )}
+                </div>
+              </div>
+
+              {/* Portfolio & Case Studies Section on Modal Card */}
+              {(portfolioDriveLink || portfolioFile) && (
+                <div className="pt-2">
+                  <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
+                    Hồ sơ năng lực & Video mẫu:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {portfolioFile && (
+                      <div className="inline-flex items-center gap-1.5 text-xs text-rose-700 font-bold bg-rose-50 px-2.5 py-1.5 rounded-xl border border-rose-200">
+                        <span className="material-symbols-outlined text-[15px] text-rose-500">picture_as_pdf</span>
+                        <span className="truncate max-w-[160px]">{portfolioFile.name}</span>
+                        <span className="text-[10px] text-slate-400">({portfolioFile.size})</span>
+                      </div>
+                    )}
+                    {portfolioDriveLink && (
+                      <div className="inline-flex items-center gap-1.5 text-xs text-[#316bbf] font-bold bg-blue-50 px-2.5 py-1.5 rounded-xl border border-blue-200">
+                        <span className="material-symbols-outlined text-[15px]">link</span>
+                        <span>Drive / Notion Portfolio</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Collaboration Highlights */}
+              <div className="pt-2 grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">
+                <div>
+                  <span className="text-slate-400 block text-[9px] uppercase font-bold">Báo giá booking</span>
+                  <span className="font-bold text-slate-900">{minBookingRate || 'Mẫu 0đ + Hoa hồng'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[9px] uppercase font-bold">Mã Spark Ads</span>
+                  <span className="font-bold text-[#613bd1]">{allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}</span>
                 </div>
               </div>
 
