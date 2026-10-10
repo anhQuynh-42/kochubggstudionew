@@ -868,13 +868,10 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6366f1] text-white font-bold text-xs shadow-sm">
                     4
                   </span>
-                  <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
-                    Về tài khoản
-                  </span>
                 </div>
-                <h5 className="mt-2.5 text-xs font-bold text-slate-900">Nhận hoa hồng sau khi có đơn</h5>
+                <h5 className="mt-2.5 text-xs font-bold text-slate-900">KOC nhận hoa hồng khi có đơn</h5>
                 <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
-                  Gắn link phát sinh đơn hàng, tiền hoa hồng chuyển thẳng về tài khoản.
+                  Phát sinh đơn hàng thành công qua link giỏ hàng hoặc tiếp thị liên kết từ video.
                 </p>
               </div>
             </div>

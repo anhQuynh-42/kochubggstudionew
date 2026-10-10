@@ -547,6 +547,16 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   <label className="block text-xs font-bold text-slate-900 mb-1">
                     Ảnh chụp màn hình phân tích kênh (TikTok Studio / Analytics)
                   </label>
+
+                  {/* Lời nhắc khuyến khích ảnh chụp rõ ràng */}
+                  <div className="mb-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 p-2.5 text-xs text-amber-900 flex items-start gap-2">
+                    <span className="material-symbols-outlined text-[16px] text-amber-600 shrink-0 mt-0.5">
+                      lightbulb
+                    </span>
+                    <p className="text-[11px] leading-relaxed text-amber-800">
+                      <b>Gợi ý dành cho bạn:</b> Ảnh chụp màn hình rõ nét, thể hiện đầy đủ thông tin phân tích kênh (như lượt xem 28 ngày qua, cơ cấu người xem hoặc tỷ lệ tương tác) có thể giúp hồ sơ của bạn nổi bật hơn và tăng khả năng được ưu tiên xét duyệt.
+                    </p>
+                  </div>
                   
                   {/* Hidden file input */}
                   <input
@@ -893,7 +903,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     4
                   </span>
                   <div>
-                    <span className="font-bold text-blue-800">Nhận hoa hồng sau khi có đơn:</span> Tiền về tài khoản ngân hàng.
+                    <span className="font-bold text-blue-800">KOC nhận hoa hồng khi có đơn</span>
                   </div>
                 </div>
               </div>

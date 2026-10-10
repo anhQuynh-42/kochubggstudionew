@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { KOCUser } from '../types';
 import { APP_LOGOS } from '../data/mockData';
-import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
 
 interface KOCProfileViewProps {
   currentUser: KOCUser | null;
@@ -678,30 +677,6 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <span>Sao chép link Media Kit</span>
             </button>
           </div>
-
-          {/* Quick Direct Link to Zalo Group */}
-          <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#316bbf] text-[10px] font-black text-white shadow-sm">
-                Z
-              </span>
-              <span className="text-xs font-bold text-blue-950">
-                Cộng đồng KOC nhận mẫu Zalo
-              </span>
-            </div>
-            <p className="text-[11px] text-blue-900 mb-3">
-              Tham gia nhóm để nhận thông báo chiến dịch booking riêng và được hỗ trợ duyệt mã mẫu hỏa tốc.
-            </p>
-            <a
-              href={ZALO_GROUP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#316bbf] hover:bg-[#28579e] py-2 text-xs font-bold text-white shadow-sm transition-all"
-            >
-              <span>Vào nhóm Zalo KOC</span>
-              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-            </a>
-          </div>
         </div>
 
         {/* Right Column: Detailed Form Tabs */}
@@ -920,7 +895,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                      Số điện thoại nhận hàng & Zalo <span className="text-rose-500">*</span>
+                      Số điện thoại nhận hàng <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -1214,7 +1189,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     <li>Duyệt nhanh hồ sơ nhận mẫu trong vòng 12h thay vì 48h thông thường.</li>
                     <li>Tự động điền nhanh form đăng ký nhận mẫu quà 0đ với một click.</li>
                     <li>Được nhãn hàng chủ động gửi lời mời booking chiến dịch độc quyền.</li>
-                    <li>Trao đổi trực tiếp với đại diện Brand qua nhóm hỗ trợ Zalo.</li>
+                    <li>Trao đổi trực tiếp với đại diện Brand và đội ngũ hỗ trợ chiến dịch.</li>
                   </ul>
                 </div>
 

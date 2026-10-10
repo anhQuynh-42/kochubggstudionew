@@ -421,7 +421,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Số điện thoại nhận hàng & Zalo <span className="text-red-500">*</span>
+                  Số điện thoại nhận hàng <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"

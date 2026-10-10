@@ -732,8 +732,8 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
         stepNum: '04',
         status: 'Quyết toán',
         date: 'Bước 4',
-        title: 'Nhận hoa hồng sau khi có đơn',
-        desc: 'Nhận 9% hoa hồng trên mỗi đơn hàng phát sinh, tiền về tài khoản ngân hàng minh bạch.'
+        title: 'KOC nhận hoa hồng khi có đơn',
+        desc: 'Nhận hoa hồng trên mỗi đơn hàng phát sinh thành công từ link tiếp thị liên kết.'
       }
     ]
   },
@@ -836,8 +836,8 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
         stepNum: '04',
         status: 'Quyết toán',
         date: 'Bước 4',
-        title: 'Nhận hoa hồng sau khi có đơn',
-        desc: 'Hưởng 10% hoa hồng cho các đơn hàng thành công, tiền về tài khoản ngân hàng đối soát minh bạch.'
+        title: 'KOC nhận hoa hồng khi có đơn',
+        desc: 'Hưởng hoa hồng cho các đơn hàng phát sinh thành công từ link tiếp thị liên kết.'
       }
     ]
   },
@@ -940,8 +940,8 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
         stepNum: '04',
         status: 'Quyết toán',
         date: 'Bước 4',
-        title: 'Nhận hoa hồng sau khi có đơn',
-        desc: 'Hưởng 9% hoa hồng trên mỗi đơn hàng thành công, tiền về tài khoản ngân hàng định kỳ.'
+        title: 'KOC nhận hoa hồng khi có đơn',
+        desc: 'Hưởng hoa hồng trên mỗi đơn hàng phát sinh thành công từ link tiếp thị liên kết.'
       }
     ]
   },
@@ -1044,8 +1044,8 @@ export const INITIAL_CAMPAIGNS: Campaign[] = [
         stepNum: '04',
         status: 'Quyết toán',
         date: 'Bước 4',
-        title: 'Nhận hoa hồng sau khi có đơn',
-        desc: 'Hưởng hoa hồng 9% cho tất cả sản phẩm + cơ hội hợp tác các campaign dài hạn tiếp theo cùng Tranyoo.'
+        title: 'KOC nhận hoa hồng khi có đơn',
+        desc: 'Hưởng hoa hồng khi có đơn hàng phát sinh thành công qua link tiếp thị liên kết.'
       }
     ]
   }
