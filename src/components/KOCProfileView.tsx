@@ -1572,10 +1572,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                         </div>
                         <div className="text-left">
                           <span className="text-xs font-bold text-slate-800 block">
-                            Bấm để tải ảnh chụp màn hình phân tích khán giả
-                          </span>
-                          <span className="text-[10px] text-slate-500 block">
-                            Hỗ trợ PNG, JPG, WebP tối đa 10MB (Kéo thả ảnh vào đây)
+                            Tải ảnh lên (Hỗ trợ PNG, JPG, WebP tối đa 10MB)
                           </span>
                         </div>
                       </div>
