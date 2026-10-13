@@ -219,6 +219,7 @@ export const App: React.FC = () => {
       if (data && data.length > 0) {
         setCampaigns(() => {
           const map = new Map(INITIAL_CAMPAIGNS.map((c) => [c.id, c]));
+          const isUnsplash = (url?: string) => !url || url.includes('images.unsplash.com');
           data.forEach((supaCamp) => {
             const local = map.get(supaCamp.id);
             const calculatedDays = calculateDaysLeft(supaCamp.endDate, supaCamp.daysLeft);
@@ -226,12 +227,15 @@ export const App: React.FC = () => {
               map.set(supaCamp.id, {
                 ...supaCamp,
                 daysLeft: calculatedDays,
-                productHeroImage: supaCamp.productHeroImage || local.productHeroImage,
+                productHeroImage:
+                  !isUnsplash(supaCamp.productHeroImage) ? supaCamp.productHeroImage : local.productHeroImage,
                 galleryImages:
-                  supaCamp.galleryImages && supaCamp.galleryImages.length > 0
+                  supaCamp.galleryImages &&
+                  supaCamp.galleryImages.length > 0 &&
+                  !isUnsplash(supaCamp.galleryImages[0])
                     ? supaCamp.galleryImages
                     : local.galleryImages,
-                brandLogo: supaCamp.brandLogo || local.brandLogo,
+                brandLogo: !isUnsplash(supaCamp.brandLogo) ? supaCamp.brandLogo : local.brandLogo,
                 sampleProducts: supaCamp.sampleProducts || local.sampleProducts,
               });
             } else {
