@@ -2008,19 +2008,41 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Báo giá & Điều khoản hợp tác */}
-                    <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">
-                      <div>
-                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Báo giá booking</span>
-                        <span className="font-bold text-slate-900">{minBookingRate || 'Mẫu 0đ + Hoa hồng'}</span>
+                    {/* Báo giá & Điều khoản hợp tác - Thiết kế 2 thẻ đối xứng cân bằng */}
+                    <div className="rounded-2xl bg-slate-50/90 p-2.5 border border-slate-200/80 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Cột 1: Báo giá booking */}
+                        <div className="rounded-xl bg-white p-2.5 border border-slate-200/70 shadow-2xs flex flex-col justify-between min-h-[66px]">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px] text-emerald-600">payments</span>
+                            Báo giá booking
+                          </span>
+                          <span className="text-xs font-black text-slate-900 mt-1 leading-snug">
+                            {minBookingRate || 'Mẫu 0đ + Hoa hồng'}
+                          </span>
+                        </div>
+
+                        {/* Cột 2: Mã Spark Ads */}
+                        <div className="rounded-xl bg-white p-2.5 border border-slate-200/70 shadow-2xs flex flex-col justify-between min-h-[66px]">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px] text-[#613bd1]">bolt</span>
+                            Mã Spark Ads
+                          </span>
+                          <span className="text-xs font-black text-[#613bd1] mt-1 leading-snug">
+                            {allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Mã Spark Ads</span>
-                        <span className="font-bold text-[#613bd1]">{allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}</span>
-                      </div>
-                      <div className="col-span-2 pt-1 border-t border-slate-200/60 flex items-center justify-between">
-                        <span className="text-slate-400 text-[9px] uppercase font-bold">Mẫu 0đ (Freecast):</span>
-                        <span className="font-bold text-emerald-700">{acceptFreecast ? 'Sẵn sàng nhận mẫu' : 'Booking fee'}</span>
+
+                      {/* Dòng Mẫu 0đ Freecast */}
+                      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white border border-slate-200/70 shadow-2xs text-[11px]">
+                        <span className="font-semibold text-slate-500 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-amber-600">card_giftcard</span>
+                          Mẫu 0đ (Freecast):
+                        </span>
+                        <span className="font-extrabold text-emerald-700">
+                          {acceptFreecast ? 'Sẵn sàng nhận mẫu' : 'Booking fee'}
+                        </span>
                       </div>
                     </div>
                   </div>
