@@ -97,7 +97,7 @@ export const ZaloCommunityWidget: React.FC<{
               <span className="material-symbols-outlined text-[16px]">open_in_new</span>
             </a>
             <div className="mt-2 text-center text-[10px] text-slate-400">
-              Link tham gia: <span className="font-mono text-slate-600">zalo.me/g/k1auwu...</span>
+              Link tham gia: <span className="font-mono text-slate-600">zalo.me/g/cjeddn...</span>
             </div>
 
             <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
