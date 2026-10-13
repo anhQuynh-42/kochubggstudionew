@@ -407,15 +407,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     };
   };
 
-  // Xử lý tải tệp portfolio hoặc video (MP4, MOV, WebM, PDF, PPT, DOC, tối đa 50MB)
+  // Xử lý tải tệp portfolio hoặc video (MP4, MOV, WebM, PDF, PPT, DOC, tối đa 100MB)
   const handlePortfolioFileUpload = (file: File) => {
     if (!file) return;
     const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|mkv)$/i.test(file.name);
-    const maxSize = isVideo ? 50 * 1024 * 1024 : 25 * 1024 * 1024; // 50MB cho video, 25MB cho tài liệu
+    const maxSize = isVideo ? 100 * 1024 * 1024 : 30 * 1024 * 1024; // 100MB cho video, 30MB cho tài liệu
     if (file.size > maxSize) {
       onShowToast(
         'Tệp quá lớn!',
-        `Vui lòng tải ${isVideo ? 'video dưới 50MB' : 'tệp dưới 25MB'}. Bạn cũng có thể dán link video TikTok/YouTube vào ô bên dưới!`,
+        `Vui lòng chọn ${isVideo ? 'video dưới 100MB' : 'tệp dưới 30MB'}. Bạn cũng có thể dán link video TikTok/YouTube vào ô bên dưới!`,
         'warning'
       );
       return;
@@ -423,24 +423,34 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
     const sizeStr = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(0)} KB` : `${sizeInMB} MB`;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      const newFileObj = {
-        name: file.name,
-        size: sizeStr,
-        dataUrl,
-        type: file.type || (isVideo ? 'video/mp4' : 'application/pdf'),
-        uploadedAt: new Date().toLocaleDateString('vi-VN'),
-      };
-      setPortfolioFile(newFileObj);
-      onShowToast(
-        isVideo ? 'Đã tải video lên!' : 'Đã tải tệp Portfolio!',
-        `${file.name} đã được lưu vào hồ sơ năng lực.`,
-        'success'
-      );
+    // 1. Tạo ngay Blob URL để video có thể phát lập tức 0ms mà không bị lag/treo trình duyệt
+    const objectUrl = URL.createObjectURL(file);
+    const newFileObj = {
+      name: file.name,
+      size: sizeStr,
+      dataUrl: objectUrl,
+      type: file.type || (isVideo ? 'video/mp4' : 'application/pdf'),
+      uploadedAt: new Date().toLocaleDateString('vi-VN'),
     };
-    reader.readAsDataURL(file);
+    setPortfolioFile(newFileObj);
+
+    onShowToast(
+      isVideo ? 'Đã tải video thành công!' : 'Đã tải tệp Portfolio!',
+      `${file.name} (${sizeStr}) đã sẵn sàng trên thẻ Media Kit của bạn.`,
+      'success'
+    );
+
+    // 2. Nếu file nhẹ (<= 15MB), đọc thêm base64 ở nền để lưu trữ bền vững
+    if (file.size <= 15 * 1024 * 1024) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64Data = e.target?.result as string;
+        if (base64Data) {
+          setPortfolioFile((prev) => (prev ? { ...prev, dataUrl: base64Data } : prev));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Active Tab within Profile Form
@@ -990,7 +1000,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             </div>
 
             {/* Portfolio & Case Studies Preview on Card */}
-            {(portfolioDriveLink || portfolioFile) && (
+            {portfolioDriveLink || portfolioFile ? (
               <div className="mt-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-left space-y-2">
                 <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
@@ -1121,6 +1131,35 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   );
                 })()}
               </div>
+            ) : (
+              <div className="mt-4 p-3 rounded-2xl bg-purple-50/60 border border-purple-200 border-dashed text-left space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-[#613bd1] uppercase tracking-wider flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">movie</span>
+                    Video mẫu hoặc Portfolio
+                  </span>
+                  <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                    Khuyên dùng
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Chưa có video. Tải video review hoặc gắn link YouTube/TikTok để nhãn hàng duyệt booking nhanh hơn.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('mediaKit');
+                    setTimeout(() => {
+                      const input = document.getElementById('koc-portfolio-upload-input');
+                      if (input) input.click();
+                    }, 150);
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] hover:opacity-95 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">video_call</span>
+                  <span>Tải video hoặc Gắn link ngay</span>
+                </button>
+              </div>
             )}
 
             {/* Collaboration terms preview */}
@@ -1235,7 +1274,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">video_library</span>
-              <span>4. Portfolio & Bio</span>
+              <span>4. Video & Portfolio (Media Kit)</span>
             </button>
           </div>
 
@@ -1855,16 +1894,20 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   {/* 1. Tải tệp Video hoặc Portfolio trực tiếp */}
                   <div className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs space-y-2">
                     <label className="text-xs font-bold text-slate-800 block">
-                      Cách 1: Tải tệp Video hoặc Portfolio (Video MP4/MOV tối đa 50MB, PDF/Slide tối đa 25MB)
+                      Cách 1: Tải tệp Video hoặc Portfolio (Video MP4/MOV tối đa 100MB, PDF/Slide tối đa 30MB)
                     </label>
+
+                    {/* Native accessible file input */}
                     <input
+                      id="koc-portfolio-upload-input"
                       ref={portfolioFileInputRef}
                       type="file"
-                      accept=".mp4,.webm,.mov,.m4v,.pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,video/*"
-                      className="hidden"
+                      accept="video/*,.mp4,.webm,.mov,.m4v,.pdf,.ppt,.pptx,.doc,.docx"
+                      className="sr-only"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handlePortfolioFileUpload(file);
+                        e.target.value = '';
                       }}
                     />
 
@@ -1893,13 +1936,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => portfolioFileInputRef.current?.click()}
+                              <label
+                                htmlFor="koc-portfolio-upload-input"
                                 className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
                               >
                                 Đổi video
-                              </button>
+                              </label>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1939,13 +1981,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                                 <span>Tải về</span>
                               </a>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => portfolioFileInputRef.current?.click()}
+                            <label
+                              htmlFor="koc-portfolio-upload-input"
                               className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
                             >
                               Đổi tệp
-                            </button>
+                            </label>
                             <button
                               type="button"
                               onClick={() => {
@@ -1960,8 +2001,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                         </div>
                       )
                     ) : (
-                      <div
-                        onClick={() => portfolioFileInputRef.current?.click()}
+                      <label
+                        htmlFor="koc-portfolio-upload-input"
                         onDrop={(e) => {
                           e.preventDefault();
                           setIsDraggingPortfolio(false);
@@ -1976,22 +2017,30 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                           e.preventDefault();
                           setIsDraggingPortfolio(false);
                         }}
-                        className={`flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                        className={`flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
                           isDraggingPortfolio
-                            ? 'border-indigo-500 bg-indigo-50/70'
-                            : 'border-slate-300 bg-slate-50/60 hover:bg-slate-100/70 hover:border-slate-400'
+                            ? 'border-indigo-500 bg-indigo-50/70 scale-[1.01]'
+                            : 'border-purple-300 bg-purple-50/30 hover:bg-purple-50/60 hover:border-purple-400'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[24px] text-[#613bd1]">video_call</span>
-                        <div className="text-center sm:text-left">
-                          <span className="text-xs font-bold text-slate-800">
-                            Bấm để tải Video review hoặc tệp PDF / Slide
-                          </span>
-                          <span className="text-[10px] text-slate-500 block">
-                            Hỗ trợ Video MP4, MOV, WebM (tối đa 50MB) hoặc PDF, PPTX (tối đa 25MB). Kéo thả tệp vào đây
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-[#613bd1] shadow-2xs">
+                            <span className="material-symbols-outlined text-[26px]">video_call</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">
+                              Bấm vào đây để chọn Video hoặc Tệp Portfolio
+                            </span>
+                            <span className="text-[10px] text-slate-500 block mt-0.5">
+                              Hỗ trợ Video MP4, MOV, WebM (tối đa 100MB) hoặc PDF, Slide (tối đa 30MB)
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                        <span className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#613bd1] hover:bg-[#522eb8] text-white text-xs font-bold shadow-sm transition-all pointer-events-none">
+                          <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                          <span>Chọn tệp tải lên</span>
+                        </span>
+                      </label>
                     )}
                   </div>
 
@@ -2407,7 +2456,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     </div>
 
                     {/* Portfolio & Case Studies */}
-                    {(portfolioDriveLink || portfolioFile) && (
+                    {portfolioDriveLink || portfolioFile ? (
                       <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 space-y-2">
                         <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
@@ -2538,6 +2587,30 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                             </a>
                           );
                         })()}
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 border-dashed flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold text-[#613bd1] uppercase tracking-wider block">
+                            Portfolio hoặc Video nổi bật:
+                          </span>
+                          <span className="text-xs text-slate-500">Chưa tải video review hoặc gắn link</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMediaKitModal(false);
+                            setActiveTab('mediaKit');
+                            setTimeout(() => {
+                              const input = document.getElementById('koc-portfolio-upload-input');
+                              if (input) input.click();
+                            }, 150);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#613bd1] hover:bg-[#522eb8] text-white text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">video_call</span>
+                          <span>Tải video ngay</span>
+                        </button>
                       </div>
                     )}
 
