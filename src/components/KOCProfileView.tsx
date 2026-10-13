@@ -50,6 +50,7 @@ const QUICK_PRESETS: Array<{
       followers: '120K',
       avgViews: '35K views',
       engagementRate: '6.8%',
+      gmv: '150M+/tháng',
       phone: '0908.123.456',
       email: 'minhthu.koc@gmail.com',
       city: 'TP. Hồ Chí Minh',
@@ -79,6 +80,7 @@ const QUICK_PRESETS: Array<{
       followers: '85K',
       avgViews: '48K views',
       engagementRate: '7.2%',
+      gmv: '85M+/tháng',
       phone: '0944.551.233',
       email: 'triet.techgadgets@gmail.com',
       city: 'Hà Nội',
@@ -108,6 +110,7 @@ const QUICK_PRESETS: Array<{
       followers: '68K',
       avgViews: '28K views',
       engagementRate: '8.1%',
+      gmv: '210M+/tháng',
       phone: '0912.334.889',
       email: 'quynhanh.fashion@gmail.com',
       city: 'Đà Nẵng',
@@ -212,6 +215,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
   const [followers, setFollowers] = useState(currentUser?.followers || '');
   const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '');
   const [engagementRate, setEngagementRate] = useState(currentUser?.engagementRate || '');
+  const [gmv, setGmv] = useState(currentUser?.gmv || '');
   const [instagramHandle, setInstagramHandle] = useState(currentUser?.instagramHandle || '');
   const [youtubeHandle, setYoutubeHandle] = useState(currentUser?.youtubeHandle || '');
 
@@ -224,8 +228,23 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
 
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [categories, setCategories] = useState<string[]>(currentUser?.categories || []);
-  const [contentStyle, setContentStyle] = useState<string[]>(currentUser?.contentStyle || []);
+  const [contentStyle, setContentStyle] = useState<string[]>(
+    currentUser?.contentStyle ? currentUser.contentStyle.filter((s) => CONTENT_STYLES.includes(s)) : []
+  );
+  const [hasCustomStyle, setHasCustomStyle] = useState(() => {
+    return Boolean(currentUser?.contentStyle?.some((s) => !CONTENT_STYLES.includes(s)));
+  });
+  const [customStyleText, setCustomStyleText] = useState(() => {
+    const customList = currentUser?.contentStyle?.filter((s) => !CONTENT_STYLES.includes(s)) || [];
+    return customList.join(', ');
+  });
+
   const [targetAudience, setTargetAudience] = useState(currentUser?.targetAudience || '');
+  const [targetAudienceImage, setTargetAudienceImage] = useState(currentUser?.targetAudienceImage || '');
+  const targetAudienceFileInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingAudienceImage, setIsDraggingAudienceImage] = useState(false);
+  const [previewAudienceModalImage, setPreviewAudienceModalImage] = useState<string | null>(null);
+
   const [acceptFreecast, setAcceptFreecast] = useState(
     currentUser?.acceptFreecast !== undefined ? currentUser.acceptFreecast : true
   );
@@ -246,6 +265,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
   const portfolioFileInputRef = useRef<HTMLInputElement>(null);
   const [isDraggingPortfolio, setIsDraggingPortfolio] = useState(false);
 
+  // Tính toán danh sách phong cách video hiển thị (bao gồm phong cách có sẵn và phong cách tự nhập)
+  const activeContentStyles = React.useMemo(() => {
+    const standard = contentStyle.filter((s) => CONTENT_STYLES.includes(s));
+    if (hasCustomStyle && customStyleText.trim()) {
+      return [...standard, customStyleText.trim()];
+    }
+    return standard;
+  }, [contentStyle, hasCustomStyle, customStyleText]);
+
   // Sync state khi currentUser thay đổi
   useEffect(() => {
     if (currentUser) {
@@ -256,6 +284,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       if (currentUser.followers) setFollowers(currentUser.followers);
       if (currentUser.avgViews) setAvgViews(currentUser.avgViews);
       if (currentUser.engagementRate) setEngagementRate(currentUser.engagementRate);
+      if (currentUser.gmv !== undefined) setGmv(currentUser.gmv);
       if (currentUser.instagramHandle !== undefined) setInstagramHandle(currentUser.instagramHandle);
       if (currentUser.youtubeHandle !== undefined) setYoutubeHandle(currentUser.youtubeHandle);
       if (currentUser.phone) setPhone(currentUser.phone);
@@ -266,8 +295,19 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       if (currentUser.shippingNote) setShippingNote(currentUser.shippingNote);
       if (currentUser.bio) setBio(currentUser.bio);
       if (currentUser.categories) setCategories(currentUser.categories);
-      if (currentUser.contentStyle) setContentStyle(currentUser.contentStyle);
+      if (currentUser.contentStyle) {
+        setContentStyle(currentUser.contentStyle.filter((s) => CONTENT_STYLES.includes(s)));
+        const customList = currentUser.contentStyle.filter((s) => !CONTENT_STYLES.includes(s));
+        if (customList.length > 0) {
+          setHasCustomStyle(true);
+          setCustomStyleText(customList.join(', '));
+        } else {
+          setHasCustomStyle(false);
+          setCustomStyleText('');
+        }
+      }
       if (currentUser.targetAudience) setTargetAudience(currentUser.targetAudience);
+      if (currentUser.targetAudienceImage !== undefined) setTargetAudienceImage(currentUser.targetAudienceImage);
       if (currentUser.acceptFreecast !== undefined) setAcceptFreecast(currentUser.acceptFreecast);
       if (currentUser.minBookingRate) setMinBookingRate(currentUser.minBookingRate);
       if (currentUser.allowSparkAds !== undefined) setAllowSparkAds(currentUser.allowSparkAds);
@@ -275,6 +315,50 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       if (currentUser.portfolioFile !== undefined) setPortfolioFile(currentUser.portfolioFile);
     }
   }, [currentUser]);
+
+  // Xử lý tải ảnh cho mục Đối tượng khán giả chính (Insight / Demographics)
+  const handleAudienceImageUpload = (file: File) => {
+    if (!file) return;
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      onShowToast('Định dạng ảnh không hợp lệ', 'Vui lòng chọn ảnh định dạng PNG, JPG hoặc WebP.', 'warning');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      onShowToast('Dung lượng ảnh quá lớn', 'Kích thước ảnh đối tượng khán giả tối đa là 10MB.', 'warning');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 900;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setTargetAudienceImage(dataUrl);
+          onShowToast('Đã tải ảnh đối tượng khán giả!', 'Ảnh biểu đồ phân tích người xem đã được lưu vào hồ sơ Media Kit.', 'success');
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Xử lý tải tệp portfolio (PDF, PPT, DOC, tối đa 20MB)
   const handlePortfolioFileUpload = (file: File) => {
@@ -353,6 +437,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       followers: followers.trim() || '10K+',
       avgViews: avgViews.trim() || '5K+',
       engagementRate: engagementRate.trim() || '4.5%',
+      gmv: gmv.trim() || undefined,
       categories,
       bio: bio.trim(),
       memberCode: kocMemberCode,
@@ -372,7 +457,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
           }
         : undefined,
       targetAudience,
-      contentStyle,
+      targetAudienceImage: targetAudienceImage && targetAudienceImage.length < 5000 ? targetAudienceImage : undefined,
+      contentStyle: activeContentStyles,
       minBookingRate,
       allowSparkAds,
       acceptFreecast,
@@ -441,6 +527,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     if (d.followers) setFollowers(d.followers);
     if (d.avgViews) setAvgViews(d.avgViews);
     if (d.engagementRate) setEngagementRate(d.engagementRate);
+    if (d.gmv) setGmv(d.gmv);
     if (d.phone) setPhone(d.phone);
     if (d.email) setEmail(d.email);
     if (d.city) setCity(d.city);
@@ -449,8 +536,14 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     if (d.shippingNote) setShippingNote(d.shippingNote);
     if (d.bio) setBio(d.bio);
     if (d.categories) setCategories(d.categories);
-    if (d.contentStyle) setContentStyle(d.contentStyle);
+    if (d.contentStyle) {
+      setContentStyle(d.contentStyle.filter((s) => CONTENT_STYLES.includes(s)));
+      const customStyles = d.contentStyle.filter((s) => !CONTENT_STYLES.includes(s));
+      setHasCustomStyle(customStyles.length > 0);
+      setCustomStyleText(customStyles.join(', '));
+    }
     if (d.targetAudience) setTargetAudience(d.targetAudience);
+    if (d.targetAudienceImage !== undefined) setTargetAudienceImage(d.targetAudienceImage);
     if (d.acceptFreecast !== undefined) setAcceptFreecast(d.acceptFreecast);
     if (d.minBookingRate) setMinBookingRate(d.minBookingRate);
     if (d.allowSparkAds !== undefined) setAllowSparkAds(d.allowSparkAds);
@@ -504,6 +597,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       categories,
       avgViews: avgViews.trim(),
       engagementRate: engagementRate.trim(),
+      gmv: gmv.trim(),
       channelLink: channelLink || (formattedHandle ? `https://www.tiktok.com/${formattedHandle}` : ''),
       instagramHandle,
       youtubeHandle,
@@ -512,7 +606,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       address,
       shippingNote,
       targetAudience,
-      contentStyle,
+      targetAudienceImage: targetAudienceImage || undefined,
+      contentStyle: activeContentStyles,
       acceptFreecast,
       allowSparkAds,
       portfolioDriveLink,
@@ -701,7 +796,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </p>
             </div>
 
-            {/* 4 Core Vital Metrics */}
+            {/* Core Vital Metrics (Bao gồm Followers, Avg Views, Tương tác, GMV) */}
             <div className="mt-5 grid grid-cols-2 gap-2.5 rounded-2xl bg-slate-50 p-3 border border-slate-100">
               <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-500 block">Followers</span>
@@ -721,10 +816,13 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   {engagementRate || 'Chưa có'}
                 </span>
               </div>
-              <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
-                <span className="text-[10px] font-medium text-slate-500 block">Đã duyệt mẫu</span>
-                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-slate-900">
-                  {currentUser?.sampleDeliveredCount || 0} chiến dịch
+              <div className="text-center p-2 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                <span className="text-[10px] font-bold text-emerald-800 block flex items-center justify-center gap-0.5">
+                  <span className="material-symbols-outlined text-[13px] text-emerald-600">trending_up</span>
+                  GMV Kênh
+                </span>
+                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-emerald-700">
+                  {gmv || 'Chưa có'}
                 </span>
               </div>
             </div>
@@ -749,6 +847,65 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Phong cách video & Định dạng nội dung */}
+            <div className="mt-4">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px] text-[#613bd1]">movie</span>
+                Phong cách video
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {activeContentStyles.length > 0 ? (
+                  activeContentStyles.map((st, idx) => (
+                    <span
+                      key={idx}
+                      className="rounded-lg bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-[#316bbf]"
+                    >
+                      {st}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[11px] text-slate-400 italic">Chưa chọn phong cách video</span>
+                )}
+              </div>
+            </div>
+
+            {/* Đối tượng khán giả chính (Target Demographics) */}
+            {(targetAudience || targetAudienceImage) && (
+              <div className="mt-4 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-left">
+                <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px] text-amber-700">groups</span>
+                  Đối tượng khán giả chính
+                </span>
+                {targetAudience && (
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                    {targetAudience}
+                  </p>
+                )}
+                {targetAudienceImage && (
+                  <div className="mt-2">
+                    <span className="text-[9px] font-bold text-slate-500 block mb-1">
+                      Ảnh phân tích nhân khẩu học người xem:
+                    </span>
+                    <div
+                      onClick={() => setPreviewAudienceModalImage(targetAudienceImage)}
+                      className="relative inline-block max-w-full rounded-xl overflow-hidden border border-amber-300 shadow-2xs group cursor-pointer"
+                      title="Bấm để xem ảnh phân tích khán giả"
+                    >
+                      <img
+                        src={targetAudienceImage}
+                        alt="Ảnh phân tích khán giả"
+                        className="max-h-28 w-auto object-cover rounded-xl group-hover:scale-102 transition-transform"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold gap-1 rounded-xl">
+                        <span className="material-symbols-outlined text-[14px]">zoom_in</span>
+                        <span>Xem ảnh</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Portfolio & Case Studies Preview on Card */}
             {(portfolioDriveLink || portfolioFile) && (
@@ -962,7 +1119,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
                       Số lượng người theo dõi (Followers)
@@ -999,6 +1156,20 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       onChange={(e) => setEngagementRate(e.target.value)}
                       placeholder="Ví dụ: 6.8%"
                       className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1">
+                      <span>Chỉ số GMV kênh</span>
+                      <span className="material-symbols-outlined text-[14px] text-emerald-600" title="Tổng giá trị hàng hoá bán được qua kênh (Ví dụ: 150M+/tháng)">payments</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={gmv}
+                      onChange={(e) => setGmv(e.target.value)}
+                      placeholder="Ví dụ: 150M+/tháng hoặc 500 Triệu"
+                      className="w-full rounded-xl border border-emerald-200 bg-emerald-50/20 px-3.5 py-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
                     />
                   </div>
                 </div>
@@ -1222,20 +1393,180 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                         </button>
                       );
                     })}
+
+                    {/* Tùy chọn "Khác (tự nhập)" */}
+                    <button
+                      type="button"
+                      onClick={() => setHasCustomStyle((prev) => !prev)}
+                      className={`flex items-center gap-2 rounded-xl p-2.5 text-xs font-semibold border transition-all cursor-pointer text-left ${
+                        hasCustomStyle
+                          ? 'border-[#613bd1] bg-purple-50 text-[#613bd1] font-bold shadow-xs'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className={`material-symbols-outlined text-[18px] ${hasCustomStyle ? 'text-[#613bd1]' : 'text-slate-400'}`}>
+                        {hasCustomStyle ? 'check_box' : 'check_box_outline_blank'}
+                      </span>
+                      <span>Khác (tự nhập)</span>
+                    </button>
                   </div>
+
+                  {/* Khung nhập phong cách video tự nhập khi chọn Khác */}
+                  {hasCustomStyle && (
+                    <div className="mt-3 p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200 animate-in fade-in duration-150 space-y-1.5">
+                      <label className="text-xs font-bold text-[#613bd1] block flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                        <span>Nhập phong cách video & định dạng nội dung riêng của bạn:</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customStyleText}
+                        onChange={(e) => setCustomStyleText(e.target.value)}
+                        placeholder="Ví dụ: Kể chuyện & Drama, So sánh chi tiết sản phẩm, Reaction, Parody..."
+                        className="w-full rounded-xl border border-purple-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                      />
+                      <p className="text-[10px] text-slate-500">
+                        Nội dung tự nhập này sẽ được lưu và hiển thị trực tiếp lên thẻ Media Kit gửi nhãn hàng.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Đối tượng khán giả chính (Target Demographics)
-                  </label>
-                  <input
-                    type="text"
-                    value={targetAudience}
-                    onChange={(e) => setTargetAudience(e.target.value)}
-                    placeholder="Ví dụ: Nữ 18-28 tuổi, học sinh sinh viên thích skincare & đồ tiện ích giá rẻ..."
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
-                  />
+                {/* Mục: Đối tượng khán giả chính & Tải ảnh phân tích nhân khẩu học */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center justify-between">
+                      <span>Đối tượng khán giả chính (Target Demographics)</span>
+                      <span className="text-[10px] font-normal text-slate-500">Nhóm người xem cốt lõi của kênh</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={targetAudience}
+                      onChange={(e) => setTargetAudience(e.target.value)}
+                      placeholder="Ví dụ: Nữ 18-28 tuổi, học sinh sinh viên & nhân viên văn phòng yêu thích làm đẹp..."
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                    />
+                  </div>
+
+                  {/* Chức năng tải ảnh lên cho mục Đối tượng khán giả chính */}
+                  <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50/60 to-blue-50/40 p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[18px] text-[#613bd1]">add_photo_alternate</span>
+                        <span>Ảnh phân tích đối tượng khán giả (Demographics Analytics)</span>
+                      </label>
+                      <span className="text-[10px] font-semibold text-[#613bd1] bg-purple-100/80 px-2 py-0.5 rounded-md">
+                        Hiển thị trên Media Kit
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Tải lên ảnh chụp màn hình phân tích người xem (Độ tuổi, Tỷ lệ giới tính Nam/Nữ, Tỉnh thành) từ TikTok Analytics / Studio để chứng minh tệp khán giả với nhãn hàng.
+                    </p>
+
+                    <input
+                      ref={targetAudienceFileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleAudienceImageUpload(file);
+                      }}
+                    />
+
+                    {targetAudienceImage ? (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-purple-200 shadow-2xs">
+                        <div className="flex items-center gap-3">
+                          <div
+                            onClick={() => setPreviewAudienceModalImage(targetAudienceImage)}
+                            className="relative h-14 w-20 rounded-lg overflow-hidden border border-slate-200 group cursor-pointer shrink-0"
+                            title="Nhấp để xem ảnh lớn"
+                          >
+                            <img
+                              src={targetAudienceImage}
+                              alt="Insight khán giả"
+                              className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px]">
+                              <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[15px] text-emerald-600">check_circle</span>
+                              Đã đính kèm ảnh phân tích khán giả
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              Ảnh sẽ hiển thị trực tiếp trên thẻ Media Kit gửi nhãn hàng
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAudienceModalImage(targetAudienceImage)}
+                            className="text-xs text-[#316bbf] font-bold hover:underline px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-1 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">visibility</span>
+                            <span>Xem ảnh</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => targetAudienceFileInputRef.current?.click()}
+                            className="text-xs text-indigo-600 font-semibold hover:underline px-2 py-1 cursor-pointer"
+                          >
+                            Đổi ảnh
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTargetAudienceImage('');
+                              if (targetAudienceFileInputRef.current) targetAudienceFileInputRef.current.value = '';
+                            }}
+                            className="text-xs text-rose-600 font-semibold hover:underline px-2 py-1 cursor-pointer"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => targetAudienceFileInputRef.current?.click()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingAudienceImage(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) handleAudienceImageUpload(file);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingAudienceImage(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDraggingAudienceImage(false);
+                        }}
+                        className={`flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all cursor-pointer bg-white ${
+                          isDraggingAudienceImage
+                            ? 'border-[#613bd1] bg-purple-50/70'
+                            : 'border-slate-300 hover:border-[#613bd1] hover:bg-purple-50/30'
+                        }`}
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#613bd1] border border-purple-200">
+                          <span className="material-symbols-outlined text-[20px]">add_photo_alternate</span>
+                        </div>
+                        <div className="text-left">
+                          <span className="text-xs font-bold text-slate-800 block">
+                            Bấm để tải ảnh chụp màn hình phân tích khán giả
+                          </span>
+                          <span className="text-[10px] text-slate-500 block">
+                            Hỗ trợ PNG, JPG, WebP tối đa 10MB (Kéo thả ảnh vào đây)
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
@@ -1583,7 +1914,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center pt-3 border-t border-slate-200">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-3 border-t border-slate-200">
                 <div className="rounded-xl bg-purple-50/50 p-2.5 border border-purple-100">
                   <span className="text-[10px] text-slate-500 font-bold block">Followers</span>
                   <b className="text-sm text-slate-900 font-['Plus_Jakarta_Sans']">{followers || '10K+'}</b>
@@ -1595,6 +1926,13 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 <div className="rounded-xl bg-pink-50/50 p-2.5 border border-pink-100">
                   <span className="text-[10px] text-slate-500 font-bold block">Tương tác</span>
                   <b className="text-sm text-[#613bd1] font-['Plus_Jakarta_Sans']">{engagementRate || '4.5%'}</b>
+                </div>
+                <div className="rounded-xl bg-emerald-50/70 p-2.5 border border-emerald-200">
+                  <span className="text-[10px] text-emerald-800 font-bold block flex items-center justify-center gap-0.5">
+                    <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
+                    GMV Kênh
+                  </span>
+                  <b className="text-sm text-emerald-700 font-['Plus_Jakarta_Sans']">{gmv || 'Chưa cập nhật'}</b>
                 </div>
               </div>
 
@@ -1615,6 +1953,53 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   )}
                 </div>
               </div>
+
+              {/* Phong cách video & Định dạng nội dung */}
+              {activeContentStyles.length > 0 && (
+                <div className="pt-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px] text-[#613bd1]">movie</span>
+                    Phong cách video & Định dạng nội dung:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeContentStyles.map((st, i) => (
+                      <span key={i} className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-[10px] font-bold text-[#316bbf]">
+                        {st}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Đối tượng khán giả chính */}
+              {(targetAudience || targetAudienceImage) && (
+                <div className="pt-2">
+                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80">
+                    <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px] text-amber-700">groups</span>
+                      Đối tượng khán giả chính:
+                    </span>
+                    {targetAudience && (
+                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                        {targetAudience}
+                      </p>
+                    )}
+                    {targetAudienceImage && (
+                      <div className="mt-2">
+                        <span className="text-[9px] font-bold text-slate-500 block mb-1">
+                          Ảnh phân tích nhân khẩu học người xem:
+                        </span>
+                        <img
+                          src={targetAudienceImage}
+                          alt="Ảnh phân tích khán giả"
+                          crossOrigin="anonymous"
+                          className="max-h-40 w-auto object-cover rounded-lg border border-amber-300"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Portfolio & Case Studies Section on Modal Card */}
               {(portfolioDriveLink || portfolioFile) && (
@@ -1696,6 +2081,31 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 Đóng
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xem ảnh phóng to nếu KOC có tải ảnh đối tượng khán giả */}
+      {previewAudienceModalImage && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={() => setPreviewAudienceModalImage(null)}
+        >
+          <div
+            className="relative max-w-3xl max-h-[90vh] bg-white rounded-2xl p-2 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewAudienceModalImage(null)}
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors z-10 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <img
+              src={previewAudienceModalImage}
+              alt="Ảnh phóng to phân tích khán giả"
+              className="max-h-[85vh] w-auto max-w-full rounded-xl object-contain mx-auto"
+            />
           </div>
         </div>
       )}

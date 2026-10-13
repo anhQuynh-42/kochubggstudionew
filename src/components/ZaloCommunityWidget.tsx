@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export const ZALO_GROUP_URL = 'https://zalo.me/g/k1auwuyha1b10yz7rntz';
+export const ZALO_GROUP_URL = 'https://zalo.me/g/cjeddnkeo8ngwrkv33sk';
 
 export const ZaloIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
   <svg

@@ -11,6 +11,7 @@ export interface PublicMediaKitData {
   followers?: string;
   avgViews?: string;
   engagementRate?: string;
+  gmv?: string;
   categories?: string[];
   bio?: string;
   memberCode?: string;
@@ -28,6 +29,7 @@ export interface PublicMediaKitData {
     type?: string;
   };
   targetAudience?: string;
+  targetAudienceImage?: string;
   contentStyle?: string[] | string;
   minBookingRate?: string;
   allowSparkAds?: boolean;
@@ -57,6 +59,14 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
   const instagramUrl = cleanInstagram ? `https://www.instagram.com/${cleanInstagram}` : '';
   const cleanYoutube = data.youtubeHandle ? data.youtubeHandle.replace(/[@\s]/g, '') : '';
   const youtubeUrl = cleanYoutube ? `https://www.youtube.com/@${cleanYoutube}` : '';
+
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const contentStylesList = React.useMemo(() => {
+    if (Array.isArray(data.contentStyle)) return data.contentStyle.filter(Boolean);
+    if (typeof data.contentStyle === 'string' && data.contentStyle.trim()) return [data.contentStyle.trim()];
+    return [];
+  }, [data.contentStyle]);
 
   // Tải thẻ Media Kit về máy dạng ảnh PNG
   const handleDownloadImage = async () => {
@@ -205,30 +215,39 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
             </div>
           </div>
 
-          {/* Metric Stats Grid */}
-          <div className="grid grid-cols-3 gap-2.5 text-center mb-4">
-            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50/50 p-3 border border-purple-100">
+          {/* Metric Stats Grid (Bao gồm chỉ số GMV) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-4">
+            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50/50 p-2.5 border border-purple-100">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Followers
               </span>
-              <b className="text-base sm:text-lg font-black text-slate-900 font-['Plus_Jakarta_Sans']">
+              <b className="text-sm sm:text-base font-black text-slate-900 font-['Plus_Jakarta_Sans']">
                 {data.followers || '10K+'}
               </b>
             </div>
-            <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50/50 p-3 border border-blue-100">
+            <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50/50 p-2.5 border border-blue-100">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Avg Views
               </span>
-              <b className="text-base sm:text-lg font-black text-[#316bbf] font-['Plus_Jakarta_Sans']">
+              <b className="text-sm sm:text-base font-black text-[#316bbf] font-['Plus_Jakarta_Sans']">
                 {data.avgViews || '5K+'}
               </b>
             </div>
-            <div className="rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50/50 p-3 border border-pink-100">
+            <div className="rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50/50 p-2.5 border border-pink-100">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Tương tác
               </span>
-              <b className="text-base sm:text-lg font-black text-[#613bd1] font-['Plus_Jakarta_Sans']">
+              <b className="text-sm sm:text-base font-black text-[#613bd1] font-['Plus_Jakarta_Sans']">
                 {data.engagementRate || '4.5%'}
+              </b>
+            </div>
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/50 p-2.5 border border-emerald-200">
+              <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block mb-1 flex items-center justify-center gap-1">
+                <span className="material-symbols-outlined text-[13px] text-emerald-600">trending_up</span>
+                GMV Kênh
+              </span>
+              <b className="text-sm sm:text-base font-black text-emerald-700 font-['Plus_Jakarta_Sans']">
+                {data.gmv || 'Chưa cập nhật'}
               </b>
             </div>
           </div>
@@ -253,6 +272,65 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* Phong cách video & Định dạng nội dung */}
+          {contentStylesList.length > 0 && (
+            <div className="mb-4">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px] text-[#613bd1]">movie</span>
+                Phong cách video & Định dạng nội dung:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {contentStylesList.map((st, idx) => (
+                  <span
+                    key={idx}
+                    className="rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#316bbf] border border-blue-200/60"
+                  >
+                    {st}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Đối tượng khán giả chính (Target Audience) & Ảnh Insight/Demographics */}
+          {(data.targetAudience || data.targetAudienceImage) && (
+            <div className="mb-4 rounded-2xl bg-gradient-to-r from-amber-50/70 to-orange-50/50 p-3.5 border border-amber-200/80">
+              <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-amber-700">groups</span>
+                Đối tượng khán giả chính (Target Audience):
+              </span>
+              {data.targetAudience && (
+                <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                  {data.targetAudience}
+                </p>
+              )}
+              {data.targetAudienceImage && (
+                <div className="mt-2.5">
+                  <span className="text-[10px] font-bold text-slate-600 block mb-1.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px] text-[#613bd1]">analytics</span>
+                    Ảnh biểu đồ nhân khẩu học người xem (Demographics Analytics):
+                  </span>
+                  <div
+                    onClick={() => setPreviewImage(data.targetAudienceImage || null)}
+                    className="relative inline-block max-w-full rounded-xl overflow-hidden border border-amber-300 shadow-2xs group cursor-pointer"
+                    title="Nhấp để xem ảnh phóng to"
+                  >
+                    <img
+                      src={data.targetAudienceImage}
+                      alt="Insight đối tượng khán giả"
+                      crossOrigin="anonymous"
+                      className="max-h-48 sm:max-h-56 w-auto object-cover group-hover:scale-102 transition-transform duration-200 rounded-xl"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1 rounded-xl">
+                      <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+                      <span>Xem ảnh lớn</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Portfolio & Case Studies Section (Yêu cầu 14 & 15) */}
           {(data.portfolioDriveLink || data.portfolioFile) && (
@@ -376,6 +454,28 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal xem ảnh phóng to nếu KOC có tải ảnh đối tượng khán giả */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] bg-white rounded-2xl p-2 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors z-10 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <img
+              src={previewImage}
+              alt="Ảnh phóng to phân tích khán giả"
+              className="max-h-[85vh] w-auto max-w-full rounded-xl object-contain mx-auto"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

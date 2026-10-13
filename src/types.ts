@@ -132,6 +132,7 @@ export interface KOCUser {
   categories?: string[];
   avgViews?: string;
   engagementRate?: string;
+  gmv?: string;
   channelLink?: string;
   instagramHandle?: string;
   youtubeHandle?: string;
@@ -140,6 +141,7 @@ export interface KOCUser {
   address?: string;
   shippingNote?: string;
   targetAudience?: string;
+  targetAudienceImage?: string;
   contentStyle?: string[];
   acceptFreecast?: boolean;
   minBookingRate?: string;
