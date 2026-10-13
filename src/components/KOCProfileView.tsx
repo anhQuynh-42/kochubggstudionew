@@ -1339,9 +1339,9 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                  <div className="flex flex-col">
+                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center mb-1.5 leading-snug">
                       Số lượng người theo dõi (Followers)
                     </label>
                     <input
@@ -1349,12 +1349,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={followers}
                       onChange={(e) => setFollowers(e.target.value)}
                       placeholder="Ví dụ: 120K hoặc 50.000"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  <div className="flex flex-col">
+                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center mb-1.5 leading-snug">
                       Lượt xem trung bình / video
                     </label>
                     <input
@@ -1362,12 +1362,12 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={avgViews}
                       onChange={(e) => setAvgViews(e.target.value)}
                       placeholder="Ví dụ: 25K views"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  <div className="flex flex-col">
+                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center mb-1.5 leading-snug">
                       Tỷ lệ tương tác ước tính
                     </label>
                     <input
@@ -1375,21 +1375,21 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={engagementRate}
                       onChange={(e) => setEngagementRate(e.target.value)}
                       placeholder="Ví dụ: 6.8%"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1">
+                  <div className="flex flex-col">
+                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center gap-1 mb-1.5 leading-snug">
                       <span>Chỉ số GMV kênh</span>
-                      <span className="material-symbols-outlined text-[14px] text-emerald-600" title="Tổng giá trị hàng hoá bán được qua kênh (Ví dụ: 150M+/tháng)">payments</span>
+                      <span className="material-symbols-outlined text-[15px] text-emerald-600" title="Tổng giá trị hàng hoá bán được qua kênh (Ví dụ: 150M+/tháng)">payments</span>
                     </label>
                     <input
                       type="text"
                       value={gmv}
                       onChange={(e) => setGmv(e.target.value)}
-                      placeholder="Ví dụ: 150M+/tháng hoặc 500 Triệu"
-                      className="w-full rounded-xl border border-emerald-200 bg-emerald-50/20 px-3.5 py-2.5 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
+                      placeholder="Ví dụ: 150M+/tháng"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
                 </div>
@@ -1404,7 +1404,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={instagramHandle}
                       onChange={(e) => setInstagramHandle(e.target.value)}
                       placeholder="@minhthu.insta"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
 
@@ -1417,7 +1417,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       value={youtubeHandle}
                       onChange={(e) => setYoutubeHandle(e.target.value)}
                       placeholder="@MinhThuVlogs"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
                   </div>
                 </div>
