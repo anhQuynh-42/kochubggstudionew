@@ -152,13 +152,11 @@ export async function updateCampaignOnSupabase(
 
   try {
     const payload = sanitizeCampaignForSupabase(updatedData);
-    // Bỏ trường id khỏi payload update để an toàn
-    delete payload.id;
+    payload.id = campaignId;
 
     const { error } = await supabase
       .from('campaigns')
-      .update(payload)
-      .eq('id', campaignId);
+      .upsert(payload, { onConflict: 'id' });
 
     if (error) {
       console.error('Lỗi khi cập nhật chiến dịch trên Supabase:', error.message);
