@@ -60,6 +60,53 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
   const cleanYoutube = data.youtubeHandle ? data.youtubeHandle.replace(/[@\s]/g, '') : '';
   const youtubeUrl = cleanYoutube ? `https://www.youtube.com/@${cleanYoutube}` : '';
 
+  // Kiểm tra tệp có phải là video hay không
+  const isPortfolioFileVideo = (file?: { type?: string; name: string }) => {
+    if (!file) return false;
+    if (file.type && file.type.startsWith('video/')) return true;
+    return /\.(mp4|webm|mov|m4v|mkv)$/i.test(file.name || '');
+  };
+
+  // Phân tích liên kết video nổi bật (YouTube, TikTok, MP4 trực tiếp, Drive...)
+  const parsePortfolioVideoLink = (url?: string) => {
+    if (!url) return null;
+    const clean = url.trim();
+    if (!clean) return null;
+
+    // 1. YouTube video hoặc Shorts
+    const ytMatch = clean.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+    if (ytMatch && ytMatch[1]) {
+      return {
+        type: 'youtube' as const,
+        embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}`,
+        url: clean,
+      };
+    }
+
+    // 2. Direct MP4 / WebM video link
+    if (/\.(mp4|webm|mov)(\?.*)?$/i.test(clean)) {
+      return {
+        type: 'video' as const,
+        embedUrl: clean,
+        url: clean,
+      };
+    }
+
+    // 3. TikTok video link
+    if (/tiktok\.com/i.test(clean)) {
+      return {
+        type: 'tiktok' as const,
+        url: clean,
+      };
+    }
+
+    // 4. Other link (Drive, Notion, Canva...)
+    return {
+      type: 'other' as const,
+      url: clean,
+    };
+  };
+
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Đóng modal khi nhấn phím Esc
@@ -92,6 +139,7 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
         quality: 0.98,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
+        filter: (node) => (node as HTMLElement).tagName !== 'IFRAME',
       });
       const link = document.createElement('a');
       const filename = `MediaKit_${cleanHandle.replace(/[@\s]/g, '') || 'KOC'}.png`;
@@ -443,13 +491,42 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
 
                 {/* Portfolio & Case Studies */}
                 {(data.portfolioDriveLink || data.portfolioFile) && (
-                  <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100">
-                    <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                  <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 space-y-2">
+                    <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
                       Portfolio hoặc Video nổi bật
                     </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {data.portfolioFile && (
+
+                    {/* File Portfolio or Uploaded Video */}
+                    {data.portfolioFile && (
+                      isPortfolioFileVideo(data.portfolioFile) ? (
+                        <div className="space-y-1">
+                          <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-48 sm:max-h-56 w-full shadow-xs">
+                            <video
+                              src={data.portfolioFile.dataUrl}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-600 px-1">
+                            <span className="truncate max-w-[220px] font-medium flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px] text-purple-600">movie</span>
+                              {data.portfolioFile.name}
+                            </span>
+                            {data.portfolioFile.dataUrl && (
+                              <a
+                                href={data.portfolioFile.dataUrl}
+                                download={data.portfolioFile.name}
+                                className="text-purple-700 hover:underline font-bold text-[10px] shrink-0"
+                              >
+                                Tải về ({data.portfolioFile.size})
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
                         <a
                           href={data.portfolioFile.dataUrl}
                           download={data.portfolioFile.name}
@@ -462,11 +539,85 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                           <span className="text-[10px] text-slate-400">({data.portfolioFile.size})</span>
                           <span className="material-symbols-outlined text-[13px]">download</span>
                         </a>
-                      )}
+                      )
+                    )}
 
-                      {data.portfolioDriveLink && (
+                    {/* Link Portfolio or Embedded Video */}
+                    {data.portfolioDriveLink && (() => {
+                      const parsed = parsePortfolioVideoLink(data.portfolioDriveLink);
+                      if (!parsed) return null;
+                      if (parsed.type === 'youtube') {
+                        return (
+                          <div className="space-y-1">
+                            <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-48 sm:max-h-56 w-full shadow-xs">
+                              <iframe
+                                src={parsed.embedUrl}
+                                title="Video Portfolio YouTube"
+                                className="w-full h-full border-0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
+                              <span className="flex items-center gap-1 text-red-600 font-semibold">
+                                <span className="material-symbols-outlined text-[13px]">smart_display</span> YouTube Video
+                              </span>
+                              <a href={parsed.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                                Mở trên YouTube <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (parsed.type === 'video') {
+                        return (
+                          <div className="space-y-1">
+                            <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-48 sm:max-h-56 w-full shadow-xs">
+                              <video
+                                src={parsed.embedUrl}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
+                              <span className="flex items-center gap-1 text-purple-600 font-semibold">
+                                <span className="material-symbols-outlined text-[13px]">movie</span> Video trực tiếp
+                              </span>
+                              <a href={parsed.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                                Mở liên kết <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (parsed.type === 'tiktok') {
+                        return (
+                          <a
+                            href={parsed.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 text-white hover:bg-black transition-colors shadow-2xs group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-6 h-6 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-pink-400 text-[15px]">play_circle</span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-white truncate">Video review trên TikTok</p>
+                                <p className="text-[10px] text-slate-300 truncate">{parsed.url}</p>
+                              </div>
+                            </div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-300 bg-white/10 px-2 py-1 rounded-lg shrink-0 group-hover:bg-white/20">
+                              Xem TikTok <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                            </span>
+                          </a>
+                        );
+                      }
+                      return (
                         <a
-                          href={data.portfolioDriveLink}
+                          href={parsed.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-[#316bbf] border border-blue-200 shadow-2xs hover:bg-blue-50 transition-colors"
@@ -475,8 +626,8 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                           <span>Mở Portfolio Drive / Notion</span>
                           <span className="material-symbols-outlined text-[12px]">open_in_new</span>
                         </a>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
                 )}
 

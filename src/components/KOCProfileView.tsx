@@ -360,12 +360,64 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     reader.readAsDataURL(file);
   };
 
-  // Xử lý tải tệp portfolio (PDF, PPT, DOC, tối đa 20MB)
+  // Kiểm tra tệp có phải là video hay không
+  const isPortfolioFileVideo = (file?: { type?: string; name: string }) => {
+    if (!file) return false;
+    if (file.type && file.type.startsWith('video/')) return true;
+    return /\.(mp4|webm|mov|m4v|mkv)$/i.test(file.name || '');
+  };
+
+  // Phân tích liên kết video nổi bật (YouTube, TikTok, MP4 trực tiếp, Drive...)
+  const parsePortfolioVideoLink = (url?: string) => {
+    if (!url) return null;
+    const clean = url.trim();
+    if (!clean) return null;
+
+    // 1. YouTube video hoặc Shorts
+    const ytMatch = clean.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+    if (ytMatch && ytMatch[1]) {
+      return {
+        type: 'youtube' as const,
+        embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}`,
+        url: clean,
+      };
+    }
+
+    // 2. Direct MP4 / WebM video link
+    if (/\.(mp4|webm|mov)(\?.*)?$/i.test(clean)) {
+      return {
+        type: 'video' as const,
+        embedUrl: clean,
+        url: clean,
+      };
+    }
+
+    // 3. TikTok video link
+    if (/tiktok\.com/i.test(clean)) {
+      return {
+        type: 'tiktok' as const,
+        url: clean,
+      };
+    }
+
+    // 4. Other link (Drive, Notion, Canva...)
+    return {
+      type: 'other' as const,
+      url: clean,
+    };
+  };
+
+  // Xử lý tải tệp portfolio hoặc video (MP4, MOV, WebM, PDF, PPT, DOC, tối đa 50MB)
   const handlePortfolioFileUpload = (file: File) => {
     if (!file) return;
-    const maxSize = 20 * 1024 * 1024; // 20MB
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|mkv)$/i.test(file.name);
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 25 * 1024 * 1024; // 50MB cho video, 25MB cho tài liệu
     if (file.size > maxSize) {
-      onShowToast('Tệp quá lớn!', 'Vui lòng tải tệp portfolio dưới 20MB.', 'warning');
+      onShowToast(
+        'Tệp quá lớn!',
+        `Vui lòng tải ${isVideo ? 'video dưới 50MB' : 'tệp dưới 25MB'}. Bạn cũng có thể dán link video TikTok/YouTube vào ô bên dưới!`,
+        'warning'
+      );
       return;
     }
     const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
@@ -378,11 +430,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
         name: file.name,
         size: sizeStr,
         dataUrl,
-        type: file.type || 'application/pdf',
+        type: file.type || (isVideo ? 'video/mp4' : 'application/pdf'),
         uploadedAt: new Date().toLocaleDateString('vi-VN'),
       };
       setPortfolioFile(newFileObj);
-      onShowToast('Đã tải tệp Portfolio!', `Tệp ${file.name} đã được lưu vào hồ sơ năng lực.`, 'success');
+      onShowToast(
+        isVideo ? 'Đã tải video lên!' : 'Đã tải tệp Portfolio!',
+        `${file.name} đã được lưu vào hồ sơ năng lực.`,
+        'success'
+      );
     };
     reader.readAsDataURL(file);
   };
@@ -516,6 +572,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
         quality: 0.98,
         pixelRatio: 2,
         backgroundColor: '#ffffff',
+        filter: (node) => (node as HTMLElement).tagName !== 'IFRAME',
       });
       const link = document.createElement('a');
       const cleanHandle = (tiktokHandle || 'creator').replace(/[@\s]/g, '');
@@ -934,13 +991,42 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
 
             {/* Portfolio & Case Studies Preview on Card */}
             {(portfolioDriveLink || portfolioFile) && (
-              <div className="mt-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-left">
-                <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+              <div className="mt-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-left space-y-2">
+                <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
                   Portfolio hoặc Video nổi bật
                 </span>
-                <div className="space-y-1.5">
-                  {portfolioFile && (
+
+                {/* Uploaded Video or PDF Document */}
+                {portfolioFile && (
+                  isPortfolioFileVideo(portfolioFile) ? (
+                    <div className="space-y-1">
+                      <div className="rounded-xl overflow-hidden bg-black aspect-video max-h-40 w-full shadow-2xs">
+                        <video
+                          src={portfolioFile.dataUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
+                        <span className="truncate max-w-[150px] font-medium text-slate-700 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-purple-600">movie</span>
+                          {portfolioFile.name}
+                        </span>
+                        {portfolioFile.dataUrl && (
+                          <a
+                            href={portfolioFile.dataUrl}
+                            download={portfolioFile.name}
+                            className="text-purple-700 hover:underline font-bold text-[10px] shrink-0"
+                          >
+                            Tải ({portfolioFile.size})
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
                     <a
                       href={portfolioFile.dataUrl}
                       download={portfolioFile.name}
@@ -950,10 +1036,80 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       <span className="truncate max-w-[140px]">{portfolioFile.name}</span>
                       <span className="text-[10px] text-slate-400 ml-auto">{portfolioFile.size}</span>
                     </a>
-                  )}
-                  {portfolioDriveLink && (
+                  )
+                )}
+
+                {/* Video Link Embed or Drive / Notion Button */}
+                {portfolioDriveLink && (() => {
+                  const parsed = parsePortfolioVideoLink(portfolioDriveLink);
+                  if (!parsed) return null;
+                  if (parsed.type === 'youtube') {
+                    return (
+                      <div className="space-y-1">
+                        <div className="rounded-xl overflow-hidden bg-black aspect-video max-h-40 w-full shadow-2xs">
+                          <iframe
+                            src={parsed.embedUrl}
+                            title="Video Portfolio YouTube"
+                            className="w-full h-full border-0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
+                          <span className="flex items-center gap-1 text-red-600 font-semibold">
+                            <span className="material-symbols-outlined text-[13px]">smart_display</span> YouTube Video
+                          </span>
+                          <a href={parsed.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                            Mở YouTube <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (parsed.type === 'video') {
+                    return (
+                      <div className="space-y-1">
+                        <div className="rounded-xl overflow-hidden bg-black aspect-video max-h-40 w-full shadow-2xs">
+                          <video
+                            src={parsed.embedUrl}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
+                          <span className="flex items-center gap-1 text-purple-600 font-semibold">
+                            <span className="material-symbols-outlined text-[13px]">movie</span> Video trực tiếp
+                          </span>
+                          <a href={parsed.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                            Mở video <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (parsed.type === 'tiktok') {
+                    return (
+                      <a
+                        href={parsed.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 text-white hover:bg-black transition-colors shadow-2xs group"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="material-symbols-outlined text-pink-400 text-[16px]">play_circle</span>
+                          <span className="text-xs font-bold text-white truncate">Video review TikTok</span>
+                        </div>
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-pink-300 bg-white/10 px-2 py-0.5 rounded-md shrink-0">
+                          Xem ngay <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                        </span>
+                      </a>
+                    );
+                  }
+                  return (
                     <a
-                      href={portfolioDriveLink}
+                      href={parsed.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-xs text-[#316bbf] font-bold bg-white px-2.5 py-1.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors shadow-2xs"
@@ -962,8 +1118,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       <span className="truncate">Drive / Notion / Canva</span>
                       <span className="material-symbols-outlined text-[13px] ml-auto">open_in_new</span>
                     </a>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -1696,15 +1852,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     Đính kèm file PDF hoặc liên kết Google Drive/Notion/Canva giới thiệu các video review nổi bật, phong cách quay dựng và kết quả chuyển đổi thực tế để nhãn hàng đánh giá ngay.
                   </p>
 
-                  {/* 1. Tải tệp Portfolio trực tiếp */}
+                  {/* 1. Tải tệp Video hoặc Portfolio trực tiếp */}
                   <div className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs space-y-2">
                     <label className="text-xs font-bold text-slate-800 block">
-                      Cách 1: Tải tệp Portfolio lên hệ thống (PDF, PPT, DOC, tối đa 20MB)
+                      Cách 1: Tải tệp Video hoặc Portfolio (Video MP4/MOV tối đa 50MB, PDF/Slide tối đa 25MB)
                     </label>
                     <input
                       ref={portfolioFileInputRef}
                       type="file"
-                      accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg"
+                      accept=".mp4,.webm,.mov,.m4v,.pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,video/*"
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -1713,50 +1869,96 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                     />
 
                     {portfolioFile ? (
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-purple-50/50 border border-purple-200">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 shadow-2xs">
-                            <span className="material-symbols-outlined text-[22px]">picture_as_pdf</span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[320px]">
-                              {portfolioFile.name}
-                            </p>
-                            <p className="text-[10px] text-slate-500">
-                              {portfolioFile.size} • {portfolioFile.uploadedAt || 'Đã tải lên'}
-                            </p>
+                      isPortfolioFileVideo(portfolioFile) ? (
+                        <div className="rounded-xl overflow-hidden bg-slate-950 border border-purple-300 shadow-xs space-y-0">
+                          <video
+                            src={portfolioFile.dataUrl}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="w-full max-h-56 bg-black object-contain"
+                          />
+                          <div className="flex items-center justify-between p-3 bg-white border-t border-slate-100">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-[#613bd1]">
+                                <span className="material-symbols-outlined text-[20px]">movie</span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[320px]">
+                                  {portfolioFile.name}
+                                </p>
+                                <p className="text-[10px] text-slate-500">
+                                  {portfolioFile.size} • Video đã tải lên ({portfolioFile.uploadedAt || 'Hôm nay'})
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => portfolioFileInputRef.current?.click()}
+                                className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
+                              >
+                                Đổi video
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPortfolioFile(undefined);
+                                  if (portfolioFileInputRef.current) portfolioFileInputRef.current.value = '';
+                                }}
+                                className="text-xs text-red-600 font-semibold hover:underline cursor-pointer"
+                              >
+                                Xóa
+                              </button>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {portfolioFile.dataUrl && (
-                            <a
-                              href={portfolioFile.dataUrl}
-                              download={portfolioFile.name}
-                              className="text-xs text-blue-600 font-bold hover:underline px-2.5 py-1 bg-white border border-blue-200 rounded-lg flex items-center gap-1 shadow-2xs"
+                      ) : (
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-purple-50/50 border border-purple-200">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 shadow-2xs">
+                              <span className="material-symbols-outlined text-[22px]">picture_as_pdf</span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[320px]">
+                                {portfolioFile.name}
+                              </p>
+                              <p className="text-[10px] text-slate-500">
+                                {portfolioFile.size} • {portfolioFile.uploadedAt || 'Đã tải lên'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {portfolioFile.dataUrl && (
+                              <a
+                                href={portfolioFile.dataUrl}
+                                download={portfolioFile.name}
+                                className="text-xs text-blue-600 font-bold hover:underline px-2.5 py-1 bg-white border border-blue-200 rounded-lg flex items-center gap-1 shadow-2xs"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">download</span>
+                                <span>Tải về</span>
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => portfolioFileInputRef.current?.click()}
+                              className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
                             >
-                              <span className="material-symbols-outlined text-[14px]">download</span>
-                              <span>Tải về</span>
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => portfolioFileInputRef.current?.click()}
-                            className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
-                          >
-                            Đổi tệp
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPortfolioFile(undefined);
-                              if (portfolioFileInputRef.current) portfolioFileInputRef.current.value = '';
-                            }}
-                            className="text-xs text-red-600 font-semibold hover:underline cursor-pointer"
-                          >
-                            Xóa
-                          </button>
+                              Đổi tệp
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPortfolioFile(undefined);
+                                if (portfolioFileInputRef.current) portfolioFileInputRef.current.value = '';
+                              }}
+                              className="text-xs text-red-600 font-semibold hover:underline cursor-pointer"
+                            >
+                              Xóa
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )
                     ) : (
                       <div
                         onClick={() => portfolioFileInputRef.current?.click()}
@@ -1780,34 +1982,88 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                             : 'border-slate-300 bg-slate-50/60 hover:bg-slate-100/70 hover:border-slate-400'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[24px] text-[#613bd1]">upload_file</span>
+                        <span className="material-symbols-outlined text-[24px] text-[#613bd1]">video_call</span>
                         <div className="text-center sm:text-left">
                           <span className="text-xs font-bold text-slate-800">
-                            Bấm để tải tệp PDF / Slide Portfolio
+                            Bấm để tải Video review hoặc tệp PDF / Slide
                           </span>
                           <span className="text-[10px] text-slate-500 block">
-                            Hỗ trợ PDF, PPTX, DOCX tối đa 20MB (Có thể kéo thả tệp vào đây)
+                            Hỗ trợ Video MP4, MOV, WebM (tối đa 50MB) hoặc PDF, PPTX (tối đa 25MB). Kéo thả tệp vào đây
                           </span>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* 2. Đường dẫn Google Drive / Notion / Canva */}
-                  <div className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs space-y-1.5">
+                  {/* 2. Đường dẫn Video (YouTube, TikTok) hoặc Google Drive / Notion / Canva */}
+                  <div className="bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs space-y-2">
                     <label className="text-xs font-bold text-slate-800 block">
-                      Cách 2: Gắn đường dẫn Google Drive / Notion / Canva (Tùy chọn)
+                      Cách 2: Gắn link Video (YouTube, TikTok) hoặc Google Drive, Notion, Canva
                     </label>
                     <input
                       type="url"
                       value={portfolioDriveLink}
                       onChange={(e) => setPortfolioDriveLink(e.target.value)}
-                      placeholder="https://drive.google.com/drive/folders/... hoặc https://notion.site/..."
+                      placeholder="Ví dụ: https://www.youtube.com/watch?v=... hoặc https://www.tiktok.com/@.../video/... hoặc Drive"
                       className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
-                    <p className="text-[10px] text-slate-500">
-                      Link này sẽ hiển thị thành nút bấm trực tiếp trên Media Kit để đối tác Brand bấm vào xem ngay.
-                    </p>
+                    {portfolioDriveLink && (() => {
+                      const parsed = parsePortfolioVideoLink(portfolioDriveLink);
+                      if (parsed?.type === 'youtube') {
+                        return (
+                          <div className="mt-2 space-y-1 p-2.5 rounded-xl bg-red-50/60 border border-red-200">
+                            <span className="text-[11px] font-bold text-red-700 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">smart_display</span>
+                              Đã nhận diện video YouTube - Sẽ phát trực tiếp trên thẻ Media Kit:
+                            </span>
+                            <div className="aspect-video max-h-48 rounded-lg overflow-hidden bg-black shadow-xs">
+                              <iframe
+                                src={parsed.embedUrl}
+                                title="YouTube Video Preview"
+                                className="w-full h-full border-0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                              />
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (parsed?.type === 'video') {
+                        return (
+                          <div className="mt-2 space-y-1 p-2.5 rounded-xl bg-purple-50/60 border border-purple-200">
+                            <span className="text-[11px] font-bold text-purple-700 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">movie</span>
+                              Đã nhận diện file Video MP4 - Sẽ phát trực tiếp trên thẻ Media Kit:
+                            </span>
+                            <div className="aspect-video max-h-48 rounded-lg overflow-hidden bg-black shadow-xs">
+                              <video
+                                src={parsed.embedUrl}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          </div>
+                        );
+                      }
+                      if (parsed?.type === 'tiktok') {
+                        return (
+                          <div className="mt-2 flex items-center gap-2 p-2 rounded-xl bg-slate-900 text-white">
+                            <span className="material-symbols-outlined text-[16px] text-pink-400">play_circle</span>
+                            <span className="text-xs text-slate-200 font-medium truncate flex-1">
+                              Đã nhận diện link video TikTok: {parsed.url}
+                            </span>
+                            <span className="text-[10px] font-bold text-pink-300 bg-white/10 px-2 py-0.5 rounded">TikTok</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <p className="text-[10px] text-slate-500">
+                          Link này sẽ hiển thị thành nút bấm trực tiếp trên Media Kit để đối tác Brand bấm vào xem ngay.
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -2152,22 +2408,126 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
 
                     {/* Portfolio & Case Studies */}
                     {(portfolioDriveLink || portfolioFile) && (
-                      <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100">
-                        <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                      <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 space-y-2">
+                        <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
                           Portfolio hoặc Video nổi bật:
                         </span>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {portfolioFile && (
+
+                        {/* File Portfolio or Uploaded Video */}
+                        {portfolioFile && (
+                          isPortfolioFileVideo(portfolioFile) ? (
+                            <div className="space-y-1">
+                              <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-48 sm:max-h-56 w-full shadow-xs">
+                                <video
+                                  src={portfolioFile.dataUrl}
+                                  controls
+                                  playsInline
+                                  preload="metadata"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <div className="flex items-center justify-between text-[11px] text-slate-600 px-1">
+                                <span className="truncate max-w-[220px] font-medium flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[14px] text-purple-600">movie</span>
+                                  {portfolioFile.name}
+                                </span>
+                                {portfolioFile.dataUrl && (
+                                  <a
+                                    href={portfolioFile.dataUrl}
+                                    download={portfolioFile.name}
+                                    className="text-purple-700 hover:underline font-bold text-[10px] shrink-0"
+                                  >
+                                    Tải về ({portfolioFile.size})
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
                             <div className="inline-flex items-center gap-1.5 text-xs text-rose-700 font-bold bg-white px-2.5 py-1.5 rounded-xl border border-rose-200 shadow-2xs">
                               <span className="material-symbols-outlined text-[15px] text-rose-500">picture_as_pdf</span>
                               <span className="truncate max-w-[160px]">{portfolioFile.name}</span>
                               <span className="text-[10px] text-slate-400">({portfolioFile.size})</span>
                             </div>
-                          )}
-                          {portfolioDriveLink && (
+                          )
+                        )}
+
+                        {/* Link Portfolio or Embedded Video */}
+                        {portfolioDriveLink && (() => {
+                          const parsed = parsePortfolioVideoLink(portfolioDriveLink);
+                          if (!parsed) return null;
+                          if (parsed.type === 'youtube') {
+                            return (
+                              <div className="space-y-1">
+                                <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-48 sm:max-h-56 w-full shadow-xs">
+                                  <iframe
+                                    src={parsed.embedUrl}
+                                    title="Video Portfolio YouTube"
+                                    className="w-full h-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
+                                  <span className="flex items-center gap-1 text-red-600 font-semibold">
+                                    <span className="material-symbols-outlined text-[13px]">smart_display</span> YouTube Video
+                                  </span>
+                                  <a href={parsed.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                                    Mở trên YouTube <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                                  </a>
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (parsed.type === 'video') {
+                            return (
+                              <div className="space-y-1">
+                                <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-48 sm:max-h-56 w-full shadow-xs">
+                                  <video
+                                    src={parsed.embedUrl}
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
+                                  <span className="flex items-center gap-1 text-purple-600 font-semibold">
+                                    <span className="material-symbols-outlined text-[13px]">movie</span> Video trực tiếp
+                                  </span>
+                                  <a href={parsed.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                                    Mở liên kết <span className="material-symbols-outlined text-[11px]">open_in_new</span>
+                                  </a>
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (parsed.type === 'tiktok') {
+                            return (
+                              <a
+                                href={parsed.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 text-white hover:bg-black transition-colors shadow-2xs group"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="w-6 h-6 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-pink-400 text-[15px]">play_circle</span>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-bold text-white truncate">Video review trên TikTok</p>
+                                    <p className="text-[10px] text-slate-300 truncate">{parsed.url}</p>
+                                  </div>
+                                </div>
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-300 bg-white/10 px-2 py-1 rounded-lg shrink-0 group-hover:bg-white/20">
+                                  Xem TikTok <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                                </span>
+                              </a>
+                            );
+                          }
+                          return (
                             <a
-                              href={portfolioDriveLink}
+                              href={parsed.url}
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center gap-1.5 text-xs text-[#316bbf] font-bold bg-white px-2.5 py-1.5 rounded-xl border border-blue-200 shadow-2xs hover:bg-blue-50 transition-colors"
@@ -2176,8 +2536,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                               <span>Mở Drive / Notion Portfolio</span>
                               <span className="material-symbols-outlined text-[12px]">open_in_new</span>
                             </a>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </div>
                     )}
 
