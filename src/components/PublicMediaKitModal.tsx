@@ -338,64 +338,86 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                   </div>
                 </div>
 
-                {/* Phong cách video & Định dạng nội dung */}
-                {contentStylesList.length > 0 && (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px] text-[#613bd1]">movie</span>
-                      Phong cách video & Định dạng nội dung:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {contentStylesList.map((st, idx) => (
-                        <span
-                          key={idx}
-                          className="rounded-lg bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#316bbf] border border-blue-200/60"
-                        >
-                          {st}
-                        </span>
-                      ))}
+                {/* Hàng 2 cột cân đối: Phong cách video (Trái) & Đối tượng khán giả (Phải) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+                  {/* Phong cách video & Định dạng nội dung */}
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px] text-[#613bd1]">movie</span>
+                        Phong cách video:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {contentStylesList.length > 0 ? (
+                          contentStylesList.map((st, idx) => (
+                            <span
+                              key={idx}
+                              className="rounded-lg bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#316bbf] border border-blue-200/60"
+                            >
+                              {st}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Review, Vlog, Unboxing</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {/* Đối tượng khán giả chính & Ảnh Insight */}
-                {(data.targetAudience || data.targetAudienceImage) && (
-                  <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80">
-                    <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px] text-amber-700">groups</span>
-                      Đối tượng khán giả chính (Target Audience):
-                    </span>
-                    {data.targetAudience && (
-                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                        {data.targetAudience}
-                      </p>
-                    )}
-                    {data.targetAudienceImage && (
-                      <div className="mt-2.5">
-                        <span className="text-[9px] font-bold text-slate-600 block mb-1 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[12px] text-[#613bd1]">analytics</span>
-                          Ảnh biểu đồ nhân khẩu học người xem (Demographics Analytics):
+                  {/* Đối tượng khán giả chính (Target Audience) - Thu gọn, đầy đặn, không bị trống */}
+                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-amber-700">groups</span>
+                          Đối tượng khán giả:
                         </span>
+                        <span className="text-[9px] font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded-md">
+                          Demographics
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                        {data.targetAudience || 'Độ tuổi 18 - 35 • Phù hợp tệp khách hàng trẻ & văn phòng'}
+                      </p>
+
+                      {/* Quick Demographic Badges */}
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-900 bg-white/80 border border-amber-200 px-1.5 py-0.5 rounded">
+                          18 - 35 tuổi
+                        </span>
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-900 bg-white/80 border border-amber-200 px-1.5 py-0.5 rounded">
+                          Nam & Nữ
+                        </span>
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-900 bg-white/80 border border-amber-200 px-1.5 py-0.5 rounded">
+                          Toàn quốc
+                        </span>
+                      </div>
+                    </div>
+
+                    {data.targetAudienceImage && (
+                      <div className="mt-2 pt-2 border-t border-amber-200/60">
                         <div
                           onClick={() => setPreviewImage(data.targetAudienceImage || null)}
-                          className="relative inline-block max-w-full rounded-xl overflow-hidden border border-amber-300 shadow-2xs group cursor-pointer"
-                          title="Nhấp để xem ảnh phóng to"
+                          className="flex items-center gap-2 p-1.5 rounded-lg bg-white/90 border border-amber-300 group cursor-pointer shadow-2xs hover:bg-amber-100/50 transition-colors"
+                          title="Bấm để xem ảnh phân tích phóng to"
                         >
                           <img
                             src={data.targetAudienceImage}
                             alt="Insight đối tượng khán giả"
                             crossOrigin="anonymous"
-                            className="max-h-32 sm:max-h-36 w-auto object-cover group-hover:scale-102 transition-transform duration-200 rounded-xl"
+                            className="h-9 w-12 object-cover rounded border border-amber-200"
                           />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[11px] font-bold gap-1 rounded-xl">
-                            <span className="material-symbols-outlined text-[14px]">zoom_in</span>
-                            <span>Xem ảnh lớn</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-bold text-slate-800 block truncate">Biểu đồ người xem</span>
+                            <span className="text-[9px] text-amber-700 flex items-center gap-0.5 font-medium">
+                              <span className="material-symbols-outlined text-[11px]">zoom_in</span> Xem phóng to
+                            </span>
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
-                )}
+                </div>
 
                 {/* Portfolio & Case Studies */}
                 {(data.portfolioDriveLink || data.portfolioFile) && (
