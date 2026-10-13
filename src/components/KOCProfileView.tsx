@@ -926,7 +926,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <div className="mt-4 p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-left">
                 <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
-                  Portfolio & Video mẫu
+                  Portfolio hoặc Video nổi bật
                 </span>
                 <div className="space-y-1.5">
                   {portfolioFile && (
@@ -2103,7 +2103,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100">
                         <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
-                          Hồ sơ năng lực & Video mẫu (Portfolio):
+                          Portfolio hoặc Video nổi bật:
                         </span>
                         <div className="flex flex-wrap items-center gap-2">
                           {portfolioFile && (
