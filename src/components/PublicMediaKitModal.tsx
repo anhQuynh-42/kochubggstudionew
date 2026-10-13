@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { APP_LOGOS } from '../data/mockData';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
@@ -62,6 +62,21 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Đóng modal khi nhấn phím Esc
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (previewImage) {
+          setPreviewImage(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewImage, onClose]);
+
   const contentStylesList = React.useMemo(() => {
     if (Array.isArray(data.contentStyle)) return data.contentStyle.filter(Boolean);
     if (typeof data.contentStyle === 'string' && data.contentStyle.trim()) return [data.contentStyle.trim()];
@@ -111,297 +126,328 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-2xl overflow-hidden my-6">
-        {/* Nút đóng */}
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer z-10"
-        >
-          <span className="material-symbols-outlined text-[18px]">close</span>
-        </button>
-
-        {/* THẺ MEDIA KIT ĐƯỢC CHỤP ẢNH (cardRef) */}
-        <div ref={cardRef} className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100">
-          {/* Header Card */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm font-black text-xs">
-                KC
-              </span>
-              <div>
-                <h4 className="text-xs font-black tracking-wide text-slate-900 uppercase">
-                  KOCITY CREATOR MEDIA KIT
-                </h4>
-                <p className="text-[10px] text-slate-400">Nền tảng kết nối KOC & Brand chính hãng</p>
-              </div>
-            </div>
-            {data.memberCode && (
-              <span className="rounded-full bg-purple-50 border border-purple-200 px-2.5 py-1 text-[11px] font-mono font-extrabold text-[#613bd1]">
-                #{data.memberCode}
-              </span>
-            )}
-          </div>
-
-          {/* KOC Info Header */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left mb-5">
-            <div className="relative">
-              <img
-                src={data.avatar || APP_LOGOS.userProfile}
-                alt={data.name}
-                crossOrigin="anonymous"
-                className="h-20 w-20 sm:h-22 sm:w-22 rounded-2xl object-cover border-2 border-purple-200 shadow-sm"
-              />
-              <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm ring-2 ring-white">
-                <span className="material-symbols-outlined text-[14px]">verified</span>
-              </span>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h2 className="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black text-slate-900">
-                  {data.name}
-                </h2>
-              </div>
-
-              {/* Social Channels Row */}
-              <div className="mt-1.5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                {/* TikTok Handle */}
-                <a
-                  href={tiktokUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 font-mono text-xs font-bold text-[#613bd1] hover:underline bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-100"
-                >
-                  <span className="text-[10px] font-sans font-bold text-slate-500">TikTok:</span>
-                  <span>{cleanHandle}</span>
-                  <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-                </a>
-
-                {/* Instagram Handle */}
-                {cleanInstagram && (
-                  <a
-                    href={instagramUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-mono text-xs font-bold text-pink-600 hover:underline bg-pink-50 px-2 py-0.5 rounded-lg border border-pink-100"
-                  >
-                    <span className="text-[10px] font-sans font-bold text-slate-500">IG:</span>
-                    <span>@{cleanInstagram}</span>
-                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-                  </a>
-                )}
-
-                {/* YouTube Handle */}
-                {cleanYoutube && (
-                  <a
-                    href={youtubeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-mono text-xs font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100"
-                  >
-                    <span className="text-[10px] font-sans font-bold text-slate-500">YT:</span>
-                    <span>@{cleanYoutube}</span>
-                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-                  </a>
-                )}
-              </div>
-
-              {data.bio && (
-                <p className="mt-2 text-xs text-slate-600 leading-relaxed italic bg-purple-50/60 p-2.5 rounded-xl border border-purple-100">
-                  "{data.bio}"
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Metric Stats Grid (Bao gồm chỉ số GMV) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center mb-4">
-            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50/50 p-2.5 border border-purple-100">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                Followers
-              </span>
-              <b className="text-sm sm:text-base font-black text-slate-900 font-['Plus_Jakarta_Sans']">
-                {data.followers || '10K+'}
-              </b>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50/50 p-2.5 border border-blue-100">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                Avg Views
-              </span>
-              <b className="text-sm sm:text-base font-black text-[#316bbf] font-['Plus_Jakarta_Sans']">
-                {data.avgViews || '5K+'}
-              </b>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50/50 p-2.5 border border-pink-100">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                Tương tác
-              </span>
-              <b className="text-sm sm:text-base font-black text-[#613bd1] font-['Plus_Jakarta_Sans']">
-                {data.engagementRate || '4.5%'}
-              </b>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/50 p-2.5 border border-emerald-200">
-              <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block mb-1 flex items-center justify-center gap-1">
-                <span className="material-symbols-outlined text-[13px] text-emerald-600">trending_up</span>
-                GMV Kênh
-              </span>
-              <b className="text-sm sm:text-base font-black text-emerald-700 font-['Plus_Jakarta_Sans']">
-                {data.gmv || 'Chưa cập nhật'}
-              </b>
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="mb-4">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-              Lĩnh vực & Chuyên mục thế mạnh:
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-5 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header cố định với nút Đóng (X) luôn nổi bật và cố định ở trên */}
+        <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-slate-100 bg-white/95 backdrop-blur-sm shrink-0 z-30">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white font-black text-xs shadow-xs">
+              KC
             </span>
-            <div className="flex flex-wrap gap-1.5">
-              {data.categories && data.categories.length > 0 ? (
-                data.categories.map((cat, idx) => (
-                  <span
-                    key={idx}
-                    className="rounded-lg bg-purple-100/80 px-2.5 py-1 text-[11px] font-bold text-[#613bd1] border border-purple-200/60"
-                  >
-                    {cat}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400 italic">Làm đẹp, Thời trang & Lifestyle</span>
-              )}
+            <div>
+              <h3 className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
+                Thẻ Media Kit KOC Chính Thức (Dạng Ngang)
+              </h3>
+              <p className="font-mono text-[11px] text-[#613bd1]">{cleanHandle || '@creator'}</p>
             </div>
           </div>
 
-          {/* Phong cách video & Định dạng nội dung */}
-          {contentStylesList.length > 0 && (
-            <div className="mb-4">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px] text-[#613bd1]">movie</span>
-                Phong cách video & Định dạng nội dung:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {contentStylesList.map((st, idx) => (
-                  <span
-                    key={idx}
-                    className="rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#316bbf] border border-blue-200/60"
-                  >
-                    {st}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Nút đóng (X) rõ ràng, to, nổi bật */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 shadow-xs transition-all cursor-pointer group hover:scale-105 active:scale-95"
+            title="Đóng thẻ (Esc)"
+          >
+            <span className="text-xs font-bold group-hover:text-rose-600">Đóng</span>
+            <span className="material-symbols-outlined text-[18px] font-bold">close</span>
+          </button>
+        </div>
 
-          {/* Đối tượng khán giả chính (Target Audience) & Ảnh Insight/Demographics */}
-          {(data.targetAudience || data.targetAudienceImage) && (
-            <div className="mb-4 rounded-2xl bg-gradient-to-r from-amber-50/70 to-orange-50/50 p-3.5 border border-amber-200/80">
-              <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-amber-700">groups</span>
-                Đối tượng khán giả chính (Target Audience):
-              </span>
-              {data.targetAudience && (
-                <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                  {data.targetAudience}
-                </p>
+        {/* Nội dung thẻ cuộn mượt mà (dạng ngang trên desktop/tablet, không bị tràn màn hình) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* THẺ MEDIA KIT ĐƯỢC CHỤP ẢNH (cardRef) - DẠNG NGANG (LANDSCAPE) */}
+          <div ref={cardRef} className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+            {/* Header dải băng trên thẻ Media Kit */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm font-black text-xs">
+                  KC
+                </span>
+                <div>
+                  <h4 className="text-xs font-black tracking-wide text-slate-900 uppercase">
+                    KOCITY CREATOR MEDIA KIT
+                  </h4>
+                  <p className="text-[10px] text-slate-400">Nền tảng kết nối KOC & Brand chính hãng</p>
+                </div>
+              </div>
+              {data.memberCode && (
+                <span className="rounded-full bg-purple-50 border border-purple-200 px-3 py-1 text-xs font-mono font-extrabold text-[#613bd1]">
+                  #{data.memberCode}
+                </span>
               )}
-              {data.targetAudienceImage && (
-                <div className="mt-2.5">
-                  <span className="text-[10px] font-bold text-slate-600 block mb-1.5 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[13px] text-[#613bd1]">analytics</span>
-                    Ảnh biểu đồ nhân khẩu học người xem (Demographics Analytics):
-                  </span>
-                  <div
-                    onClick={() => setPreviewImage(data.targetAudienceImage || null)}
-                    className="relative inline-block max-w-full rounded-xl overflow-hidden border border-amber-300 shadow-2xs group cursor-pointer"
-                    title="Nhấp để xem ảnh phóng to"
-                  >
+            </div>
+
+            {/* Bố cục DẠNG NGANG: 2 cột chia đôi cân đối (Left & Right) */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+              {/* CỘT TRÁI (md:col-span-5): Thông tin Creator, Kênh MXH, Bio, Địa chỉ, Chuyên mục, Báo giá */}
+              <div className="md:col-span-5 space-y-3.5 md:border-r md:border-slate-100 md:pr-6">
+                {/* Avatar & Tên KOC */}
+                <div className="flex items-center gap-3.5">
+                  <div className="relative shrink-0">
                     <img
-                      src={data.targetAudienceImage}
-                      alt="Insight đối tượng khán giả"
+                      src={data.avatar || APP_LOGOS.userProfile}
+                      alt={data.name}
                       crossOrigin="anonymous"
-                      className="max-h-48 sm:max-h-56 w-auto object-cover group-hover:scale-102 transition-transform duration-200 rounded-xl"
+                      className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover border-2 border-purple-200 shadow-sm"
                     />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1 rounded-xl">
-                      <span className="material-symbols-outlined text-[16px]">zoom_in</span>
-                      <span>Xem ảnh lớn</span>
+                    <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm ring-2 ring-white">
+                      <span className="material-symbols-outlined text-[13px]">verified</span>
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-['Plus_Jakarta_Sans'] text-base sm:text-lg font-black text-slate-900 truncate">
+                      {data.name}
+                    </h4>
+                    <div className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500 font-semibold">
+                      <span className="material-symbols-outlined text-[14px] text-[#316bbf]">location_on</span>
+                      <span className="truncate">
+                        {data.city ? `${data.city}${data.district ? `, ${data.district}` : ''}` : 'Toàn quốc'}
+                      </span>
                     </div>
+                    <span className="inline-block mt-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 border border-amber-200">
+                      ⭐ 5.0 KOC Verified
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Portfolio & Case Studies Section (Yêu cầu 14 & 15) */}
-          {(data.portfolioDriveLink || data.portfolioFile) && (
-            <div className="mb-4 rounded-2xl bg-gradient-to-r from-indigo-50/80 to-purple-50/70 p-3.5 border border-indigo-100">
-              <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-[#613bd1]">folder_shared</span>
-                Hồ sơ năng lực & Video mẫu (Portfolio)
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                {/* File Portfolio tải lên */}
-                {data.portfolioFile && (
+                {/* Social Handles */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   <a
-                    href={data.portfolioFile.dataUrl}
-                    download={data.portfolioFile.name}
+                    href={tiktokUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-200 shadow-xs hover:bg-rose-50 transition-colors"
+                    className="inline-flex items-center gap-1 font-mono text-xs font-bold text-[#613bd1] hover:underline bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100"
                   >
-                    <span className="material-symbols-outlined text-[16px] text-rose-500">picture_as_pdf</span>
-                    <span className="truncate max-w-[180px]">{data.portfolioFile.name}</span>
-                    <span className="text-[10px] text-slate-400">({data.portfolioFile.size})</span>
-                    <span className="material-symbols-outlined text-[14px]">download</span>
+                    <span>TikTok: {cleanHandle}</span>
+                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
                   </a>
+
+                  {cleanInstagram && (
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-mono text-xs font-bold text-pink-600 hover:underline bg-pink-50 px-2.5 py-1 rounded-lg border border-pink-100"
+                    >
+                      <span>IG: @{cleanInstagram}</span>
+                      <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                    </a>
+                  )}
+
+                  {cleanYoutube && (
+                    <a
+                      href={youtubeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-mono text-xs font-bold text-rose-600 hover:underline bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100"
+                    >
+                      <span>YT: @{cleanYoutube}</span>
+                      <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                    </a>
+                  )}
+                </div>
+
+                {/* Bio */}
+                {data.bio && (
+                  <p className="text-xs text-slate-600 leading-relaxed italic bg-purple-50/50 p-2.5 rounded-xl border border-purple-100">
+                    "{data.bio}"
+                  </p>
                 )}
 
-                {/* Link Drive / Notion Portfolio */}
-                {data.portfolioDriveLink && (
-                  <a
-                    href={data.portfolioDriveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#316bbf] border border-blue-200 shadow-xs hover:bg-blue-50 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">link</span>
-                    <span>Mở Portfolio Drive / Notion</span>
-                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                  </a>
+                {/* Lĩnh vực & Chuyên mục thế mạnh */}
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                    Lĩnh vực & Chuyên mục thế mạnh:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.categories && data.categories.length > 0 ? (
+                      data.categories.map((cat, idx) => (
+                        <span
+                          key={idx}
+                          className="rounded-lg bg-purple-100/80 px-2.5 py-1 text-[10px] font-bold text-[#613bd1] border border-purple-200/60"
+                        >
+                          {cat}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Làm đẹp, Thời trang & Lifestyle</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Điều khoản & Báo giá hợp tác */}
+                <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Báo giá booking</span>
+                    <span className="font-bold text-slate-900">{data.minBookingRate || 'Mẫu 0đ + Hoa hồng'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Mã Spark Ads</span>
+                    <span className="font-bold text-[#613bd1]">{data.allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}</span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-slate-200/60 flex items-center justify-between">
+                    <span className="text-slate-400 text-[9px] uppercase font-bold">Mẫu 0đ (Freecast):</span>
+                    <span className="font-bold text-emerald-700">{data.acceptFreecast !== false ? 'Sẵn sàng nhận mẫu' : 'Booking fee'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CỘT PHẢI (md:col-span-7): Metrics Grid, Video styles, Target audience, Portfolio */}
+              <div className="md:col-span-7 space-y-3.5">
+                {/* Metric Stats Grid (Bao gồm GMV Kênh) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="rounded-xl bg-purple-50/70 p-2.5 border border-purple-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
+                      Followers
+                    </span>
+                    <b className="text-sm sm:text-base font-black text-slate-900 font-['Plus_Jakarta_Sans']">
+                      {data.followers || '10K+'}
+                    </b>
+                  </div>
+                  <div className="rounded-xl bg-blue-50/70 p-2.5 border border-blue-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
+                      Avg Views
+                    </span>
+                    <b className="text-sm sm:text-base font-black text-[#316bbf] font-['Plus_Jakarta_Sans']">
+                      {data.avgViews || '5K+'}
+                    </b>
+                  </div>
+                  <div className="rounded-xl bg-pink-50/70 p-2.5 border border-pink-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
+                      Tương tác
+                    </span>
+                    <b className="text-sm sm:text-base font-black text-[#613bd1] font-['Plus_Jakarta_Sans']">
+                      {data.engagementRate || '4.5%'}
+                    </b>
+                  </div>
+                  <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
+                      <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
+                      GMV Kênh
+                    </span>
+                    <b className="text-sm sm:text-base font-black text-emerald-700 font-['Plus_Jakarta_Sans']">
+                      {data.gmv || 'Chưa cập nhật'}
+                    </b>
+                  </div>
+                </div>
+
+                {/* Phong cách video & Định dạng nội dung */}
+                {contentStylesList.length > 0 && (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px] text-[#613bd1]">movie</span>
+                      Phong cách video & Định dạng nội dung:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {contentStylesList.map((st, idx) => (
+                        <span
+                          key={idx}
+                          className="rounded-lg bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#316bbf] border border-blue-200/60"
+                        >
+                          {st}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
+
+                {/* Đối tượng khán giả chính & Ảnh Insight */}
+                {(data.targetAudience || data.targetAudienceImage) && (
+                  <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80">
+                    <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px] text-amber-700">groups</span>
+                      Đối tượng khán giả chính (Target Audience):
+                    </span>
+                    {data.targetAudience && (
+                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                        {data.targetAudience}
+                      </p>
+                    )}
+                    {data.targetAudienceImage && (
+                      <div className="mt-2.5">
+                        <span className="text-[9px] font-bold text-slate-600 block mb-1 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px] text-[#613bd1]">analytics</span>
+                          Ảnh biểu đồ nhân khẩu học người xem (Demographics Analytics):
+                        </span>
+                        <div
+                          onClick={() => setPreviewImage(data.targetAudienceImage || null)}
+                          className="relative inline-block max-w-full rounded-xl overflow-hidden border border-amber-300 shadow-2xs group cursor-pointer"
+                          title="Nhấp để xem ảnh phóng to"
+                        >
+                          <img
+                            src={data.targetAudienceImage}
+                            alt="Insight đối tượng khán giả"
+                            crossOrigin="anonymous"
+                            className="max-h-32 sm:max-h-36 w-auto object-cover group-hover:scale-102 transition-transform duration-200 rounded-xl"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[11px] font-bold gap-1 rounded-xl">
+                            <span className="material-symbols-outlined text-[14px]">zoom_in</span>
+                            <span>Xem ảnh lớn</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Portfolio & Case Studies */}
+                {(data.portfolioDriveLink || data.portfolioFile) && (
+                  <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100">
+                    <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
+                      Hồ sơ năng lực & Video mẫu (Portfolio)
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {data.portfolioFile && (
+                        <a
+                          href={data.portfolioFile.dataUrl}
+                          download={data.portfolioFile.name}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 border border-rose-200 shadow-2xs hover:bg-rose-50 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[15px] text-rose-500">picture_as_pdf</span>
+                          <span className="truncate max-w-[160px]">{data.portfolioFile.name}</span>
+                          <span className="text-[10px] text-slate-400">({data.portfolioFile.size})</span>
+                          <span className="material-symbols-outlined text-[13px]">download</span>
+                        </a>
+                      )}
+
+                      {data.portfolioDriveLink && (
+                        <a
+                          href={data.portfolioDriveLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-[#316bbf] border border-blue-200 shadow-2xs hover:bg-blue-50 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">link</span>
+                          <span>Mở Portfolio Drive / Notion</span>
+                          <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer watermark */}
+                <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100">
+                  <span>Xác thực bởi Kocity Platform</span>
+                  <span>https://kocity.vn</span>
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Highlights & Collaboration Terms */}
-          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 mb-2">
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[15px] text-[#316bbf]">location_on</span>
-              <span>{data.city ? `${data.city}${data.district ? `, ${data.district}` : ''}` : 'Toàn quốc'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[15px] text-emerald-600">payments</span>
-              <span>Rate card: {data.minBookingRate || 'Mẫu 0đ + Hoa hồng'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[15px] text-[#613bd1]">bolt</span>
-              <span>Spark Ads: {data.allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[15px] text-amber-600">card_giftcard</span>
-              <span>Mẫu 0đ (Freecast): {data.acceptFreecast !== false ? 'Nhận mẫu' : 'Booking fee'}</span>
-            </div>
-          </div>
-
-          {/* Footer watermark */}
-          <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100">
-            <span>Xác thực bởi Kocity Platform</span>
-            <span>https://kocity.vn</span>
           </div>
         </div>
 
-        {/* Action Buttons Toolbar */}
-        <div className="mt-5 space-y-2.5 pt-3 border-t border-slate-100">
+        {/* Footer cố định phía dưới */}
+        <div className="p-3.5 sm:p-4 border-t border-slate-100 bg-slate-50/95 backdrop-blur-sm shrink-0 space-y-2 z-20">
           <div className="grid grid-cols-2 gap-2">
             {/* Nút 1: Tải ảnh PNG */}
             <button
@@ -452,6 +498,16 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
               </button>
             )}
           </div>
+
+          {/* Nút 5: Đóng thẻ */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 py-2 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">close</span>
+            <span>Đóng thẻ Media Kit</span>
+          </button>
         </div>
       </div>
 

@@ -394,6 +394,20 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
   const [showMediaKitModal, setShowMediaKitModal] = useState(false);
   const [copyMemberCodeSuccess, setCopyMemberCodeSuccess] = useState(false);
 
+  // Đóng modal khi nhấn phím Esc
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowMediaKitModal(false);
+        setPreviewAudienceModalImage(null);
+      }
+    };
+    if (showMediaKitModal || previewAudienceModalImage) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showMediaKitModal, previewAudienceModalImage]);
+
   // Mã định danh KOC cá nhân cố định (dễ nhớ, dùng để đối soát mẫu và quản lý)
   const kocMemberCode = React.useMemo(() => {
     if (!currentUser) return 'KOC-MEMBER';
@@ -1839,213 +1853,294 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       </div>
 
       {/* Media Kit Fullscreen Preview Modal */}
+      {/* Media Kit Fullscreen Preview Modal */}
       {showMediaKitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl overflow-hidden my-8">
-            <button
-              onClick={() => setShowMediaKitModal(false)}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">close</span>
-            </button>
-
-            <div className="text-center mb-6">
-              <span className="rounded-full bg-purple-50 px-3 py-1 text-[10px] font-extrabold text-[#613bd1] border border-purple-200 uppercase tracking-wider">
-                Thẻ Media Kit KOC Chính Thức
-              </span>
-              <h3 className="mt-2 font-['Plus_Jakarta_Sans'] text-xl font-extrabold text-slate-900">
-                {name || 'Hồ sơ KOC'}
-              </h3>
-              <p className="font-mono text-xs text-[#613bd1]">{tiktokHandle || '@creator'}</p>
-              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 border border-slate-200">
-                <span className="text-[10px] font-semibold text-slate-500 uppercase">Mã KOC:</span>
-                <span className="font-mono text-xs font-extrabold text-[#613bd1]">#{kocMemberCode}</span>
-                <button
-                  type="button"
-                  onClick={handleCopyMemberCode}
-                  className="ml-0.5 text-slate-400 hover:text-[#613bd1] transition-colors cursor-pointer"
-                  title="Sao chép mã KOC"
-                >
-                  <span className="material-symbols-outlined text-[13px] leading-none">
-                    {copyMemberCodeSuccess ? 'done' : 'content_copy'}
-                  </span>
-                </button>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-5 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150"
+          onClick={() => setShowMediaKitModal(false)}
+        >
+          <div
+            className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header cố định với nút Đóng (X) luôn nổi bật và rõ ràng */}
+            <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-slate-100 bg-white/95 backdrop-blur-sm shrink-0 z-30">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white font-black text-xs shadow-xs">
+                  KC
+                </span>
+                <div>
+                  <h3 className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
+                    Thẻ Media Kit KOC Chính Thức (Dạng Ngang)
+                  </h3>
+                  <p className="font-mono text-[11px] text-[#613bd1]">{tiktokHandle || '@creator'}</p>
+                </div>
               </div>
+
+              {/* Nút đóng (X) rõ ràng, to, nổi bật */}
+              <button
+                type="button"
+                onClick={() => setShowMediaKitModal(false)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 shadow-xs transition-all cursor-pointer group hover:scale-105 active:scale-95"
+                title="Đóng thẻ (Esc)"
+              >
+                <span className="text-xs font-bold group-hover:text-rose-600">Đóng</span>
+                <span className="material-symbols-outlined text-[18px] font-bold">close</span>
+              </button>
             </div>
 
-            {/* Card Content container - Được chụp ảnh khi xuất PNG */}
-            <div ref={mediaKitCardRef} className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-4">
-                <img
-                  src={avatar || APP_LOGOS.userProfile}
-                  alt={name}
-                  crossOrigin="anonymous"
-                  className="h-16 w-16 sm:h-18 sm:w-18 rounded-2xl object-cover border-2 border-purple-200 shadow-sm"
-                />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-['Plus_Jakarta_Sans'] text-base sm:text-lg font-black text-slate-900">
-                    {name || 'Hồ sơ KOC'}
-                  </h4>
-
-                  {/* Social Handles Row */}
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className="font-mono text-xs font-bold text-[#613bd1] bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
-                      TT: {tiktokHandle || '@creator'}
+            {/* Nội dung cuộn mượt mà (dạng ngang trên desktop/tablet, không bị tràn màn hình) */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {/* Thẻ Media Kit ĐƯỢC CHỤP ẢNH XUẤT PNG (cardRef) - DẠNG NGANG (LANDSCAPE) */}
+              <div
+                ref={mediaKitCardRef}
+                className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4"
+              >
+                {/* Header dải băng trên thẻ Media Kit */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] text-white shadow-sm font-black text-xs">
+                      KC
                     </span>
-                    {instagramHandle && (
-                      <span className="font-mono text-xs font-bold text-pink-600 bg-pink-50 px-2 py-0.5 rounded-md border border-pink-100">
-                        IG: @{instagramHandle.replace(/[@\s]/g, '')}
-                      </span>
-                    )}
-                    {youtubeHandle && (
-                      <span className="font-mono text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
-                        YT: @{youtubeHandle.replace(/[@\s]/g, '')}
-                      </span>
-                    )}
+                    <div>
+                      <h4 className="text-xs font-black tracking-wide text-slate-900 uppercase">
+                        KOCITY CREATOR MEDIA KIT
+                      </h4>
+                      <p className="text-[10px] text-slate-400">Nền tảng kết nối KOC & Brand chính hãng</p>
+                    </div>
                   </div>
-
-                  <p className="mt-1 text-xs text-slate-700 leading-relaxed font-medium">
-                    {bio || 'Chưa cập nhật phần tự giới thiệu ngắn cho nhãn hàng.'}
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-500 font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px] text-[#316bbf]">location_on</span>
-                    {address ? `${address}${district ? `, ${district}` : ''}${city ? `, ${city}` : ''}` : (city || 'Toàn quốc')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-3 border-t border-slate-200">
-                <div className="rounded-xl bg-purple-50/50 p-2.5 border border-purple-100">
-                  <span className="text-[10px] text-slate-500 font-bold block">Followers</span>
-                  <b className="text-sm text-slate-900 font-['Plus_Jakarta_Sans']">{followers || '10K+'}</b>
-                </div>
-                <div className="rounded-xl bg-blue-50/50 p-2.5 border border-blue-100">
-                  <span className="text-[10px] text-slate-500 font-bold block">Avg Views</span>
-                  <b className="text-sm text-[#316bbf] font-['Plus_Jakarta_Sans']">{avgViews || '5K+'}</b>
-                </div>
-                <div className="rounded-xl bg-pink-50/50 p-2.5 border border-pink-100">
-                  <span className="text-[10px] text-slate-500 font-bold block">Tương tác</span>
-                  <b className="text-sm text-[#613bd1] font-['Plus_Jakarta_Sans']">{engagementRate || '4.5%'}</b>
-                </div>
-                <div className="rounded-xl bg-emerald-50/70 p-2.5 border border-emerald-200">
-                  <span className="text-[10px] text-emerald-800 font-bold block flex items-center justify-center gap-0.5">
-                    <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
-                    GMV Kênh
-                  </span>
-                  <b className="text-sm text-emerald-700 font-['Plus_Jakarta_Sans']">{gmv || 'Chưa cập nhật'}</b>
-                </div>
-              </div>
-
-              {/* Lĩnh vực & Chuyên mục hoạt động */}
-              <div className="pt-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Lĩnh vực & Chuyên mục thế mạnh:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {categories.length > 0 ? (
-                    categories.map((c, i) => (
-                      <span key={i} className="rounded-lg bg-purple-100 px-2.5 py-1 text-[10px] font-bold text-[#613bd1]">
-                        {c}
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 border border-purple-200">
+                    <span className="text-[10px] font-semibold text-purple-700 uppercase">Mã KOC:</span>
+                    <span className="font-mono text-xs font-extrabold text-[#613bd1]">#{kocMemberCode}</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyMemberCode}
+                      className="ml-0.5 text-slate-400 hover:text-[#613bd1] transition-colors cursor-pointer"
+                      title="Sao chép mã KOC"
+                    >
+                      <span className="material-symbols-outlined text-[13px] leading-none">
+                        {copyMemberCodeSuccess ? 'done' : 'content_copy'}
                       </span>
-                    ))
-                  ) : (
-                    <span className="text-[11px] text-slate-400 italic">Chưa chọn ngành hàng</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Phong cách video & Định dạng nội dung */}
-              {activeContentStyles.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[13px] text-[#613bd1]">movie</span>
-                    Phong cách video & Định dạng nội dung:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {activeContentStyles.map((st, i) => (
-                      <span key={i} className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-[10px] font-bold text-[#316bbf]">
-                        {st}
-                      </span>
-                    ))}
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* Đối tượng khán giả chính */}
-              {(targetAudience || targetAudienceImage) && (
-                <div className="pt-2">
-                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80">
-                    <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px] text-amber-700">groups</span>
-                      Đối tượng khán giả chính:
-                    </span>
-                    {targetAudience && (
-                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                        {targetAudience}
+                {/* Bố cục DẠNG NGANG: 2 cột chia đôi cân đối (Left & Right) */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                  {/* CỘT TRÁI (md:col-span-5): Creator Info, Socials, Bio, Categories, Highlights */}
+                  <div className="md:col-span-5 space-y-3.5 md:border-r md:border-slate-100 md:pr-6">
+                    {/* Avatar & Tên KOC */}
+                    <div className="flex items-center gap-3.5">
+                      <div className="relative shrink-0">
+                        <img
+                          src={avatar || APP_LOGOS.userProfile}
+                          alt={name}
+                          crossOrigin="anonymous"
+                          className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover border-2 border-purple-200 shadow-sm"
+                        />
+                        <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm ring-2 ring-white">
+                          <span className="material-symbols-outlined text-[13px]">verified</span>
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-['Plus_Jakarta_Sans'] text-base sm:text-lg font-black text-slate-900 truncate">
+                          {name || 'Hồ sơ KOC'}
+                        </h4>
+                        <div className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500 font-semibold">
+                          <span className="material-symbols-outlined text-[14px] text-[#316bbf]">location_on</span>
+                          <span className="truncate">
+                            {address ? `${address}${district ? `, ${district}` : ''}${city ? `, ${city}` : ''}` : (city || 'Toàn quốc')}
+                          </span>
+                        </div>
+                        <span className="inline-block mt-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 border border-amber-200">
+                          ⭐ 5.0 KOC Verified
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Social Handles */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="font-mono text-xs font-bold text-[#613bd1] bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100">
+                        TikTok: {tiktokHandle || '@creator'}
+                      </span>
+                      {instagramHandle && (
+                        <span className="font-mono text-xs font-bold text-pink-600 bg-pink-50 px-2.5 py-1 rounded-lg border border-pink-100">
+                          IG: @{instagramHandle.replace(/[@\s]/g, '')}
+                        </span>
+                      )}
+                      {youtubeHandle && (
+                        <span className="font-mono text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100">
+                          YT: @{youtubeHandle.replace(/[@\s]/g, '')}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Bio */}
+                    {bio && (
+                      <p className="text-xs text-slate-600 leading-relaxed italic bg-purple-50/50 p-2.5 rounded-xl border border-purple-100">
+                        "{bio}"
                       </p>
                     )}
-                    {targetAudienceImage && (
-                      <div className="mt-2">
-                        <span className="text-[9px] font-bold text-slate-500 block mb-1">
-                          Ảnh phân tích nhân khẩu học người xem:
+
+                    {/* Lĩnh vực & Chuyên mục hoạt động */}
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                        Lĩnh vực & Chuyên mục thế mạnh:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {categories.length > 0 ? (
+                          categories.map((c, i) => (
+                            <span key={i} className="rounded-lg bg-purple-100 px-2.5 py-1 text-[10px] font-bold text-[#613bd1]">
+                              {c}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Chưa chọn ngành hàng</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Báo giá & Điều khoản hợp tác */}
+                    <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Báo giá booking</span>
+                        <span className="font-bold text-slate-900">{minBookingRate || 'Mẫu 0đ + Hoa hồng'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Mã Spark Ads</span>
+                        <span className="font-bold text-[#613bd1]">{allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}</span>
+                      </div>
+                      <div className="col-span-2 pt-1 border-t border-slate-200/60 flex items-center justify-between">
+                        <span className="text-slate-400 text-[9px] uppercase font-bold">Mẫu 0đ (Freecast):</span>
+                        <span className="font-bold text-emerald-700">{acceptFreecast ? 'Sẵn sàng nhận mẫu' : 'Booking fee'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CỘT PHẢI (md:col-span-7): Metrics Grid, Video styles, Target audience, Portfolio */}
+                  <div className="md:col-span-7 space-y-3.5">
+                    {/* Metric Stats Grid (Bao gồm GMV Kênh) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                      <div className="rounded-xl bg-purple-50/70 p-2.5 border border-purple-100">
+                        <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider mb-0.5">Followers</span>
+                        <b className="text-sm sm:text-base text-slate-900 font-['Plus_Jakarta_Sans'] font-black">{followers || '10K+'}</b>
+                      </div>
+                      <div className="rounded-xl bg-blue-50/70 p-2.5 border border-blue-100">
+                        <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider mb-0.5">Avg Views</span>
+                        <b className="text-sm sm:text-base text-[#316bbf] font-['Plus_Jakarta_Sans'] font-black">{avgViews || '5K+'}</b>
+                      </div>
+                      <div className="rounded-xl bg-pink-50/70 p-2.5 border border-pink-100">
+                        <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider mb-0.5">Tương tác</span>
+                        <b className="text-sm sm:text-base text-[#613bd1] font-['Plus_Jakarta_Sans'] font-black">{engagementRate || '4.5%'}</b>
+                      </div>
+                      <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200">
+                        <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
+                          <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
+                          GMV Kênh
                         </span>
-                        <img
-                          src={targetAudienceImage}
-                          alt="Ảnh phân tích khán giả"
-                          crossOrigin="anonymous"
-                          className="max-h-40 w-auto object-cover rounded-lg border border-amber-300"
-                        />
+                        <b className="text-sm sm:text-base text-emerald-700 font-['Plus_Jakarta_Sans'] font-black">{gmv || 'Chưa cập nhật'}</b>
+                      </div>
+                    </div>
+
+                    {/* Phong cách video & Định dạng nội dung */}
+                    {activeContentStyles.length > 0 && (
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-[#613bd1]">movie</span>
+                          Phong cách video & Định dạng nội dung:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {activeContentStyles.map((st, i) => (
+                            <span key={i} className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-[10px] font-bold text-[#316bbf]">
+                              {st}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
+
+                    {/* Đối tượng khán giả chính & Ảnh Insight */}
+                    {(targetAudience || targetAudienceImage) && (
+                      <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80">
+                        <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-amber-700">groups</span>
+                          Đối tượng khán giả chính (Target Audience):
+                        </span>
+                        {targetAudience && (
+                          <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                            {targetAudience}
+                          </p>
+                        )}
+                        {targetAudienceImage && (
+                          <div className="mt-2.5">
+                            <span className="text-[9px] font-bold text-slate-600 block mb-1 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px] text-[#613bd1]">analytics</span>
+                              Ảnh phân tích nhân khẩu học người xem (Demographics):
+                            </span>
+                            <div
+                              onClick={() => setPreviewAudienceModalImage(targetAudienceImage)}
+                              className="relative inline-block max-w-full rounded-xl overflow-hidden border border-amber-300 group cursor-pointer shadow-2xs"
+                              title="Nhấp để xem ảnh lớn"
+                            >
+                              <img
+                                src={targetAudienceImage}
+                                alt="Ảnh phân tích khán giả"
+                                crossOrigin="anonymous"
+                                className="max-h-32 sm:max-h-36 w-auto object-cover rounded-xl group-hover:scale-102 transition-transform duration-200"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[11px] font-bold gap-1 rounded-xl">
+                                <span className="material-symbols-outlined text-[14px]">zoom_in</span>
+                                <span>Xem ảnh lớn</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Portfolio & Case Studies */}
+                    {(portfolioDriveLink || portfolioFile) && (
+                      <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100">
+                        <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
+                          Hồ sơ năng lực & Video mẫu (Portfolio):
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {portfolioFile && (
+                            <div className="inline-flex items-center gap-1.5 text-xs text-rose-700 font-bold bg-white px-2.5 py-1.5 rounded-xl border border-rose-200 shadow-2xs">
+                              <span className="material-symbols-outlined text-[15px] text-rose-500">picture_as_pdf</span>
+                              <span className="truncate max-w-[160px]">{portfolioFile.name}</span>
+                              <span className="text-[10px] text-slate-400">({portfolioFile.size})</span>
+                            </div>
+                          )}
+                          {portfolioDriveLink && (
+                            <a
+                              href={portfolioDriveLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs text-[#316bbf] font-bold bg-white px-2.5 py-1.5 rounded-xl border border-blue-200 shadow-2xs hover:bg-blue-50 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">link</span>
+                              <span>Mở Drive / Notion Portfolio</span>
+                              <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Watermark */}
+                    <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100">
+                      <span>Xác thực bởi Kocity Platform</span>
+                      <span>https://kocity.vn</span>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* Portfolio & Case Studies Section on Modal Card */}
-              {(portfolioDriveLink || portfolioFile) && (
-                <div className="pt-2">
-                  <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
-                    Hồ sơ năng lực & Video mẫu:
-                  </span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {portfolioFile && (
-                      <div className="inline-flex items-center gap-1.5 text-xs text-rose-700 font-bold bg-rose-50 px-2.5 py-1.5 rounded-xl border border-rose-200">
-                        <span className="material-symbols-outlined text-[15px] text-rose-500">picture_as_pdf</span>
-                        <span className="truncate max-w-[160px]">{portfolioFile.name}</span>
-                        <span className="text-[10px] text-slate-400">({portfolioFile.size})</span>
-                      </div>
-                    )}
-                    {portfolioDriveLink && (
-                      <div className="inline-flex items-center gap-1.5 text-xs text-[#316bbf] font-bold bg-blue-50 px-2.5 py-1.5 rounded-xl border border-blue-200">
-                        <span className="material-symbols-outlined text-[15px]">link</span>
-                        <span>Drive / Notion Portfolio</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Collaboration Highlights */}
-              <div className="pt-2 grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase font-bold">Báo giá booking</span>
-                  <span className="font-bold text-slate-900">{minBookingRate || 'Mẫu 0đ + Hoa hồng'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase font-bold">Mã Spark Ads</span>
-                  <span className="font-bold text-[#613bd1]">{allowSparkAds ? 'Sẵn sàng cấp' : 'Thỏa thuận'}</span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100">
-                <span>Xác thực bởi Kocity Platform</span>
-                <span className="font-mono">#{kocMemberCode}</span>
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="mt-5 space-y-2.5 pt-2">
+            {/* Footer cố định phía dưới */}
+            <div className="p-3.5 sm:p-4 border-t border-slate-100 bg-slate-50/95 backdrop-blur-sm shrink-0 space-y-2 z-20">
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -2076,9 +2171,10 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowMediaKitModal(false)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 py-2 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 py-2 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
               >
-                Đóng
+                <span className="material-symbols-outlined text-[16px]">close</span>
+                <span>Đóng thẻ Media Kit</span>
               </button>
             </div>
           </div>
