@@ -331,22 +331,23 @@ export const AdminView: React.FC<AdminViewProps> = ({
     appId: string,
     newStatus: ApplicationStatus,
     customShippingCode?: string,
-    feedback?: string
+    feedback?: string,
+    customShippingStatus?: KOCApplication['shippingStatus']
   ) => {
     const updated = applications.map((app) => {
       if (app.id === appId) {
         let shippingCode = customShippingCode !== undefined ? customShippingCode : app.shippingCode;
-        let shippingStatus = app.shippingStatus;
+        let shippingStatus = customShippingStatus !== undefined ? customShippingStatus : app.shippingStatus;
 
         if (newStatus === 'Đã duyệt gửi mẫu' && !shippingCode) {
           shippingCode = `GHTK-${Math.floor(10000000 + Math.random() * 90000000)}`;
-          shippingStatus = 'Đang trung chuyển';
+          if (!customShippingStatus) shippingStatus = 'Đang trung chuyển';
         } else if (newStatus === 'Đang giao') {
-          shippingStatus = 'Đang trung chuyển';
+          if (!customShippingStatus) shippingStatus = 'Đang trung chuyển';
         } else if (newStatus === 'Đã lên bài' || newStatus === 'Đã hoàn thành') {
-          shippingStatus = 'Đã phát thành công';
+          if (!customShippingStatus) shippingStatus = 'Đã phát thành công';
         } else if (newStatus === 'Từ chối' || newStatus === 'Bị từ chối') {
-          shippingStatus = 'Không gửi mẫu';
+          if (!customShippingStatus) shippingStatus = 'Không gửi mẫu';
         }
 
         return {
@@ -378,13 +379,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
       });
 
       // Tự động tạo thông báo gửi tới tài khoản KOC
-      if (prevApp && (prevApp.status !== newStatus || feedback)) {
+      const isJustDelivered =
+        (customShippingStatus === 'Đã phát thành công' || target.shippingStatus === 'Đã phát thành công') &&
+        prevApp?.shippingStatus !== 'Đã phát thành công';
+
+      if (prevApp && (prevApp.status !== newStatus || feedback || isJustDelivered)) {
         let notifTitle = '';
         let notifMessage = '';
         let notifType: AppNotification['type'] = 'approval';
         let notifLinkTab: AppNotification['linkTab'] = 'my-campaigns';
 
-        if (newStatus === 'Đã duyệt gửi mẫu') {
+        if (isJustDelivered && newStatus !== 'Đã hoàn thành' && newStatus !== 'Đã lên bài') {
+          notifTitle = `📦 Quà mẫu đã giao thành công - Bắt đầu làm video!`;
+          notifMessage = `Bưu tá đã phát thành công sản phẩm mẫu cho chiến dịch "${target.campaignName}". Bạn hãy mở hộp trải nghiệm sản phẩm và bắt đầu quay video ngay để hoàn thành nộp bài đúng hạn trong 5 - 7 ngày nhé!`;
+          notifType = 'delivery';
+          notifLinkTab = 'my-campaigns';
+        } else if (newStatus === 'Đã duyệt gửi mẫu') {
           notifTitle = `🎉 Hồ sơ được duyệt: ${target.campaignName}`;
           notifMessage = `Chúc mừng ${target.kocName}! Hồ sơ đăng ký (${target.code}) đã được duyệt gửi mẫu.${target.shippingCode ? ` Mã vận đơn: ${target.shippingCode}.` : ''} Hãy chuẩn bị nhận hàng và lên bài đúng hạn nhé!`;
           notifType = 'approval';
@@ -2662,6 +2672,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 </button>
                               )}
 
+                              {app.status === 'Đang giao' && app.shippingStatus !== 'Đã phát thành công' && (
+                                <button
+                                  onClick={() => {
+                                    handleUpdateStatus(app.id, app.status, undefined, undefined, 'Đã phát thành công');
+                                    onShowToast('Đã đánh dấu giao thành công!', 'Hệ thống đã gửi thông báo giục KOC làm video đúng hạn 5 - 7 ngày.', 'success');
+                                  }}
+                                  className="rounded-lg bg-amber-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-amber-700 transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+                                  title="Đánh dấu bưu tá đã giao thành công và gửi thông báo giục KOC làm video 5 - 7 ngày"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">task_alt</span>
+                                  Giao thành công
+                                </button>
+                              )}
+
                               {app.status === 'Đang giao' && (
                                 <button
                                   onClick={() => handleUpdateStatus(app.id, 'Chờ duyệt video')}
@@ -3233,6 +3257,37 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     className="rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 cursor-pointer"
                   >
                     Lưu mã
+                  </button>
+                </div>
+
+                <label className="text-xs font-bold text-slate-700 block pt-2">Tình trạng giao quà mẫu</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      handleUpdateStatus(selectedApp.id, selectedApp.status, undefined, undefined, 'Đang trung chuyển');
+                      onShowToast('Cập nhật thành công', 'Trạng thái vận đơn: Đang trung chuyển', 'info');
+                    }}
+                    className={`rounded-xl py-2 px-3 text-xs font-bold transition-all cursor-pointer border ${
+                      selectedApp.shippingStatus === 'Đang trung chuyển'
+                        ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    🚚 Đang giao hàng
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleUpdateStatus(selectedApp.id, selectedApp.status, undefined, undefined, 'Đã phát thành công');
+                      onShowToast('Đã đánh dấu giao thành công!', 'Hệ thống đã gửi thông báo giục KOC quay video trong 5 - 7 ngày.', 'success');
+                    }}
+                    className={`rounded-xl py-2 px-3 text-xs font-bold transition-all cursor-pointer border ${
+                      selectedApp.shippingStatus === 'Đã phát thành công'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50 hover:text-amber-800'
+                    }`}
+                    title="Đánh dấu bưu tá đã phát mẫu và kích hoạt thông báo giục KOC làm video 5 - 7 ngày"
+                  >
+                    📦 Giao thành công (Nhắc video)
                   </button>
                 </div>
 

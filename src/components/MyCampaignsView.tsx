@@ -273,6 +273,8 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
             const isVideoApproved = app.status === 'Đã hoàn thành' || app.status === 'Đã lên bài';
             const isPendingVideo = app.status === 'Chờ duyệt video';
 
+            const isSampleDelivered = app.shippingStatus === 'Đã phát thành công';
+
             const currentStepIdx = isVideoApproved
               ? 4
               : isPendingVideo || isVideoRejected || app.videoLink
@@ -294,8 +296,14 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
               },
               {
                 label: 'Giao quà mẫu',
-                desc: app.shippingCode || (isApproved ? 'GHTK đang giao' : 'Chờ duyệt để gửi mẫu'),
-                icon: 'local_shipping',
+                desc: isSampleDelivered
+                  ? 'Đã giao thành công'
+                  : app.shippingCode
+                  ? app.shippingCode
+                  : isApproved
+                  ? 'GHTK đang giao'
+                  : 'Chờ duyệt để gửi mẫu',
+                icon: isSampleDelivered ? 'task_alt' : 'local_shipping',
               },
               {
                 label: 'Nghiệm thu video',
@@ -305,10 +313,12 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                   ? 'Cần sửa & nộp lại'
                   : isPendingVideo
                   ? 'Đang chờ Admin duyệt'
+                  : isSampleDelivered && !app.videoLink
+                  ? 'Hạn làm video: 5 - 7 ngày'
                   : app.videoLink
                   ? 'Đã nộp video'
                   : isApproved
-                  ? 'Hạn 4 - 7 ngày'
+                  ? 'Hạn 5 - 7 ngày sau nhận hàng'
                   : 'Chờ nhận mẫu',
                 icon: isVideoApproved
                   ? 'check_circle'
@@ -316,6 +326,8 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                   ? 'cancel'
                   : isPendingVideo
                   ? 'hourglass_top'
+                  : isSampleDelivered
+                  ? 'alarm'
                   : 'video_library',
               },
             ];
@@ -401,65 +413,42 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                       </p>
                     </div>
                   </div>
-
-                  {/* Tracking & Timeline Quick Badges */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
-                      <span className="text-slate-500 block text-[10px]">Tình trạng quà mẫu & Nghiệm thu:</span>
-                      {isVideoApproved ? (
-                        <span className="font-bold text-emerald-700 flex items-center gap-1 text-left mt-0.5">
-                          <span className="material-symbols-outlined text-[14px] text-emerald-600">check_circle</span>
-                          <span>Đã hoàn thành nghiệm thu video</span>
-                        </span>
-                      ) : isVideoRejected ? (
-                        <span className="font-bold text-rose-700 flex items-center gap-1 text-left mt-0.5">
-                          <span className="material-symbols-outlined text-[14px] text-rose-600">error</span>
-                          <span>Video bị từ chối - Xem góp ý bên dưới</span>
-                        </span>
-                      ) : isPendingVideo ? (
-                        <span className="font-semibold text-amber-800 flex items-center gap-1 text-left mt-0.5">
-                          <span className="material-symbols-outlined text-[14px] text-amber-700">hourglass_top</span>
-                          <span>Đã nộp video - Đang chờ duyệt</span>
-                        </span>
-                      ) : app.status === 'Chờ duyệt' ? (
-                        <span className="font-semibold text-amber-800 flex items-center gap-1 text-left mt-0.5">
-                          <span className="material-symbols-outlined text-[14px] text-amber-700">schedule</span>
-                          <span>Chờ Quản trị viên duyệt hồ sơ gửi mẫu</span>
-                        </span>
-                      ) : isRejectedProfile ? (
-                        <span className="font-semibold text-rose-700 flex items-center gap-1 text-left mt-0.5">
-                          <span className="material-symbols-outlined text-[14px] text-rose-600">block</span>
-                          <span>Chưa đạt tiêu chí chiến dịch này</span>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleCopyTracking(app.shippingCode || 'GHTK-EXP98234')}
-                          className="font-bold text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer text-left mt-0.5"
-                          title="Nhấp để sao chép mã vận đơn"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">local_shipping</span>
-                          <span>{app.shippingCode ? `${app.shippingCode}` : 'GHTK: Đang chuẩn bị hàng'}</span>
-                          <span className="material-symbols-outlined text-[12px] text-emerald-600">content_copy</span>
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
-                      <span className="text-slate-500 block text-[10px]">Thời hạn hoàn thành:</span>
-                      <span className="font-semibold text-slate-900 block mt-0.5">
-                        {isVideoApproved
-                          ? 'Đã hoàn thành xuất sắc'
-                          : isVideoRejected
-                          ? 'Nộp lại video càng sớm càng tốt'
-                          : app.status === 'Chờ duyệt'
-                          ? 'Tính sau khi nhận hàng mẫu'
-                          : isRejectedProfile
-                          ? 'Không áp dụng'
-                          : 'Hạn 4 - 7 ngày sau nhận hàng'}
-                      </span>
-                    </div>
-                  </div>
                 </div>
+
+                {/* Banner: Giục KOC làm video sau khi mẫu giao thành công */}
+                {isSampleDelivered && !app.videoLink && (
+                  <div className="rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 p-4 text-xs text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-start sm:items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shrink-0 shadow-sm">
+                        <span className="material-symbols-outlined text-[22px]">alarm</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-amber-950 text-xs sm:text-sm">
+                            📦 Quà mẫu đã giao thành công - Bắt đầu quay video!
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                            <span className="material-symbols-outlined text-[12px]">schedule</span>
+                            Hạn 5 - 7 ngày
+                          </span>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-amber-800 mt-1 leading-relaxed">
+                          Bưu tá đã phát thành công sản phẩm mẫu. Bạn hãy mở hộp trải nghiệm và <b>bắt đầu làm video ngay</b> để hoàn thành đúng hạn <b>5 - 7 ngày</b>. Nộp link video sớm để Brand nghiệm thu và nhận thù lao nhé!
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedAppId(app.id);
+                        setVideoLinkInput('');
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                      <span>Nộp video ngay</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Banner: Phản hồi của Quản trị viên khi Video bị từ chối */}
                 {isVideoRejected && (
