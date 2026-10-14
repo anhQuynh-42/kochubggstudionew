@@ -818,37 +818,34 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
 
             {/* Standard 4 Steps */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6366f1] text-white font-bold text-xs shadow-sm">
                     1
                   </span>
                   <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
-                    Duyệt 12h
+                    Duyệt trong 12h
                   </span>
                 </div>
-                <h5 className="mt-2.5 text-xs font-bold text-slate-900">Đăng Ký tham gia</h5>
-                <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
-                  Bên mình duyệt qua (12h) & Brand duyệt hồ sơ kênh của bạn.
-                </p>
+                <h5 className="mt-2.5 text-xs font-bold text-slate-900">Đăng ký tham gia</h5>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8b5cf6] text-white font-bold text-xs shadow-sm">
                     2
                   </span>
                   <span className="text-[10px] font-semibold text-violet-800 bg-violet-100 px-2 py-0.5 rounded-full">
-                    Free 100%
+                    Miễn phí 100%
                   </span>
                 </div>
-                <h5 className="mt-2.5 text-xs font-bold text-slate-900">KOC nhận mẫu free</h5>
-                <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
-                  Nhận quà mẫu hỏa tốc & Làm video trải nghiệm (Hạn 4-7 ngày).
-                </p>
+                <h5 className="mt-2.5 text-xs font-bold text-slate-900 flex items-center gap-1">
+                  <span>KOC nhận mẫu free</span>
+                  <span className="material-symbols-outlined text-[15px] text-[#8b5cf6]">package_2</span>
+                </h5>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6366f1] text-white font-bold text-xs shadow-sm">
                     3
@@ -858,21 +855,20 @@ export const CampaignDetailView: React.FC<CampaignDetailViewProps> = ({
                   </span>
                 </div>
                 <h5 className="mt-2.5 text-xs font-bold text-slate-900">KOC trả video</h5>
-                <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
-                  Up lên Drive (Google Drive) để kiểm duyệt nội dung trước khi lên bài.
-                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#6366f1] text-white font-bold text-xs shadow-sm">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#316bbf] text-white font-bold text-xs shadow-sm">
                     4
                   </span>
                 </div>
-                <h5 className="mt-2.5 text-xs font-bold text-slate-900">KOC nhận hoa hồng khi có đơn</h5>
-                <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
-                  Phát sinh đơn hàng thành công qua link giỏ hàng hoặc tiếp thị liên kết từ video.
-                </p>
+                <div>
+                  <h5 className="mt-2.5 text-xs font-bold text-slate-900">KOC nhận hoa hồng khi có đơn</h5>
+                  <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
+                    Khách hàng đặt mua thành công qua link giỏ hàng hoặc tiếp thị liên kết (affiliate) từ video của bạn.
+                  </p>
+                </div>
               </div>
             </div>
 
