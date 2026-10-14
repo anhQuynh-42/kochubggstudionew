@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { APP_LOGOS } from '../data/mockData';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
+import { copyTextToClipboard } from '../lib/clipboard';
 
 export interface PublicMediaKitData {
   id?: string;
@@ -160,17 +161,19 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
     }
   };
 
-  // Sao chép link chia sẻ
-  const handleCopyLink = () => {
-    try {
-      navigator.clipboard.writeText(window.location.href);
+  // Lấy đường link sạch và ngắn gọn để chia sẻ
+  const cleanTargetHandle = (data.tiktokHandle || 'creator').replace(/[@\s]/g, '');
+  const cleanShareUrl = `${window.location.origin}/?mediakit=${encodeURIComponent(cleanTargetHandle)}`;
+
+  // Sao chép link chia sẻ ngắn gọn và tương thích 100% mọi thiết bị
+  const handleCopyLink = async () => {
+    const success = await copyTextToClipboard(cleanShareUrl);
+    if (success) {
       setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      setTimeout(() => setCopiedLink(false), 2500);
       if (onShowToast) {
-        onShowToast('Đã sao chép link Media Kit!', 'Bạn có thể gửi link này cho Brand xem trực tiếp.', 'success');
+        onShowToast('Đã sao chép link Media Kit ngắn gọn!', cleanShareUrl, 'success');
       }
-    } catch (e) {
-      console.warn(e);
     }
   };
 
@@ -680,7 +683,20 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
               <span className="material-symbols-outlined text-[16px]">
                 {copiedLink ? 'done' : 'link'}
               </span>
-              <span>{copiedLink ? 'Đã copy link!' : 'Copy link web'}</span>
+              <span>{copiedLink ? 'Đã chép link ngắn!' : 'Sao chép link web'}</span>
+            </button>
+          </div>
+
+          {/* Dòng hiển thị link trực quan ngắn gọn */}
+          <div className="flex items-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-[11px]">
+            <span className="material-symbols-outlined text-[14px] text-purple-600 shrink-0">link</span>
+            <span className="font-mono text-slate-600 truncate flex-1 select-all">{cleanShareUrl}</span>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="ml-auto text-xs font-bold text-[#613bd1] hover:underline shrink-0 cursor-pointer"
+            >
+              {copiedLink ? 'Đã chép' : 'Sao chép'}
             </button>
           </div>
 

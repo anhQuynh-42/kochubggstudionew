@@ -31,6 +31,7 @@ import {
   saveHeroBannerToSupabase,
   deleteHeroBannerFromSupabase,
   subscribeToHeroBannerRealtime,
+  getKOCProfileFromSupabase,
 } from './services/supabaseService';
 
 // Hàm tính số ngày còn lại theo thời gian thực dựa vào ngày kết thúc (endDate)
@@ -198,23 +199,38 @@ export const App: React.FC = () => {
         const baseCount = parseInt(String(found?.completedCampaignsCount || '0'), 10) || 0;
         const totalCompleted = baseCount + systemCompleted;
 
+        // Ưu tiên hiển thị tức thì từ localStorage nếu có
         if (found) {
           setPublicMediaKitData({
             ...found,
             completedCampaignsCount: totalCompleted,
           });
-        } else {
-          setPublicMediaKitData({
-            name: mediakitHandle.replace('@', ''),
-            tiktokHandle: mediakitHandle.startsWith('@') ? mediakitHandle : `@${mediakitHandle}`,
-            followers: '10K+',
-            avgViews: '5K+',
-            engagementRate: '4.5%',
-            categories: ['Làm đẹp & Mỹ phẩm', 'Thời trang & Phụ kiện'],
-            bio: 'KOC sáng tạo nội dung trên nền tảng Kocity.',
-            completedCampaignsCount: totalCompleted,
-          });
         }
+
+        // Tải hồ sơ KOC từ Supabase đám mây để đảm bảo người nhận trên thiết bị khác xem được trọn vẹn
+        getKOCProfileFromSupabase(cleanTarget).then((cloudProfile) => {
+          if (cloudProfile) {
+            setPublicMediaKitData((prev) => {
+              const mergedBase = parseInt(String(cloudProfile.completedCampaignsCount ?? baseCount), 10) || 0;
+              return {
+                ...(prev || {}),
+                ...cloudProfile,
+                completedCampaignsCount: mergedBase + systemCompleted,
+              };
+            });
+          } else if (!found) {
+            setPublicMediaKitData({
+              name: mediakitHandle.replace('@', ''),
+              tiktokHandle: mediakitHandle.startsWith('@') ? mediakitHandle : `@${mediakitHandle}`,
+              followers: '10K+',
+              avgViews: '5K+',
+              engagementRate: '4.5%',
+              categories: ['Làm đẹp & Mỹ phẩm', 'Thời trang & Phụ kiện'],
+              bio: 'KOC sáng tạo nội dung trên nền tảng Kocity.',
+              completedCampaignsCount: totalCompleted,
+            });
+          }
+        });
       }
     } catch (e) {
       console.warn(e);

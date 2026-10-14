@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { KOCUser, KOCApplication } from '../types';
 import { APP_LOGOS } from '../data/mockData';
+import { copyTextToClipboard } from '../lib/clipboard';
+import { saveKOCProfileToSupabase } from '../services/supabaseService';
 
 interface KOCProfileViewProps {
   currentUser: KOCUser | null;
@@ -530,26 +532,38 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     return `KOC-${(seed % 9000) + 1000}`;
   }, [currentUser]);
 
-  const handleCopyMemberCode = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(kocMemberCode);
+  const handleCopyMemberCode = async () => {
+    const success = await copyTextToClipboard(kocMemberCode);
+    if (success) {
+      setCopyMemberCodeSuccess(true);
+      onShowToast('Đã sao chép mã KOC!', `Mã định danh của bạn là #${kocMemberCode}`, 'success');
+      setTimeout(() => setCopyMemberCodeSuccess(false), 2500);
     }
-    setCopyMemberCodeSuccess(true);
-    onShowToast('Đã sao chép mã KOC!', `Mã định danh của bạn là #${kocMemberCode}`, 'success');
-    setTimeout(() => setCopyMemberCodeSuccess(false), 2500);
   };
 
   const mediaKitCardRef = useRef<HTMLDivElement>(null);
   const [isDownloadingMediaKit, setIsDownloadingMediaKit] = useState(false);
   const [copiedShareLink, setCopiedShareLink] = useState(false);
 
-  // Tạo URL chia sẻ Media Kit công khai chứa toàn bộ dữ liệu hồ sơ
+  // Tạo URL chia sẻ Media Kit công khai ngắn gọn, chuyên nghiệp và thanh lịch
   const getShareableMediaKitUrl = () => {
     const cleanHandle = (tiktokHandle || 'creator').replace(/[@\s]/g, '');
-    const profilePayload = {
+    return `${window.location.origin}/?mediakit=${encodeURIComponent(cleanHandle)}`;
+  };
+
+  // Chia sẻ hoặc copy link Media Kit
+  const handleShareMediaKit = async () => {
+    const cleanHandle = (tiktokHandle || 'creator').replace(/[@\s]/g, '');
+    const shareUrl = getShareableMediaKitUrl();
+
+    // Đồng bộ hồ sơ KOC lên Supabase và localStorage để người nhận mở link là xem được ngay
+    const currentProfileData: KOCUser = {
+      ...(currentUser || {}),
+      id: currentUser?.id || `koc-${Date.now()}`,
+      role: currentUser?.role || 'koc',
       name: name.trim() || cleanHandle,
-      tiktokHandle: tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`,
       avatar: avatar || APP_LOGOS.userProfile,
+      tiktokHandle: tiktokHandle.startsWith('@') ? tiktokHandle : `@${tiktokHandle}`,
       followers: followers.trim() || '10K+',
       avgViews: avgViews.trim() || '5K+',
       engagementRate: engagementRate.trim() || '4.5%',
@@ -557,56 +571,56 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       completedCampaignsCount: totalCompletedCampaigns,
       categories,
       bio: bio.trim(),
-      memberCode: kocMemberCode,
       city,
       district,
       address,
+      phone: phone.trim() || currentUser?.phone || '',
+      email: email.trim() || currentUser?.email || '',
       channelLink: channelLink || `https://www.tiktok.com/@${cleanHandle}`,
       instagramHandle,
       youtubeHandle,
       portfolioDriveLink,
-      portfolioFile: portfolioFile
-        ? {
-            name: portfolioFile.name,
-            size: portfolioFile.size,
-            type: portfolioFile.type,
-            dataUrl: portfolioFile.dataUrl && portfolioFile.dataUrl.length < 5000 ? portfolioFile.dataUrl : undefined,
-          }
-        : undefined,
+      portfolioFile,
       targetAudience,
-      targetAudienceImage: targetAudienceImage && targetAudienceImage.length < 5000 ? targetAudienceImage : undefined,
+      targetAudienceImage,
       contentStyle: activeContentStyles,
+      acceptFreecast,
       minBookingRate,
       allowSparkAds,
-      acceptFreecast,
+      verified: Boolean(currentUser?.verified),
     };
 
-    let shareUrl = `${window.location.origin}/?mediakit=${encodeURIComponent(cleanHandle)}`;
+    saveKOCProfileToSupabase(currentProfileData).catch((e) => console.warn(e));
+
     try {
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(profilePayload))));
-      shareUrl = `${window.location.origin}/?mediakit=${encodeURIComponent(cleanHandle)}&mk=${encoded}`;
+      const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+      const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
+      const userIndex = savedUsers.findIndex(
+        (u) =>
+          u.id === currentProfileData.id ||
+          (u.tiktokHandle && u.tiktokHandle.toLowerCase().replace(/[@\s]/g, '') === cleanHandle)
+      );
+      if (userIndex >= 0) {
+        savedUsers[userIndex] = { ...savedUsers[userIndex], ...currentProfileData };
+      } else {
+        savedUsers.push(currentProfileData);
+      }
+      localStorage.setItem('koctrend_registered_users', JSON.stringify(savedUsers));
     } catch (e) {
       console.warn(e);
     }
-    return shareUrl;
-  };
 
-  // Chia sẻ hoặc copy link Media Kit
-  const handleShareMediaKit = () => {
-    const shareUrl = getShareableMediaKitUrl();
-    try {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(shareUrl);
-      }
+    const copied = await copyTextToClipboard(shareUrl);
+    if (copied) {
       setCopiedShareLink(true);
       setTimeout(() => setCopiedShareLink(false), 2500);
       onShowToast(
-        'Đã sao chép link Media Kit!',
-        'Bất kỳ Brand hay người nhận nào cũng có thể click vào để xem trực tiếp hồ sơ của bạn.',
+        'Đã sao chép link Media Kit ngắn gọn!',
+        'Đường link ngắn gọn, chuyên nghiệp đã sẵn sàng gửi qua Zalo / Messenger cho Brand.',
         'success'
       );
-    } catch (err) {
-      console.warn(err);
+    } else {
+      onShowToast('Lỗi sao chép', 'Vui lòng sao chép thủ công đường link hiển thị bên dưới.', 'warning');
     }
   };
 
@@ -737,6 +751,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     };
 
     onSaveProfile(updatedUser);
+    saveKOCProfileToSupabase(updatedUser).catch((err) => console.warn(err));
     onShowToast(
       currentUser ? 'Đã cập nhật hồ sơ KOC!' : 'Tạo hồ sơ KOC thành công!',
       `Hồ sơ của bạn đã sẵn sàng nhận mẫu từ 500+ nhãn hàng.`,
@@ -1245,7 +1260,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
             </div>
 
             {/* Quick action buttons for Media Kit */}
-            <div className="mt-5 space-y-2 pt-2 border-t border-slate-100">
+            <div className="mt-5 space-y-2.5 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowMediaKitModal(true)}
@@ -1255,16 +1270,34 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 <span>Xem & Xuất thẻ Media Kit (PNG)</span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleShareMediaKit}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100 py-2 text-xs font-bold text-[#613bd1] transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  {copiedShareLink ? 'done' : 'link'}
-                </span>
-                <span>{copiedShareLink ? 'Đã sao chép link web!' : 'Sao chép link Media Kit'}</span>
-              </button>
+              {/* Hộp link chia sẻ ngắn gọn, chuyên nghiệp */}
+              <div className="rounded-xl border border-purple-200/80 bg-purple-50/50 p-2 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
+                  <span className="flex items-center gap-1 text-[#613bd1]">
+                    <span className="material-symbols-outlined text-[14px]">link</span>
+                    Link Media Kit ngắn gọn
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">Gửi Brand / Zalo</span>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-lg bg-white border border-purple-100 p-1">
+                  <input
+                    type="text"
+                    readOnly
+                    value={getShareableMediaKitUrl()}
+                    className="w-full bg-transparent px-1.5 text-[11px] font-mono text-slate-700 outline-none select-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleShareMediaKit}
+                    className="flex items-center gap-1 shrink-0 rounded-md bg-[#613bd1] hover:bg-[#502bb8] px-2.5 py-1 text-[11px] font-bold text-white transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <span className="material-symbols-outlined text-[13px]">
+                      {copiedShareLink ? 'done' : 'content_copy'}
+                    </span>
+                    <span>{copiedShareLink ? 'Đã chép' : 'Sao chép'}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2724,12 +2757,25 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   type="button"
                   onClick={handleShareMediaKit}
                   className="flex items-center justify-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 py-2.5 px-3 text-xs font-bold text-[#613bd1] transition-all cursor-pointer"
-                  title="Sao chép link web để người khác click vào xem trực tiếp trên trình duyệt"
+                  title="Sao chép link web ngắn gọn để người khác click vào xem trực tiếp trên trình duyệt"
                 >
                   <span className="material-symbols-outlined text-[16px]">
                     {copiedShareLink ? 'done' : 'link'}
                   </span>
-                  <span>{copiedShareLink ? 'Đã copy link!' : 'Copy link web'}</span>
+                  <span>{copiedShareLink ? 'Đã chép link ngắn!' : 'Sao chép link web'}</span>
+                </button>
+              </div>
+
+              {/* Dòng hiển thị link trực quan ngắn gọn */}
+              <div className="flex items-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-[11px]">
+                <span className="material-symbols-outlined text-[14px] text-purple-600 shrink-0">link</span>
+                <span className="font-mono text-slate-600 truncate flex-1 select-all">{getShareableMediaKitUrl()}</span>
+                <button
+                  type="button"
+                  onClick={handleShareMediaKit}
+                  className="ml-auto text-xs font-bold text-[#613bd1] hover:underline shrink-0 cursor-pointer"
+                >
+                  {copiedShareLink ? 'Đã chép' : 'Sao chép'}
                 </button>
               </div>
 

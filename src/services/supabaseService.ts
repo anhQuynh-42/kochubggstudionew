@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { Campaign, KOCApplication } from '../types';
+import { Campaign, KOCApplication, KOCUser } from '../types';
 
 /**
  * Service giao tiếp với cơ sở dữ liệu Supabase đám mây cho Kocity
@@ -468,4 +468,74 @@ export function subscribeToHeroBannerRealtime(onBannerUpdate: (newUrl: string | 
   return () => {
     supabase.removeChannel(channel);
   };
+}
+
+// 11. Lưu hồ sơ Media Kit của KOC lên Supabase đám mây
+export async function saveKOCProfileToSupabase(profile: KOCUser): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const cleanHandle = (profile.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '');
+    if (!cleanHandle) return false;
+
+    // Chuẩn bị payload hồ sơ an toàn
+    const safeProfile = { ...profile };
+    // Nếu avatar là data URL quá lớn (>100KB), lược bỏ chuỗi base64 để không gây nghẽn payload
+    if (safeProfile.avatar && safeProfile.avatar.startsWith('data:') && safeProfile.avatar.length > 100000) {
+      safeProfile.avatar = '';
+    }
+
+    const payload = {
+      id: `__KOC_PROFILE__${cleanHandle}`,
+      code: `KOC_${cleanHandle.toUpperCase()}`,
+      title: profile.name || cleanHandle,
+      brandName: profile.name || cleanHandle,
+      category: 'KOC_PROFILE',
+      tiktokHandle: profile.tiktokHandle,
+      tiktokUrl: profile.channelLink,
+      productHeroImage: profile.avatar && !profile.avatar.startsWith('data:') ? profile.avatar : undefined,
+      description: JSON.stringify(safeProfile),
+    };
+
+    const { error } = await supabase.from('campaigns').upsert(payload);
+    if (error) {
+      console.warn('Lỗi khi lưu KOC Profile lên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Lỗi lưu KOC Profile:', err);
+    return false;
+  }
+}
+
+// 12. Tải hồ sơ Media Kit của KOC từ Supabase
+export async function getKOCProfileFromSupabase(targetHandle: string): Promise<KOCUser | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const cleanHandle = targetHandle.toLowerCase().replace(/[@\s]/g, '');
+    if (!cleanHandle) return null;
+
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('description, title, productHeroImage, tiktokHandle')
+      .eq('id', `__KOC_PROFILE__${cleanHandle}`)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    if (data.description) {
+      try {
+        const parsed = JSON.parse(data.description) as KOCUser;
+        return parsed;
+      } catch (e) {
+        console.warn('Lỗi giải mã hồ sơ KOC từ Supabase:', e);
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn('Lỗi tải KOC Profile từ Supabase:', err);
+    return null;
+  }
 }
