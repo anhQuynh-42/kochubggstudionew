@@ -407,7 +407,7 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                       GMV Kênh
                     </span>
                     <b className="text-sm sm:text-base font-black text-emerald-700 font-['Plus_Jakarta_Sans']">
-                      {data.gmv || 'Chưa cập nhật'}
+                      {data.gmv || '0'}
                     </b>
                   </div>
                   <div className="col-span-2 sm:col-span-1 rounded-xl bg-amber-50/80 p-2.5 border border-amber-200 flex flex-col justify-center">
@@ -417,12 +417,8 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                     </span>
                     <b className="text-sm sm:text-base font-black text-amber-700 font-['Plus_Jakarta_Sans']">
                       {data.completedCampaignsCount !== undefined && data.completedCampaignsCount !== null && data.completedCampaignsCount !== ''
-                        ? (typeof data.completedCampaignsCount === 'number'
-                            ? `${data.completedCampaignsCount} chiến dịch`
-                            : String(data.completedCampaignsCount).includes('chiến dịch')
-                            ? String(data.completedCampaignsCount)
-                            : `${data.completedCampaignsCount} chiến dịch`)
-                        : '0 chiến dịch'}
+                        ? String(data.completedCampaignsCount).replace(/\s*chiến\s*dịch/gi, '').trim()
+                        : '0'}
                     </b>
                   </div>
                 </div>

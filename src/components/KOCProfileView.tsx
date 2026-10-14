@@ -957,7 +957,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   GMV Kênh
                 </span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-emerald-700">
-                  {gmv || 'Chưa có'}
+                  {gmv || '0'}
                 </span>
               </div>
               <div className="col-span-2 sm:col-span-1 text-center p-2 rounded-xl bg-amber-50/80 border border-amber-200">
@@ -966,7 +966,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   Chiến dịch đã chạy
                 </span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-amber-700">
-                  {totalCompletedCampaigns} chiến dịch
+                  {totalCompletedCampaigns}
                 </span>
               </div>
             </div>
@@ -2477,7 +2477,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                           <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
                           GMV Kênh
                         </span>
-                        <b className="text-sm sm:text-base text-emerald-700 font-['Plus_Jakarta_Sans'] font-black">{gmv || 'Chưa cập nhật'}</b>
+                        <b className="text-sm sm:text-base text-emerald-700 font-['Plus_Jakarta_Sans'] font-black">{gmv || '0'}</b>
                       </div>
                       <div className="col-span-2 sm:col-span-1 rounded-xl bg-amber-50/80 p-2.5 border border-amber-200 flex flex-col justify-center">
                         <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
@@ -2485,7 +2485,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                           Chiến dịch đã chạy
                         </span>
                         <b className="text-sm sm:text-base text-amber-700 font-['Plus_Jakarta_Sans'] font-black">
-                          {totalCompletedCampaigns} chiến dịch
+                          {totalCompletedCampaigns}
                         </b>
                       </div>
                     </div>
