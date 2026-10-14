@@ -935,7 +935,11 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                     ) : (
                       <button
                         id={`apply-btn-${camp.id}`}
-                        onClick={() => onOpenApplyModal(camp)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onOpenApplyModal(camp);
+                        }}
                         className="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:from-[#4f46e5] hover:to-[#7c3aed] py-2.5 sm:py-3 text-center text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
                       >
                         <span>Đăng ký nhận mẫu</span>

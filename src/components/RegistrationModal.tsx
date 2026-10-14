@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Campaign, KOCApplication, KOCUser } from '../types';
 import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
 import { APP_LOGOS } from '../data/mockData';
@@ -50,7 +50,19 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '');
   const [audience, setAudience] = useState(currentUser?.targetAudience || currentUser?.categories?.join(', ') || '');
 
-  // Tự động điền thông tin từ Hồ sơ KOC (Yêu cầu 16)
+  // Step 3
+  const [concept, setConcept] = useState(() => {
+    if (campaign.category.includes('Thời trang')) {
+      return 'Mix & Match outfit hè, review cận cảnh chất liệu áo lót tàng hình Visecret không hằn viền và chia sẻ mẹo mặc váy hở lưng.';
+    }
+    return 'Unbox ASMR và setup góc học tập/làm việc gọn gàng, test tốc độ sạc & chất âm thực tế cùng phụ kiện chính hãng.';
+  });
+  const [expectedDays, setExpectedDays] = useState('Trong 3-5 ngày sau khi nhận mẫu');
+  const [agreeBrief, setAgreeBrief] = useState(true);
+  const [agreeSparkAds, setAgreeSparkAds] = useState(true);
+  const [agreeTruth, setAgreeTruth] = useState(true);
+
+  // Tự động điền thông tin từ Hồ sơ KOC
   const [hasAutoFilled, setHasAutoFilled] = useState(Boolean(currentUser));
 
   useEffect(() => {
@@ -146,17 +158,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     setIsDraggingProof(false);
   };
 
-  // Step 3
-  const [concept, setConcept] = useState(() => {
-    if (campaign.category.includes('Thời trang')) {
-      return 'Mix & Match outfit hè, review cận cảnh chất liệu áo lót tàng hình Visecret không hằn viền và chia sẻ mẹo mặc váy hở lưng.';
-    }
-    return 'Unbox ASMR và setup góc học tập/làm việc gọn gàng, test tốc độ sạc & chất âm thực tế cùng phụ kiện chính hãng.';
-  });
-  const [expectedDays, setExpectedDays] = useState('Trong 3-5 ngày sau khi nhận mẫu');
-  const [agreeBrief, setAgreeBrief] = useState(true);
-  const [agreeSparkAds, setAgreeSparkAds] = useState(true);
-  const [agreeTruth, setAgreeTruth] = useState(true);
+
 
   const handleNext = () => {
     setErrorMessage('');
@@ -246,21 +248,40 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
       onSubmitSuccess(newApplication);
 
-      // Đồng bộ thông tin KOC vừa nhập vào Hồ sơ cá nhân nếu trước đó còn trống
-      if (currentUser && onAutoLogin) {
-        onAutoLogin({
-          ...currentUser,
-          name: fullName.trim() || currentUser.name,
-          phone: phone.trim() || currentUser.phone,
-          email: email.trim() || currentUser.email,
-          city: city || currentUser.city,
-          district: district.trim() || currentUser.district,
-          address: address.trim() || currentUser.address,
-          shippingNote: shippingNote.trim() || currentUser.shippingNote,
-          tiktokHandle: tiktokHandle.trim() || currentUser.tiktokHandle,
-          followers: followers.trim() || currentUser.followers,
-          avgViews: avgViews.trim() || currentUser.avgViews,
-        });
+      // Đồng bộ thông tin KOC vừa nhập vào Hồ sơ cá nhân (hoặc tạo tài khoản KOC mới nếu chưa đăng nhập)
+      if (onAutoLogin) {
+        const userProfile: KOCUser = currentUser
+          ? {
+              ...currentUser,
+              name: fullName.trim() || currentUser.name,
+              phone: phone.trim() || currentUser.phone,
+              email: email.trim() || currentUser.email,
+              city: city || currentUser.city,
+              district: district.trim() || currentUser.district,
+              address: address.trim() || currentUser.address,
+              shippingNote: shippingNote.trim() || currentUser.shippingNote,
+              tiktokHandle: tiktokHandle.trim() || currentUser.tiktokHandle,
+              followers: followers.trim() || currentUser.followers,
+              avgViews: avgViews.trim() || currentUser.avgViews,
+            }
+          : {
+              id: `koc-${Date.now()}`,
+              name: fullName.trim() || 'KOC Thành viên',
+              phone: phone.trim(),
+              email: email.trim(),
+              city: city || 'TP. Hồ Chí Minh',
+              district: district.trim(),
+              address: address.trim(),
+              shippingNote: shippingNote.trim(),
+              tiktokHandle: tiktokHandle.trim().startsWith('@') ? tiktokHandle.trim() : `@${tiktokHandle.trim()}`,
+              channelLink: channelLink.trim() || (tiktokHandle.trim() ? `https://www.tiktok.com/@${tiktokHandle.trim().replace(/^@/, '')}` : ''),
+              followers: followers.trim() || '10K+',
+              avgViews: avgViews.trim() || '5K+',
+              role: 'koc',
+              avatar: APP_LOGOS.userProfile,
+              verified: false,
+            };
+        onAutoLogin(userProfile);
       }
 
       setIsSubmitting(false);

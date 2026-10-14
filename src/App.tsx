@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Campaign, KOCApplication, KOCUser, ApplicationStatus } from './types';
+import { Campaign, KOCApplication, KOCUser, ApplicationStatus, AppNotification } from './types';
 import { INITIAL_CAMPAIGNS, INITIAL_APPLICATIONS, INITIAL_NOTIFICATIONS } from './data/mockData';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -563,22 +563,6 @@ export const App: React.FC = () => {
 
   // Handler: Open Apply Registration Form
   const handleOpenApplyModal = (campaign: Campaign) => {
-    if (!currentUser) {
-      setPendingApplyCampaign(campaign);
-      handleOpenLogin(
-        'register',
-        `Vui lòng đăng ký tài khoản KOC hoặc đăng nhập để đăng ký nhận mẫu chiến dịch "${campaign.title}".`
-      );
-      return;
-    }
-    if (currentUser.role === 'admin') {
-      showToast(
-        'Tài khoản Quản Trị Viên',
-        'Bạn đang đăng nhập tài khoản Admin. Hãy sử dụng tài khoản KOC để đăng ký nhận mẫu chiến dịch.',
-        'info'
-      );
-      return;
-    }
     setApplyCampaign(campaign);
   };
 
@@ -1139,8 +1123,11 @@ export const App: React.FC = () => {
           onClose={() => setApplyCampaign(null)}
           onSubmitSuccess={handleApplicationSubmitSuccess}
           onAutoLogin={(user) => {
-            if (!currentUser) {
-              setCurrentUser(user);
+            setCurrentUser(user);
+            try {
+              localStorage.setItem('koctrend_koc_profile', JSON.stringify(user));
+            } catch (e) {
+              console.warn(e);
             }
           }}
           onViewMyCampaigns={() => {
