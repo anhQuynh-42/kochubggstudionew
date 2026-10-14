@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
-import { KOCUser } from '../types';
+import { KOCUser, KOCApplication } from '../types';
 import { APP_LOGOS } from '../data/mockData';
 
 interface KOCProfileViewProps {
@@ -9,6 +9,7 @@ interface KOCProfileViewProps {
   onExploreCampaigns: () => void;
   onOpenLogin?: () => void;
   onShowToast: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
+  applications?: KOCApplication[];
 }
 
 const CATEGORY_OPTIONS = [
@@ -65,6 +66,7 @@ const QUICK_PRESETS: Array<{
       minBookingRate: 'Mẫu 0đ + Hoa hồng 10-15%',
       allowSparkAds: true,
       portfolioDriveLink: 'https://drive.google.com/drive/folders/minhthu-koc-portfolio',
+      completedCampaignsCount: 15,
     },
   },
   {
@@ -95,6 +97,7 @@ const QUICK_PRESETS: Array<{
       minBookingRate: 'Freecast (Mẫu 0đ) hoặc Booking 500k/video',
       allowSparkAds: true,
       portfolioDriveLink: 'https://drive.google.com/drive/folders/triet-gadgets',
+      completedCampaignsCount: 8,
     },
   },
   {
@@ -125,6 +128,7 @@ const QUICK_PRESETS: Array<{
       minBookingRate: 'Mẫu 0đ + Hoa hồng 10%',
       allowSparkAds: true,
       portfolioDriveLink: 'https://drive.google.com/drive/folders/quynhanh-ootd',
+      completedCampaignsCount: 22,
     },
   },
 ];
@@ -135,6 +139,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
   onExploreCampaigns,
   onOpenLogin,
   onShowToast,
+  applications = [],
 }) => {
   // 1. If user has not logged in yet: Profile requires login/registration
   if (!currentUser) {
@@ -216,8 +221,38 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
   const [avgViews, setAvgViews] = useState(currentUser?.avgViews || '');
   const [engagementRate, setEngagementRate] = useState(currentUser?.engagementRate || '');
   const [gmv, setGmv] = useState(currentUser?.gmv || '');
+  const [baseCampaignsCount, setBaseCampaignsCount] = useState<number | string>(
+    currentUser?.completedCampaignsCount ?? 0
+  );
   const [instagramHandle, setInstagramHandle] = useState(currentUser?.instagramHandle || '');
   const [youtubeHandle, setYoutubeHandle] = useState(currentUser?.youtubeHandle || '');
+
+  // Chuẩn hoá để so khớp KOC
+  const normalizeHandle = (h?: string) => (h ? h.toLowerCase().replace(/[@\s]/g, '') : '');
+  const normalizePhone = (p?: string) => (p ? p.replace(/[\s.-]/g, '') : '');
+
+  // Tự động đếm các chiến dịch KOC này đã hoàn thành trên hệ thống (Quản trị viên đã duyệt 'Đã hoàn thành' hoặc 'Đã lên bài')
+  const systemCompletedCampaigns = React.useMemo(() => {
+    if (!currentUser || !applications || applications.length === 0) return 0;
+    const userHandle = normalizeHandle(currentUser.tiktokHandle);
+    const userPhone = normalizePhone(currentUser.phone);
+
+    return applications.filter((a) => {
+      const matchId = Boolean(a.kocId && currentUser.id && a.kocId === currentUser.id);
+      const appHandle = normalizeHandle(a.tiktokHandle);
+      const matchHandle = Boolean(userHandle && appHandle && userHandle === appHandle);
+      const appPhone = normalizePhone(a.phone);
+      const matchPhone = Boolean(userPhone && appPhone && userPhone.length >= 9 && userPhone === appPhone);
+
+      const isMyApplication = matchId || matchHandle || matchPhone;
+      const isCompleted = a.status === 'Đã hoàn thành' || a.status === 'Đã lên bài';
+      return isMyApplication && isCompleted;
+    }).length;
+  }, [applications, currentUser]);
+
+  const parsedBaseCount = parseInt(String(baseCampaignsCount || '0'), 10) || 0;
+  // Tổng chiến dịch = Số chiến dịch ngoài nền tảng (nếu có) + số chiến dịch hoàn thành tự động trên web
+  const totalCompletedCampaigns = parsedBaseCount + systemCompletedCampaigns;
 
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [email, setEmail] = useState(currentUser?.email || '');
@@ -285,6 +320,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       if (currentUser.avgViews) setAvgViews(currentUser.avgViews);
       if (currentUser.engagementRate) setEngagementRate(currentUser.engagementRate);
       if (currentUser.gmv !== undefined) setGmv(currentUser.gmv);
+      if (currentUser.completedCampaignsCount !== undefined) setBaseCampaignsCount(currentUser.completedCampaignsCount);
       if (currentUser.instagramHandle !== undefined) setInstagramHandle(currentUser.instagramHandle);
       if (currentUser.youtubeHandle !== undefined) setYoutubeHandle(currentUser.youtubeHandle);
       if (currentUser.phone) setPhone(currentUser.phone);
@@ -518,6 +554,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       avgViews: avgViews.trim() || '5K+',
       engagementRate: engagementRate.trim() || '4.5%',
       gmv: gmv.trim() || undefined,
+      completedCampaignsCount: totalCompletedCampaigns,
       categories,
       bio: bio.trim(),
       memberCode: kocMemberCode,
@@ -609,6 +646,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
     if (d.avgViews) setAvgViews(d.avgViews);
     if (d.engagementRate) setEngagementRate(d.engagementRate);
     if (d.gmv) setGmv(d.gmv);
+    if (d.completedCampaignsCount !== undefined) setBaseCampaignsCount(d.completedCampaignsCount);
     if (d.phone) setPhone(d.phone);
     if (d.email) setEmail(d.email);
     if (d.city) setCity(d.city);
@@ -695,6 +733,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
       portfolioFile,
       sampleDeliveredCount: currentUser?.sampleDeliveredCount || 0,
       completedVideosCount: currentUser?.completedVideosCount || 0,
+      completedCampaignsCount: parsedBaseCount,
     };
 
     onSaveProfile(updatedUser);
@@ -877,8 +916,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
               </p>
             </div>
 
-            {/* Core Vital Metrics (Bao gồm Followers, Avg Views, Tương tác, GMV) */}
-            <div className="mt-5 grid grid-cols-2 gap-2.5 rounded-2xl bg-slate-50 p-3 border border-slate-100">
+            {/* Core Vital Metrics (Bao gồm Followers, Avg Views, Tương tác, GMV & Chiến dịch đã chạy) */}
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 rounded-2xl bg-slate-50 p-3 border border-slate-100">
               <div className="text-center p-2 rounded-xl bg-white border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-500 block">Followers</span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-slate-900">
@@ -904,6 +943,15 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 </span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-emerald-700">
                   {gmv || 'Chưa có'}
+                </span>
+              </div>
+              <div className="col-span-2 sm:col-span-1 text-center p-2 rounded-xl bg-amber-50/80 border border-amber-200">
+                <span className="text-[10px] font-bold text-amber-800 block flex items-center justify-center gap-0.5">
+                  <span className="material-symbols-outlined text-[13px] text-amber-600">task_alt</span>
+                  Chiến dịch đã chạy
+                </span>
+                <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-amber-700">
+                  {totalCompletedCampaigns} chiến dịch
                 </span>
               </div>
             </div>
@@ -1339,7 +1387,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 items-start">
                   <div className="flex flex-col">
                     <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center mb-1.5 leading-snug">
                       Số lượng người theo dõi (Followers)
@@ -1391,6 +1439,29 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                       placeholder="Ví dụ: 150M+/tháng"
                       className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
                     />
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center gap-1 mb-1.5 leading-snug">
+                      <span>Chiến dịch đã chạy</span>
+                      <span className="material-symbols-outlined text-[15px] text-amber-600" title="Số chiến dịch KOC đã tham gia. Tự động cộng dồn khi hoàn thành thêm chiến dịch trên KOC Hub.">task_alt</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={baseCampaignsCount}
+                        onChange={(e) => setBaseCampaignsCount(e.target.value)}
+                        placeholder="Ví dụ: 5"
+                        className="h-10 w-full rounded-xl border border-amber-200 bg-amber-50/30 px-3.5 text-xs text-slate-900 focus:border-[#613bd1] focus:outline-none focus:ring-1 focus:ring-[#613bd1]"
+                      />
+                      {systemCompletedCampaigns > 0 && (
+                        <span className="mt-1 text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5" title="Chiến dịch hoàn thành trên KOC Hub tự động cộng dồn">
+                          <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                          +{systemCompletedCampaigns} từ KOC Hub
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -2354,26 +2425,35 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
 
                   {/* CỘT PHẢI (md:col-span-7): Metrics Grid, Video styles, Target audience, Portfolio */}
                   <div className="md:col-span-7 space-y-3.5">
-                    {/* Metric Stats Grid (Bao gồm GMV Kênh) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                      <div className="rounded-xl bg-purple-50/70 p-2.5 border border-purple-100">
+                    {/* Metric Stats Grid (Bao gồm GMV Kênh & Chiến dịch đã chạy) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                      <div className="rounded-xl bg-purple-50/70 p-2.5 border border-purple-100 flex flex-col justify-center">
                         <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider mb-0.5">Followers</span>
                         <b className="text-sm sm:text-base text-slate-900 font-['Plus_Jakarta_Sans'] font-black">{followers || '10K+'}</b>
                       </div>
-                      <div className="rounded-xl bg-blue-50/70 p-2.5 border border-blue-100">
+                      <div className="rounded-xl bg-blue-50/70 p-2.5 border border-blue-100 flex flex-col justify-center">
                         <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider mb-0.5">Avg Views</span>
                         <b className="text-sm sm:text-base text-[#316bbf] font-['Plus_Jakarta_Sans'] font-black">{avgViews || '5K+'}</b>
                       </div>
-                      <div className="rounded-xl bg-pink-50/70 p-2.5 border border-pink-100">
+                      <div className="rounded-xl bg-pink-50/70 p-2.5 border border-pink-100 flex flex-col justify-center">
                         <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider mb-0.5">Tương tác</span>
                         <b className="text-sm sm:text-base text-[#613bd1] font-['Plus_Jakarta_Sans'] font-black">{engagementRate || '4.5%'}</b>
                       </div>
-                      <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200">
+                      <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200 flex flex-col justify-center">
                         <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
                           <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
                           GMV Kênh
                         </span>
                         <b className="text-sm sm:text-base text-emerald-700 font-['Plus_Jakarta_Sans'] font-black">{gmv || 'Chưa cập nhật'}</b>
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 rounded-xl bg-amber-50/80 p-2.5 border border-amber-200 flex flex-col justify-center">
+                        <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
+                          <span className="material-symbols-outlined text-[12px] text-amber-600">task_alt</span>
+                          Chiến dịch đã chạy
+                        </span>
+                        <b className="text-sm sm:text-base text-amber-700 font-['Plus_Jakarta_Sans'] font-black">
+                          {totalCompletedCampaigns} chiến dịch
+                        </b>
                       </div>
                     </div>
 

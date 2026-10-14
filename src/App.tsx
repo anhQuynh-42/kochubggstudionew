@@ -180,8 +180,29 @@ export const App: React.FC = () => {
         const found = savedUsers.find(
           (u) => (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === cleanTarget
         );
+
+        let systemCompleted = 0;
+        try {
+          const savedAppsStr = localStorage.getItem('koc_applications_list');
+          const savedApps: any[] = savedAppsStr ? JSON.parse(savedAppsStr) : [];
+          systemCompleted = savedApps.filter(
+            (a) =>
+              ((a.tiktokHandle && a.tiktokHandle.toLowerCase().replace(/[@\s]/g, '') === cleanTarget) ||
+                (found && a.kocId === found.id)) &&
+              (a.status === 'Đã hoàn thành' || a.status === 'Đã lên bài')
+          ).length;
+        } catch (e) {
+          console.warn(e);
+        }
+
+        const baseCount = parseInt(String(found?.completedCampaignsCount || '0'), 10) || 0;
+        const totalCompleted = baseCount + systemCompleted;
+
         if (found) {
-          setPublicMediaKitData(found);
+          setPublicMediaKitData({
+            ...found,
+            completedCampaignsCount: totalCompleted,
+          });
         } else {
           setPublicMediaKitData({
             name: mediakitHandle.replace('@', ''),
@@ -191,6 +212,7 @@ export const App: React.FC = () => {
             engagementRate: '4.5%',
             categories: ['Làm đẹp & Mỹ phẩm', 'Thời trang & Phụ kiện'],
             bio: 'KOC sáng tạo nội dung trên nền tảng Kocity.',
+            completedCampaignsCount: totalCompleted,
           });
         }
       }
@@ -1036,6 +1058,7 @@ export const App: React.FC = () => {
             onExploreCampaigns={handleBackToMarketplace}
             onOpenLogin={() => handleOpenLogin('login')}
             onShowToast={showToast}
+            applications={applications}
           />
         )}
 

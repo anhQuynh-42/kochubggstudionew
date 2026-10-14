@@ -161,4 +161,5 @@ export interface KOCUser {
   };
   sampleDeliveredCount?: number;
   completedVideosCount?: number;
+  completedCampaignsCount?: number;
 }

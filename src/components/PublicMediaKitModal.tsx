@@ -12,6 +12,7 @@ export interface PublicMediaKitData {
   avgViews?: string;
   engagementRate?: string;
   gmv?: string;
+  completedCampaignsCount?: number | string;
   categories?: string[];
   bio?: string;
   memberCode?: string;
@@ -371,9 +372,9 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
 
               {/* CỘT PHẢI (md:col-span-7): Metrics Grid, Video styles, Target audience, Portfolio */}
               <div className="md:col-span-7 space-y-3.5">
-                {/* Metric Stats Grid (Bao gồm GMV Kênh) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                  <div className="rounded-xl bg-purple-50/70 p-2.5 border border-purple-100">
+                {/* Metric Stats Grid (Bao gồm GMV Kênh & Số chiến dịch đã chạy) */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                  <div className="rounded-xl bg-purple-50/70 p-2.5 border border-purple-100 flex flex-col justify-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                       Followers
                     </span>
@@ -381,7 +382,7 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                       {data.followers || '10K+'}
                     </b>
                   </div>
-                  <div className="rounded-xl bg-blue-50/70 p-2.5 border border-blue-100">
+                  <div className="rounded-xl bg-blue-50/70 p-2.5 border border-blue-100 flex flex-col justify-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                       Avg Views
                     </span>
@@ -389,7 +390,7 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                       {data.avgViews || '5K+'}
                     </b>
                   </div>
-                  <div className="rounded-xl bg-pink-50/70 p-2.5 border border-pink-100">
+                  <div className="rounded-xl bg-pink-50/70 p-2.5 border border-pink-100 flex flex-col justify-center">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">
                       Tương tác
                     </span>
@@ -397,13 +398,28 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                       {data.engagementRate || '4.5%'}
                     </b>
                   </div>
-                  <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200">
+                  <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200 flex flex-col justify-center">
                     <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
                       <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
                       GMV Kênh
                     </span>
                     <b className="text-sm sm:text-base font-black text-emerald-700 font-['Plus_Jakarta_Sans']">
                       {data.gmv || 'Chưa cập nhật'}
+                    </b>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 rounded-xl bg-amber-50/80 p-2.5 border border-amber-200 flex flex-col justify-center">
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
+                      <span className="material-symbols-outlined text-[12px] text-amber-600">task_alt</span>
+                      Chiến dịch đã chạy
+                    </span>
+                    <b className="text-sm sm:text-base font-black text-amber-700 font-['Plus_Jakarta_Sans']">
+                      {data.completedCampaignsCount !== undefined && data.completedCampaignsCount !== null && data.completedCampaignsCount !== ''
+                        ? (typeof data.completedCampaignsCount === 'number'
+                            ? `${data.completedCampaignsCount} chiến dịch`
+                            : String(data.completedCampaignsCount).includes('chiến dịch')
+                            ? String(data.completedCampaignsCount)
+                            : `${data.completedCampaignsCount} chiến dịch`)
+                        : '0 chiến dịch'}
                     </b>
                   </div>
                 </div>
