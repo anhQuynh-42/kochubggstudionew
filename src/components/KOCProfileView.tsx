@@ -952,8 +952,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 </span>
               </div>
               <div className="text-center p-2 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                <span className="text-[10px] font-bold text-emerald-800 block flex items-center justify-center gap-0.5">
-                  <span className="material-symbols-outlined text-[13px] text-emerald-600">trending_up</span>
+                <span className="text-[10px] font-bold text-emerald-800 block text-center uppercase tracking-wider mb-0.5">
                   GMV Kênh
                 </span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-emerald-700">
@@ -961,8 +960,7 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                 </span>
               </div>
               <div className="col-span-2 sm:col-span-1 text-center p-2 rounded-xl bg-amber-50/80 border border-amber-200">
-                <span className="text-[10px] font-bold text-amber-800 block flex items-center justify-center gap-0.5">
-                  <span className="material-symbols-outlined text-[13px] text-amber-600">task_alt</span>
+                <span className="text-[10px] font-bold text-amber-800 block text-center uppercase tracking-wider mb-0.5">
                   Chiến dịch đã chạy
                 </span>
                 <span className="font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-extrabold text-amber-700">
@@ -1461,9 +1459,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   </div>
 
                   <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center gap-1 mb-1.5 leading-snug">
-                      <span>Chỉ số GMV kênh</span>
-                      <span className="material-symbols-outlined text-[15px] text-emerald-600" title="Tổng giá trị hàng hoá bán được qua kênh (Ví dụ: 150M+/tháng)">payments</span>
+                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center mb-1.5 leading-snug">
+                      Chỉ số GMV kênh
                     </label>
                     <input
                       type="text"
@@ -1475,9 +1472,8 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                   </div>
 
                   <div className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center gap-1 mb-1.5 leading-snug">
-                      <span>Chiến dịch đã chạy</span>
-                      <span className="material-symbols-outlined text-[15px] text-amber-600" title="Số chiến dịch KOC đã tham gia. Tự động cộng dồn khi hoàn thành thêm chiến dịch trên KOC Hub.">task_alt</span>
+                    <label className="text-xs font-bold text-slate-700 min-h-[38px] flex items-center mb-1.5 leading-snug">
+                      Chiến dịch đã chạy
                     </label>
                     <div className="relative">
                       <input
@@ -2473,15 +2469,13 @@ export const KOCProfileView: React.FC<KOCProfileViewProps> = ({
                         <b className="text-sm sm:text-base text-[#613bd1] font-['Plus_Jakarta_Sans'] font-black">{engagementRate || '4.5%'}</b>
                       </div>
                       <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200 flex flex-col justify-center">
-                        <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
-                          <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
+                        <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider mb-0.5">
                           GMV Kênh
                         </span>
                         <b className="text-sm sm:text-base text-emerald-700 font-['Plus_Jakarta_Sans'] font-black">{gmv || '0'}</b>
                       </div>
                       <div className="col-span-2 sm:col-span-1 rounded-xl bg-amber-50/80 p-2.5 border border-amber-200 flex flex-col justify-center">
-                        <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
-                          <span className="material-symbols-outlined text-[12px] text-amber-600">task_alt</span>
+                        <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider mb-0.5">
                           Chiến dịch đã chạy
                         </span>
                         <b className="text-sm sm:text-base text-amber-700 font-['Plus_Jakarta_Sans'] font-black">

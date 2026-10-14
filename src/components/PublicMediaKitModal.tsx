@@ -402,8 +402,7 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                     </b>
                   </div>
                   <div className="rounded-xl bg-emerald-50/80 p-2.5 border border-emerald-200 flex flex-col justify-center">
-                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
-                      <span className="material-symbols-outlined text-[12px] text-emerald-600">trending_up</span>
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5 block">
                       GMV Kênh
                     </span>
                     <b className="text-sm sm:text-base font-black text-emerald-700 font-['Plus_Jakarta_Sans']">
@@ -411,8 +410,7 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                     </b>
                   </div>
                   <div className="col-span-2 sm:col-span-1 rounded-xl bg-amber-50/80 p-2.5 border border-amber-200 flex flex-col justify-center">
-                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-0.5 flex items-center justify-center gap-0.5">
-                      <span className="material-symbols-outlined text-[12px] text-amber-600">task_alt</span>
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-0.5 block">
                       Chiến dịch đã chạy
                     </span>
                     <b className="text-sm sm:text-base font-black text-amber-700 font-['Plus_Jakarta_Sans']">
