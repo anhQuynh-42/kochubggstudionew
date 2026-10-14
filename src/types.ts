@@ -71,6 +71,9 @@ export type ApplicationStatus =
   | 'Chờ duyệt'
   | 'Đã duyệt gửi mẫu'
   | 'Đang giao'
+  | 'Chờ duyệt video'
+  | 'Đã hoàn thành'
+  | 'Bị từ chối'
   | 'Đã lên bài'
   | 'Từ chối';
 
@@ -99,6 +102,8 @@ export interface KOCApplication {
   campaignId: string;
   campaignName: string;
   verified?: boolean;
+  adminFeedback?: string;
+  videoSubmittedAt?: string;
 }
 
 export interface AppNotification {

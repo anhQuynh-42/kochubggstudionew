@@ -86,6 +86,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [editingShippingCode, setEditingShippingCode] = useState('');
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
+  // Reject with Feedback Modal State (Duyệt/Từ chối video hoặc hồ sơ kèm phản hồi cho KOC)
+  const [rejectModalApp, setRejectModalApp] = useState<KOCApplication | null>(null);
+  const [rejectFeedbackText, setRejectFeedbackText] = useState('');
+  const [rejectType, setRejectType] = useState<'video' | 'application'>('video');
+
   // New Campaign Form Modal & Draft Preview Modal
   const [isAddCampaignModalOpen, setIsAddCampaignModalOpen] = useState(false);
   const [isPreviewDraftOpen, setIsPreviewDraftOpen] = useState(false);
@@ -169,8 +174,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const pendingApps = appsList.filter((a) => a.status === 'Chờ duyệt').length;
     const approvedApps = appsList.filter((a) => a.status === 'Đã duyệt gửi mẫu').length;
     const shippingApps = appsList.filter((a) => a.status === 'Đang giao').length;
-    const completedApps = appsList.filter((a) => a.status === 'Đã lên bài').length;
-    const rejectedApps = appsList.filter((a) => a.status === 'Từ chối').length;
+    const pendingVideoApps = appsList.filter((a) => a.status === 'Chờ duyệt video').length;
+    const completedApps = appsList.filter((a) => a.status === 'Đã lên bài' || a.status === 'Đã hoàn thành').length;
+    const rejectedApps = appsList.filter((a) => a.status === 'Từ chối' || a.status === 'Bị từ chối').length;
 
     const totalActiveCampaigns = campaigns.length;
     const totalSpots = campaigns.reduce((acc, c) => acc + c.totalSpots, 0);
@@ -215,6 +221,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       pendingApps,
       approvedApps,
       shippingApps,
+      pendingVideoApps,
       completedApps,
       rejectedApps,
       totalActiveCampaigns,
@@ -305,7 +312,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
         app.code.toLowerCase().includes(appSearch.toLowerCase()) ||
         app.campaignName.toLowerCase().includes(appSearch.toLowerCase());
 
-      const matchStatus = statusFilter === 'all' || app.status === statusFilter;
+      const matchStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'Đã hoàn thành'
+          ? app.status === 'Đã hoàn thành' || app.status === 'Đã lên bài'
+          : statusFilter === 'Bị từ chối'
+          ? app.status === 'Bị từ chối' || app.status === 'Từ chối'
+          : app.status === statusFilter;
       const matchCampaign = campaignFilter === 'all' || app.campaignId === campaignFilter;
 
       return matchSearch && matchStatus && matchCampaign;
@@ -313,7 +327,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
   }, [applications, appSearch, statusFilter, campaignFilter]);
 
   // Action: Update Application Status
-  const handleUpdateStatus = (appId: string, newStatus: ApplicationStatus, customShippingCode?: string) => {
+  const handleUpdateStatus = (
+    appId: string,
+    newStatus: ApplicationStatus,
+    customShippingCode?: string,
+    feedback?: string
+  ) => {
     const updated = applications.map((app) => {
       if (app.id === appId) {
         let shippingCode = customShippingCode !== undefined ? customShippingCode : app.shippingCode;
@@ -324,9 +343,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
           shippingStatus = 'Đang trung chuyển';
         } else if (newStatus === 'Đang giao') {
           shippingStatus = 'Đang trung chuyển';
-        } else if (newStatus === 'Đã lên bài') {
+        } else if (newStatus === 'Đã lên bài' || newStatus === 'Đã hoàn thành') {
           shippingStatus = 'Đã phát thành công';
-        } else if (newStatus === 'Từ chối') {
+        } else if (newStatus === 'Từ chối' || newStatus === 'Bị từ chối') {
           shippingStatus = 'Không gửi mẫu';
         }
 
@@ -335,6 +354,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           status: newStatus,
           shippingCode,
           shippingStatus,
+          ...(feedback !== undefined ? { adminFeedback: feedback } : {}),
         };
       }
       return app;
@@ -354,10 +374,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
         status: newStatus,
         shippingCode: target.shippingCode,
         shippingStatus: target.shippingStatus,
+        ...(feedback !== undefined ? { adminFeedback: feedback } : {}),
       });
 
       // Tự động tạo thông báo gửi tới tài khoản KOC
-      if (prevApp && prevApp.status !== newStatus) {
+      if (prevApp && (prevApp.status !== newStatus || feedback)) {
         let notifTitle = '';
         let notifMessage = '';
         let notifType: AppNotification['type'] = 'approval';
@@ -373,14 +394,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
           notifMessage = `Mẫu sản phẩm cho hồ sơ (${target.code}) đang được chuyển phát đến bạn. Mã vận đơn: ${target.shippingCode || 'GHTK'}.`;
           notifType = 'delivery';
           notifLinkTab = 'my-campaigns';
-        } else if (newStatus === 'Đã lên bài') {
-          notifTitle = `🌟 Đã nghiệm thu bài đăng: ${target.campaignName}`;
-          notifMessage = `Video review cho chiến dịch "${target.campaignName}" (${target.code}) đã được nghiệm thu thành công. Cảm ơn sự hợp tác của bạn!`;
+        } else if (newStatus === 'Đã hoàn thành' || newStatus === 'Đã lên bài') {
+          notifTitle = `🌟 Đã hoàn thành nghiệm thu: ${target.campaignName}`;
+          notifMessage = `Chúc mừng ${target.kocName}! Video review cho chiến dịch "${target.campaignName}" (${target.code}) đã được Quản trị viên duyệt Đã hoàn thành. Thù lao và hoa hồng chiến dịch đã được ghi nhận!`;
           notifType = 'approval';
+          notifLinkTab = 'my-campaigns';
+        } else if (newStatus === 'Bị từ chối') {
+          notifTitle = `⚠️ Video chưa đạt yêu cầu: ${target.campaignName}`;
+          notifMessage = feedback
+            ? `Phản hồi từ Quản trị viên: "${feedback}". Vui lòng kiểm tra và nộp lại link video đã sửa trong mục "Chiến dịch của tôi".`
+            : `Video nộp cho chiến dịch "${target.campaignName}" (${target.code}) chưa đạt yêu cầu brief. Vui lòng kiểm tra và nộp lại.`;
+          notifType = 'approval';
+          notifLinkTab = 'my-campaigns';
+        } else if (newStatus === 'Chờ duyệt video') {
+          notifTitle = `⏳ Video đang chờ nghiệm thu: ${target.campaignName}`;
+          notifMessage = `Video cho chiến dịch "${target.campaignName}" đang chờ Quản trị viên kiểm tra và duyệt nghiệm thu.`;
+          notifType = 'delivery';
           notifLinkTab = 'my-campaigns';
         } else if (newStatus === 'Từ chối') {
           notifTitle = `Kết quả xét duyệt: ${target.campaignName}`;
-          notifMessage = `Rất tiếc hồ sơ đăng ký (${target.code}) chưa phù hợp với tiêu chí xét duyệt đợt này của Brand. Kocity còn nhiều chiến dịch hấp dẫn khác đang chờ bạn!`;
+          notifMessage = feedback
+            ? `Phản hồi từ Quản trị viên: "${feedback}".`
+            : `Rất tiếc hồ sơ đăng ký (${target.code}) chưa phù hợp với tiêu chí xét duyệt đợt này của Brand. Kocity còn nhiều chiến dịch hấp dẫn khác đang chờ bạn!`;
           notifType = 'approval';
           notifLinkTab = 'marketplace';
         }
@@ -413,7 +448,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   const handleQuickReject = (app: KOCApplication) => {
-    handleUpdateStatus(app.id, 'Từ chối');
+    setRejectModalApp(app);
+    setRejectType('application');
+    setRejectFeedbackText(app.adminFeedback || '');
   };
 
   // Image Upload helper functions (File Select, Drag & Drop, Paste)
@@ -806,11 +843,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
             Đang giao
           </span>
         );
-      case 'Đã lên bài':
+      case 'Chờ duyệt video':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-300 px-2.5 py-1 text-xs font-bold text-amber-800">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping"></span>
+            Chờ duyệt video
+          </span>
+        );
+      case 'Đã lên bài':
+      case 'Đã hoàn thành':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs">
             <span className="material-symbols-outlined text-[14px]">check_circle</span>
-            Đã lên bài
+            Đã hoàn thành
+          </span>
+        );
+      case 'Bị từ chối':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-300 px-2.5 py-1 text-xs font-bold text-rose-700 shadow-xs">
+            <span className="material-symbols-outlined text-[14px]">cancel</span>
+            Bị từ chối
           </span>
         );
       case 'Từ chối':
@@ -1043,27 +1095,48 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <button
                     onClick={() => {
                       setActiveAdminTab('applications');
-                      setStatusFilter('Đã lên bài');
+                      setStatusFilter('Chờ duyệt video');
                       setIsMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                      activeAdminTab === 'applications' && statusFilter === 'Đã lên bài'
+                      activeAdminTab === 'applications' && statusFilter === 'Chờ duyệt video'
                         ? 'bg-blue-50 text-blue-700 font-bold border-l-2 border-blue-600'
                         : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50'
                     }`}
                   >
-                    <span>Đã lên bài review</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                      Chờ duyệt video
+                    </span>
+                    <span className="rounded bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2">
+                      {metrics.pendingVideoApps}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveAdminTab('applications');
+                      setStatusFilter('Đã hoàn thành');
+                      setIsMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                      activeAdminTab === 'applications' && (statusFilter === 'Đã hoàn thành' || statusFilter === 'Đã lên bài')
+                        ? 'bg-blue-50 text-blue-700 font-bold border-l-2 border-blue-600'
+                        : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>Đã hoàn thành</span>
                     <span className="text-[11px] text-slate-400 font-mono">{metrics.completedApps}</span>
                   </button>
 
                   <button
                     onClick={() => {
                       setActiveAdminTab('applications');
-                      setStatusFilter('Từ chối');
+                      setStatusFilter('Bị từ chối');
                       setIsMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                      activeAdminTab === 'applications' && statusFilter === 'Từ chối'
+                      activeAdminTab === 'applications' && (statusFilter === 'Bị từ chối' || statusFilter === 'Từ chối')
                         ? 'bg-blue-50 text-blue-700 font-bold border-l-2 border-blue-600'
                         : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50'
                     }`}
@@ -2405,10 +2478,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 {[
                   { id: 'all', label: 'Tất cả', count: applications.length },
                   { id: 'Chờ duyệt', label: 'Chờ duyệt', count: metrics.pendingApps },
-                  { id: 'Đã duyệt gửi mẫu', label: 'Đã duyệt', count: metrics.approvedApps },
+                  { id: 'Đã duyệt gửi mẫu', label: 'Đã duyệt gửi mẫu', count: metrics.approvedApps },
                   { id: 'Đang giao', label: 'Đang giao', count: metrics.shippingApps },
-                  { id: 'Đã lên bài', label: 'Đã lên bài', count: metrics.completedApps },
-                  { id: 'Từ chối', label: 'Từ chối', count: metrics.rejectedApps },
+                  { id: 'Chờ duyệt video', label: 'Chờ duyệt video', count: metrics.pendingVideoApps },
+                  { id: 'Đã hoàn thành', label: 'Đã hoàn thành', count: metrics.completedApps },
+                  { id: 'Bị từ chối', label: 'Bị từ chối', count: metrics.rejectedApps },
                 ].map((chip) => (
                   <button
                     key={chip.id}
@@ -2590,11 +2664,50 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                               {app.status === 'Đang giao' && (
                                 <button
-                                  onClick={() => handleUpdateStatus(app.id, 'Đã lên bài')}
+                                  onClick={() => handleUpdateStatus(app.id, 'Chờ duyệt video')}
                                   className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700 transition-all cursor-pointer flex items-center gap-1"
                                 >
-                                  <span className="material-symbols-outlined text-[14px]">check</span>
-                                  Xác nhận lên bài
+                                  <span className="material-symbols-outlined text-[14px]">video_library</span>
+                                  Chờ nộp video
+                                </button>
+                              )}
+
+                              {app.status === 'Chờ duyệt video' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.id, 'Đã hoàn thành')}
+                                    className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                                    title="Duyệt hoàn thành video nghiệm thu"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                    Duyệt
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setRejectModalApp(app);
+                                      setRejectType('video');
+                                      setRejectFeedbackText(app.adminFeedback || '');
+                                    }}
+                                    className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-all cursor-pointer flex items-center gap-1"
+                                    title="Từ chối video và gửi feedback cho KOC"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">cancel</span>
+                                    Từ chối
+                                  </button>
+                                </>
+                              )}
+
+                              {app.status === 'Bị từ chối' && (
+                                <button
+                                  onClick={() => {
+                                    setRejectModalApp(app);
+                                    setRejectType('video');
+                                    setRejectFeedbackText(app.adminFeedback || '');
+                                  }}
+                                  className="rounded-lg border border-rose-200 bg-rose-50/70 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-all cursor-pointer"
+                                  title="Xem hoặc cập nhật Feedback gửi KOC"
+                                >
+                                  Sửa Feedback
                                 </button>
                               )}
 
@@ -2740,15 +2853,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
         {activeAdminTab === 'content' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {applications.filter((a) => a.videoLink || a.status === 'Đã lên bài').length === 0 ? (
+              {applications.filter((a) => a.videoLink || a.status === 'Chờ duyệt video' || a.status === 'Đã hoàn thành' || a.status === 'Bị từ chối' || a.status === 'Đã lên bài').length === 0 ? (
                 <div className="col-span-2 p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500">
                   <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">videocam_off</span>
                   <p className="text-sm font-semibold">Chưa có video nào được nộp</p>
-                  <p className="text-xs text-slate-400 mt-1">Khi KOC nộp link TikTok trong mục "Chiến dịch của tôi", bài nộp sẽ hiển thị tại đây.</p>
+                  <p className="text-xs text-slate-400 mt-1">Khi KOC nộp link TikTok trong mục "Chiến dịch của tôi", bài nộp sẽ hiển thị tại đây để bạn kiểm tra, duyệt hoàn thành hoặc từ chối kèm phản hồi.</p>
                 </div>
               ) : (
                 applications
-                  .filter((a) => a.videoLink || a.status === 'Đã lên bài')
+                  .filter((a) => a.videoLink || a.status === 'Chờ duyệt video' || a.status === 'Đã hoàn thành' || a.status === 'Bị từ chối' || a.status === 'Đã lên bài')
                   .map((app) => (
                     <div
                       key={app.id}
@@ -2771,10 +2884,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             <p className="text-[11px] text-slate-500">Followers: {app.followers}</p>
                           </div>
                         </div>
-                        <span className="rounded-full bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                          Đã lên bài
-                        </span>
+
+                        {/* Status Badge */}
+                        {app.status === 'Đã hoàn thành' || app.status === 'Đã lên bài' ? (
+                          <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                            Đã hoàn thành
+                          </span>
+                        ) : app.status === 'Bị từ chối' ? (
+                          <span className="rounded-full bg-rose-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">cancel</span>
+                            Bị từ chối
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-500 px-2.5 py-1 text-xs font-bold text-white shadow-xs flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">hourglass_top</span>
+                            Chờ duyệt video
+                          </span>
+                        )}
                       </div>
 
                       <div className="rounded-xl bg-blue-50/60 p-3 text-xs space-y-1.5 border border-blue-100">
@@ -2790,48 +2917,88 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                        {app.videoLink ? (
-                          <a
-                            href={app.videoLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 transition-all cursor-pointer shadow-xs"
-                          >
-                            <span className="material-symbols-outlined text-[16px] text-blue-200">play_circle</span>
-                            Mở Video TikTok
-                          </a>
-                        ) : (
+                      {/* Display feedback if rejected */}
+                      {app.status === 'Bị từ chối' && app.adminFeedback && (
+                        <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-900 space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-rose-800">
+                            <span className="material-symbols-outlined text-[15px] text-rose-600">feedback</span>
+                            <span>Feedback đã gửi cho KOC:</span>
+                          </div>
+                          <p className="text-rose-800 italic bg-white/80 p-2.5 rounded-lg border border-rose-200/60 leading-relaxed font-medium">
+                            "{app.adminFeedback}"
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center gap-2">
+                          {app.videoLink ? (
+                            <a
+                              href={app.videoLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer shadow-xs"
+                            >
+                              <span className="material-symbols-outlined text-[16px] text-indigo-600">play_circle</span>
+                              Xem Video
+                            </a>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const link = prompt('Nhập link video TikTok hoặc Drive của KOC này:');
+                                if (link) {
+                                  onUpdateApplications(
+                                    applications.map((a) => (a.id === app.id ? { ...a, videoLink: link } : a))
+                                  );
+                                  onShowToast('Đã lưu link video!', link, 'success');
+                                }
+                              }}
+                              className="rounded-xl border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 cursor-pointer"
+                            >
+                              + Nhập link video
+                            </button>
+                          )}
+
                           <button
                             onClick={() => {
-                              const link = prompt('Nhập link video TikTok của KOC này:');
-                              if (link) {
+                              const newViews = prompt('Cập nhật số lượt xem (views) thực tế của video:', app.videoViews || '50K views');
+                              if (newViews) {
                                 onUpdateApplications(
-                                  applications.map((a) => (a.id === app.id ? { ...a, videoLink: link } : a))
+                                  applications.map((a) => (a.id === app.id ? { ...a, videoViews: newViews } : a))
                                 );
-                                onShowToast('Đã lưu link video!', link, 'success');
+                                onShowToast('Đã cập nhật chỉ số views!', newViews, 'success');
                               }
                             }}
-                            className="rounded-xl border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 cursor-pointer"
+                            className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
                           >
-                            + Nhập link video
+                            Cập nhật View
                           </button>
-                        )}
+                        </div>
 
-                        <button
-                          onClick={() => {
-                            const newViews = prompt('Cập nhật số lượt xem (views) thực tế của video:', app.videoViews || '50K views');
-                            if (newViews) {
-                              onUpdateApplications(
-                                applications.map((a) => (a.id === app.id ? { ...a, videoViews: newViews } : a))
-                              );
-                              onShowToast('Đã cập nhật chỉ số views!', newViews, 'success');
-                            }
-                          }}
-                          className="rounded-xl border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 transition-all cursor-pointer"
-                        >
-                          Cập nhật View
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setRejectModalApp(app);
+                              setRejectType('video');
+                              setRejectFeedbackText(app.adminFeedback || '');
+                            }}
+                            className="flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-all cursor-pointer"
+                            title="Từ chối video và gửi phản hồi cho KOC"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">cancel</span>
+                            Từ chối video
+                          </button>
+
+                          <button
+                            onClick={() => handleUpdateStatus(app.id, 'Đã hoàn thành')}
+                            className="flex items-center gap-1 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-all cursor-pointer shadow-xs"
+                            title="Duyệt hoàn thành nghiệm thu video"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                            Duyệt hoàn thành
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -3012,6 +3179,41 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </p>
               </div>
 
+              {/* Video link & views info if submitted */}
+              {selectedApp.videoLink && (
+                <div className="rounded-xl bg-indigo-50/70 p-3 border border-indigo-100 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-indigo-900 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[15px] text-indigo-600">play_circle</span>
+                      Link video nghiệm thu:
+                    </span>
+                    <a
+                      href={selectedApp.videoLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-bold text-[#6366f1] hover:underline flex items-center gap-0.5"
+                    >
+                      <span>Xem video</span>
+                      <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                    </a>
+                  </div>
+                  <p className="text-[11px] text-slate-600 truncate font-mono">{selectedApp.videoLink}</p>
+                </div>
+              )}
+
+              {/* Admin feedback if exists */}
+              {selectedApp.adminFeedback && (
+                <div className="rounded-xl bg-rose-50 p-3 border border-rose-200 text-xs space-y-1">
+                  <span className="font-bold text-rose-800 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[15px] text-rose-600">feedback</span>
+                    Phản hồi đã gửi KOC:
+                  </span>
+                  <p className="text-rose-900 bg-white/70 p-2 rounded-lg border border-rose-200/60 font-medium">
+                    "{selectedApp.adminFeedback}"
+                  </p>
+                </div>
+              )}
+
               {/* Status and Shipping Code Edit */}
               <div className="border-t border-slate-100 pt-4 space-y-3">
                 <label className="text-xs font-bold text-slate-700 block">Cập nhật Mã vận đơn gửi hàng</label>
@@ -3035,14 +3237,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
 
                 <label className="text-xs font-bold text-slate-700 block pt-2">Chuyển trạng thái hồ sơ</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {(['Chờ duyệt', 'Đã duyệt gửi mẫu', 'Đang giao', 'Đã lên bài'] as ApplicationStatus[]).map((st) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(['Chờ duyệt', 'Đã duyệt gửi mẫu', 'Đang giao', 'Chờ duyệt video', 'Đã hoàn thành', 'Bị từ chối'] as ApplicationStatus[]).map((st) => (
                     <button
                       key={st}
-                      onClick={() => handleUpdateStatus(selectedApp.id, st)}
+                      onClick={() => {
+                        if (st === 'Bị từ chối' || st === 'Từ chối') {
+                          setRejectModalApp(selectedApp);
+                          setRejectType('video');
+                          setRejectFeedbackText(selectedApp.adminFeedback || '');
+                        } else {
+                          handleUpdateStatus(selectedApp.id, st);
+                        }
+                      }}
                       className={`rounded-xl py-2 px-2 text-xs font-bold transition-all cursor-pointer ${
                         selectedApp.status === st
-                          ? 'bg-blue-600 text-white shadow-xs'
+                          ? st === 'Đã hoàn thành'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : st === 'Bị từ chối'
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : 'bg-blue-600 text-white shadow-xs'
                           : 'bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700'
                       }`}
                     >
@@ -4079,6 +4293,163 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   Đóng
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: TỪ CHỐI VIDEO / HỒ SƠ & GỬI FEEDBACK GÓP Ý CHO KOC
+          ========================================================================= */}
+      {rejectModalApp && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 flex flex-col space-y-4 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 shadow-xs">
+                  <span className="material-symbols-outlined text-xl">rate_review</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    {rejectType === 'video' ? 'Từ chối Video & Gửi Feedback' : 'Từ chối Hồ sơ & Gửi Feedback'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Phản hồi sẽ được hiển thị trực tiếp tại trang "Chiến dịch của tôi" của KOC
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setRejectModalApp(null);
+                  setRejectFeedbackText('');
+                }}
+                className="rounded-xl p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            {/* KOC & Video Information Card */}
+            <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-200/80 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={rejectModalApp.avatar}
+                    alt={rejectModalApp.kocName}
+                    className="h-9 w-9 rounded-full object-cover border border-slate-200"
+                  />
+                  <div>
+                    <p className="font-bold text-slate-900">{rejectModalApp.kocName}</p>
+                    <p className="text-[11px] text-blue-600 font-semibold">{rejectModalApp.tiktokHandle}</p>
+                  </div>
+                </div>
+                <span className="font-mono text-[11px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  {rejectModalApp.code}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="text-slate-600">Chiến dịch: <b className="text-slate-800">{rejectModalApp.campaignName}</b></span>
+                {rejectModalApp.videoLink && (
+                  <a
+                    href={rejectModalApp.videoLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#6366f1] hover:underline font-bold flex items-center gap-1"
+                  >
+                    <span>Xem video nộp</span>
+                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Templates Chips */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                💡 Chọn nhanh lý do / góp ý mẫu:
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Video chưa chèn hashtag hoặc tag kênh thương hiệu theo brief',
+                  'Thiếu phân cảnh unbox và trải nghiệm thực tế sản phẩm',
+                  'Chưa gắn link giỏ hàng TikTok Shop / chưa cấp mã Spark Ads',
+                  'Chất lượng âm thanh/hình ảnh chưa rõ nét hoặc dính bản quyền âm nhạc',
+                  'Chưa nêu bật tính năng cốt lõi và chương trình ưu đãi của Brand',
+                ].map((tmpl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      if (rejectFeedbackText) {
+                        setRejectFeedbackText((prev) => `${prev}. ${tmpl}`);
+                      } else {
+                        setRejectFeedbackText(tmpl);
+                      }
+                    }}
+                    className="text-[11px] rounded-lg border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 px-2.5 py-1 text-slate-700 transition-colors text-left cursor-pointer"
+                  >
+                    + {tmpl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Textarea for Feedback */}
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Nội dung Feedback gửi cho KOC <span className="text-rose-600">*</span>:
+              </label>
+              <textarea
+                rows={4}
+                value={rejectFeedbackText}
+                onChange={(e) => setRejectFeedbackText(e.target.value)}
+                placeholder="Nhập chi tiết yêu cầu sửa đổi để KOC nắm rõ và quay/sửa lại video (Ví dụ: Bạn bổ sung thêm phân cảnh trải nghiệm thực tế và gắn link giỏ hàng nhé)..."
+                className="w-full rounded-2xl border border-slate-300 p-3 text-xs text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 focus:outline-none transition-all leading-relaxed"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                KOC sẽ nhận thông báo chuông và thấy lời nhắn này tại trang "Chiến dịch của tôi" kèm nút nộp lại video đã sửa.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectModalApp(null);
+                  setRejectFeedbackText('');
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!rejectFeedbackText.trim()) {
+                    onShowToast('Vui lòng nhập feedback!', 'Cần nhập lý do hoặc chọn mẫu phản hồi để KOC biết cách chỉnh sửa.', 'warning');
+                    return;
+                  }
+                  handleUpdateStatus(
+                    rejectModalApp.id,
+                    rejectType === 'video' ? 'Bị từ chối' : 'Từ chối',
+                    undefined,
+                    rejectFeedbackText.trim()
+                  );
+                  setRejectModalApp(null);
+                  setRejectFeedbackText('');
+                  onShowToast(
+                    'Đã từ chối & gửi feedback!',
+                    'Trạng thái tại trang KOC đã cập nhật thành "Bị từ chối" cùng phản hồi của bạn.',
+                    'success'
+                  );
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-500/20 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">send</span>
+                <span>Xác nhận Từ chối & Gửi phản hồi</span>
+              </button>
             </div>
           </div>
         </div>

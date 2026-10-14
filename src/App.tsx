@@ -738,6 +738,7 @@ export const App: React.FC = () => {
 
   // Handler: Submit video link
   const handleSubmitVideoLink = (appId: string, link: string) => {
+    const nowIso = new Date().toISOString();
     setApplications((prev) => {
       const updated = prev.map((app) => {
         if (app.id === appId) {
@@ -745,7 +746,9 @@ export const App: React.FC = () => {
             ...app,
             videoLink: link,
             videoViews: 'Đang quét chỉ số...',
-            status: 'Đã lên bài' as ApplicationStatus,
+            status: 'Chờ duyệt video' as ApplicationStatus,
+            videoSubmittedAt: nowIso,
+            adminFeedback: undefined, // Reset phản hồi cũ khi KOC nộp lại
           };
         }
         return app;
@@ -762,7 +765,7 @@ export const App: React.FC = () => {
     const videoNotif: AppNotification = {
       id: `admin-notif-video-${Date.now()}`,
       title: `Video nghiệm thu mới: ${targetApp ? targetApp.kocName : 'KOC'} nộp bài`,
-      message: `Đã nộp link video cho chiến dịch "${targetApp ? targetApp.campaignName : 'Chiến dịch'}". Vào kiểm tra để nghiệm thu.`,
+      message: `Đã nộp link video cho chiến dịch "${targetApp ? targetApp.campaignName : 'Chiến dịch'}". Vào tab "Nội dung" để kiểm tra và duyệt nghiệm thu.`,
       time: 'Vừa xong',
       read: false,
       type: 'delivery',
@@ -770,13 +773,28 @@ export const App: React.FC = () => {
       linkTab: 'admin',
       adminSubTab: 'content',
     };
-    setNotifications((prev) => [videoNotif, ...prev]);
+
+    const kocConfirmNotif: AppNotification = {
+      id: `koc-notif-video-submitted-${Date.now()}`,
+      title: `Đã nộp video: ${targetApp ? targetApp.campaignName : 'Chiến dịch'}`,
+      message: `Video của bạn đã gửi thành công và đang chờ Quản trị viên duyệt nghiệm thu. Trạng thái sẽ cập nhật sớm!`,
+      time: 'Vừa xong',
+      read: false,
+      type: 'approval',
+      targetRole: 'koc',
+      targetKocId: targetApp?.kocId,
+      targetTiktokHandle: targetApp?.tiktokHandle,
+      linkTab: 'my-campaigns',
+    };
+
+    setNotifications((prev) => [videoNotif, kocConfirmNotif, ...prev]);
 
     // Đồng bộ lên Supabase
     updateApplicationStatusOnSupabase(appId, {
       videoLink: link,
       videoViews: 'Đang quét chỉ số...',
-      status: 'Đã lên bài',
+      status: 'Chờ duyệt video',
+      videoSubmittedAt: nowIso,
     });
   };
 

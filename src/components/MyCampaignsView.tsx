@@ -261,36 +261,72 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
         <div className="space-y-4">
           {myApps.map((app) => {
             const matchedCampaign = campaigns.find((c) => c.id === app.campaignId) || campaigns[0];
-            const isApproved = app.status === 'Đã duyệt gửi mẫu' || app.status === 'Đang giao' || app.status === 'Đã lên bài';
-            const isRejected = app.status === 'Từ chối';
-            const currentStepIdx = app.videoLink || app.status === 'Đã lên bài' ? 3 : app.status === 'Đã duyệt gửi mẫu' || app.status === 'Đang giao' ? 2 : 1;
+            const isApproved =
+              app.status === 'Đã duyệt gửi mẫu' ||
+              app.status === 'Đang giao' ||
+              app.status === 'Chờ duyệt video' ||
+              app.status === 'Đã hoàn thành' ||
+              app.status === 'Đã lên bài' ||
+              app.status === 'Bị từ chối';
+            const isRejectedProfile = app.status === 'Từ chối';
+            const isVideoRejected = app.status === 'Bị từ chối';
+            const isVideoApproved = app.status === 'Đã hoàn thành' || app.status === 'Đã lên bài';
+            const isPendingVideo = app.status === 'Chờ duyệt video';
+
+            const currentStepIdx = isVideoApproved
+              ? 4
+              : isPendingVideo || isVideoRejected || app.videoLink
+              ? 3
+              : app.status === 'Đã duyệt gửi mẫu' || app.status === 'Đang giao'
+              ? 2
+              : 1;
 
             const steps = [
               { label: 'Đăng ký mẫu', desc: 'Đã nộp hồ sơ', icon: 'how_to_reg' },
-              { 
-                label: isRejected ? 'Từ chối duyệt' : 'Quản trị viên duyệt', 
-                desc: isRejected ? 'Hồ sơ chưa đạt' : isApproved ? 'Đã duyệt gửi mẫu' : 'Đang chờ Admin duyệt', 
-                icon: isRejected ? 'cancel' : 'verified' 
+              {
+                label: isRejectedProfile ? 'Từ chối duyệt mẫu' : 'Quản trị viên duyệt',
+                desc: isRejectedProfile
+                  ? 'Hồ sơ chưa đạt'
+                  : isApproved
+                  ? 'Đã duyệt gửi mẫu'
+                  : 'Đang chờ Admin duyệt',
+                icon: isRejectedProfile ? 'cancel' : 'verified',
               },
-              { 
-                label: 'Giao quà mẫu', 
-                desc: app.shippingCode || (isApproved ? 'GHTK đang giao' : 'Chờ duyệt để gửi mẫu'), 
-                icon: 'local_shipping' 
+              {
+                label: 'Giao quà mẫu',
+                desc: app.shippingCode || (isApproved ? 'GHTK đang giao' : 'Chờ duyệt để gửi mẫu'),
+                icon: 'local_shipping',
               },
-              { 
-                label: 'Nghiệm thu video', 
-                desc: app.videoLink ? 'Đã nộp video' : (isApproved ? 'Hạn 4 - 7 ngày' : 'Chờ nhận mẫu'), 
-                icon: 'video_library' 
+              {
+                label: 'Nghiệm thu video',
+                desc: isVideoApproved
+                  ? 'Đã hoàn thành'
+                  : isVideoRejected
+                  ? 'Cần sửa & nộp lại'
+                  : isPendingVideo
+                  ? 'Đang chờ Admin duyệt'
+                  : app.videoLink
+                  ? 'Đã nộp video'
+                  : isApproved
+                  ? 'Hạn 4 - 7 ngày'
+                  : 'Chờ nhận mẫu',
+                icon: isVideoApproved
+                  ? 'check_circle'
+                  : isVideoRejected
+                  ? 'cancel'
+                  : isPendingVideo
+                  ? 'hourglass_top'
+                  : 'video_library',
               },
             ];
 
             return (
               <div
                 key={app.id}
-                className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm transition-all hover:shadow-md"
+                className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm transition-all hover:shadow-md space-y-4"
               >
                 {/* Top Info */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div className="flex items-start gap-3.5">
                     <img
                       src={matchedCampaign.productHeroImage}
@@ -302,37 +338,58 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                         <span className="font-mono text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
                           {app.code}
                         </span>
+
+                        {/* Status Badge */}
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border flex items-center gap-1 ${
-                            app.status === 'Đã duyệt gửi mẫu'
+                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold border flex items-center gap-1 ${
+                            isVideoApproved
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : isVideoRejected
+                              ? 'bg-rose-50 text-rose-800 border-rose-300'
+                              : isPendingVideo
+                              ? 'bg-amber-50 text-amber-900 border-amber-300'
+                              : app.status === 'Đã duyệt gửi mẫu'
+                              ? 'bg-blue-50 text-blue-800 border-blue-200'
                               : app.status === 'Đang giao'
                               ? 'bg-sky-50 text-sky-800 border-sky-300'
-                              : app.status === 'Đã lên bài'
-                              ? 'bg-blue-50 text-blue-800 border-blue-200'
-                              : app.status === 'Từ chối'
-                              ? 'bg-rose-50 text-rose-800 border-rose-300'
+                              : isRejectedProfile
+                              ? 'bg-slate-100 text-slate-700 border-slate-300'
                               : 'bg-amber-50 text-amber-900 border-amber-300'
                           }`}
                         >
-                          {app.status === 'Chờ duyệt' && (
-                            <span className="material-symbols-outlined text-[13px] text-amber-700">hourglass_top</span>
+                          {isVideoApproved && (
+                            <span className="material-symbols-outlined text-[14px] text-emerald-600">verified</span>
+                          )}
+                          {isVideoRejected && (
+                            <span className="material-symbols-outlined text-[14px] text-rose-600">cancel</span>
+                          )}
+                          {isPendingVideo && (
+                            <span className="material-symbols-outlined text-[14px] text-amber-600">hourglass_top</span>
                           )}
                           {app.status === 'Đã duyệt gửi mẫu' && (
-                            <span className="material-symbols-outlined text-[13px] text-emerald-700">verified</span>
+                            <span className="material-symbols-outlined text-[14px] text-blue-600">local_shipping</span>
                           )}
-                          {app.status === 'Từ chối' && (
-                            <span className="material-symbols-outlined text-[13px] text-rose-700">cancel</span>
+                          {app.status === 'Chờ duyệt' && (
+                            <span className="material-symbols-outlined text-[14px] text-amber-600">schedule</span>
                           )}
-                          {app.status === 'Chờ duyệt'
+                          {isRejectedProfile && (
+                            <span className="material-symbols-outlined text-[14px] text-slate-500">block</span>
+                          )}
+
+                          {isVideoApproved
+                            ? 'Đã hoàn thành'
+                            : isVideoRejected
+                            ? 'Bị từ chối'
+                            : isPendingVideo
+                            ? 'Chờ duyệt video'
+                            : app.status === 'Chờ duyệt'
                             ? 'Chờ Quản trị viên duyệt mẫu'
-                            : app.status === 'Đã duyệt gửi mẫu'
-                            ? 'Đã duyệt gửi mẫu'
-                            : app.status === 'Từ chối'
+                            : isRejectedProfile
                             ? 'Chưa được duyệt'
                             : app.status}
                         </span>
                       </div>
+
                       <h3
                         onClick={() => onSelectCampaign(matchedCampaign)}
                         className="mt-1 font-['Plus_Jakarta_Sans'] text-sm sm:text-base font-bold text-slate-900 cursor-pointer hover:text-[#6366f1] transition-colors"
@@ -348,13 +405,28 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                   {/* Tracking & Timeline Quick Badges */}
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
-                      <span className="text-slate-500 block text-[10px]">Tình trạng mẫu quà tặng:</span>
-                      {app.status === 'Chờ duyệt' ? (
+                      <span className="text-slate-500 block text-[10px]">Tình trạng quà mẫu & Nghiệm thu:</span>
+                      {isVideoApproved ? (
+                        <span className="font-bold text-emerald-700 flex items-center gap-1 text-left mt-0.5">
+                          <span className="material-symbols-outlined text-[14px] text-emerald-600">check_circle</span>
+                          <span>Đã hoàn thành nghiệm thu video</span>
+                        </span>
+                      ) : isVideoRejected ? (
+                        <span className="font-bold text-rose-700 flex items-center gap-1 text-left mt-0.5">
+                          <span className="material-symbols-outlined text-[14px] text-rose-600">error</span>
+                          <span>Video bị từ chối - Xem góp ý bên dưới</span>
+                        </span>
+                      ) : isPendingVideo ? (
+                        <span className="font-semibold text-amber-800 flex items-center gap-1 text-left mt-0.5">
+                          <span className="material-symbols-outlined text-[14px] text-amber-700">hourglass_top</span>
+                          <span>Đã nộp video - Đang chờ duyệt</span>
+                        </span>
+                      ) : app.status === 'Chờ duyệt' ? (
                         <span className="font-semibold text-amber-800 flex items-center gap-1 text-left mt-0.5">
                           <span className="material-symbols-outlined text-[14px] text-amber-700">schedule</span>
                           <span>Chờ Quản trị viên duyệt hồ sơ gửi mẫu</span>
                         </span>
-                      ) : app.status === 'Từ chối' ? (
+                      ) : isRejectedProfile ? (
                         <span className="font-semibold text-rose-700 flex items-center gap-1 text-left mt-0.5">
                           <span className="material-symbols-outlined text-[14px] text-rose-600">block</span>
                           <span>Chưa đạt tiêu chí chiến dịch này</span>
@@ -373,11 +445,15 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                     </div>
 
                     <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-200 text-xs">
-                      <span className="text-slate-500 block text-[10px]">Thời hạn làm video (4 - 7 ngày):</span>
+                      <span className="text-slate-500 block text-[10px]">Thời hạn hoàn thành:</span>
                       <span className="font-semibold text-slate-900 block mt-0.5">
-                        {app.status === 'Chờ duyệt'
+                        {isVideoApproved
+                          ? 'Đã hoàn thành xuất sắc'
+                          : isVideoRejected
+                          ? 'Nộp lại video càng sớm càng tốt'
+                          : app.status === 'Chờ duyệt'
                           ? 'Tính sau khi nhận hàng mẫu'
-                          : app.status === 'Từ chối'
+                          : isRejectedProfile
                           ? 'Không áp dụng'
                           : 'Hạn 4 - 7 ngày sau nhận hàng'}
                       </span>
@@ -385,8 +461,58 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                   </div>
                 </div>
 
+                {/* Banner: Phản hồi của Quản trị viên khi Video bị từ chối */}
+                {isVideoRejected && (
+                  <div className="rounded-2xl bg-rose-50/90 border border-rose-200 p-4 text-xs text-rose-950 space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-rose-800">
+                      <span className="material-symbols-outlined text-[18px] text-rose-600">feedback</span>
+                      <span>Phản hồi từ Quản trị viên (Lý do từ chối & Yêu cầu chỉnh sửa):</span>
+                    </div>
+                    <div className="bg-white p-3 rounded-xl border border-rose-200 text-rose-900 leading-relaxed font-medium">
+                      "{app.adminFeedback || 'Video chưa đạt tiêu chí theo brief của chiến dịch. Vui lòng kiểm tra lại yêu cầu và nộp lại link video đã chỉnh sửa.'}"
+                    </div>
+                    <p className="text-[11px] text-rose-700 font-medium pt-0.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">tips_and_updates</span>
+                      <span>Hãy quay bổ sung hoặc chỉnh sửa theo góp ý trên, sau đó dán link mới vào ô bên dưới và bấm <b>"Nộp lại link video đã sửa"</b> để Admin duyệt lại.</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Banner: Chúc mừng khi Video Đã hoàn thành */}
+                {isVideoApproved && (
+                  <div className="rounded-2xl bg-emerald-50/90 border border-emerald-200 p-3.5 text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shrink-0 shadow-xs">
+                        <span className="material-symbols-outlined text-[20px]">verified</span>
+                      </div>
+                      <div>
+                        <p className="font-extrabold text-emerald-900 text-xs sm:text-sm">
+                          🎉 Video của bạn đã được Quản trị viên duyệt Đã hoàn thành!
+                        </p>
+                        <p className="text-[11px] text-emerald-700 mt-0.5">
+                          Chiến dịch đã nghiệm thu thành công. Thù lao cố định và hoa hồng affiliate của bạn đã được ghi nhận.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 font-extrabold text-emerald-800 text-[11px] bg-white px-3 py-1.5 rounded-xl border border-emerald-200 shadow-2xs">
+                      ✓ Nghiệm thu 100%
+                    </span>
+                  </div>
+                )}
+
+                {/* Banner: Đang chờ duyệt video */}
+                {isPendingVideo && (
+                  <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-3 text-xs text-amber-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-amber-600 animate-spin">sync</span>
+                    <div>
+                      <span className="font-bold text-amber-900">Đã nộp video - Đang chờ nghiệm thu: </span>
+                      <span className="text-amber-800">Quản trị viên đang kiểm tra chất lượng video, gắn giỏ hàng và duyệt hoàn thành.</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Visual 4-Step Progress Stepper */}
-                <div className="py-5 border-b border-slate-100">
+                <div className="py-2">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative">
                     {steps.map((st, sIdx) => {
                       const isCompleted = sIdx < currentStepIdx;
@@ -396,7 +522,11 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                         <div
                           key={sIdx}
                           className={`flex items-center gap-3 rounded-2xl p-3 border transition-all ${
-                            isCurrent
+                            isVideoApproved && sIdx === 3
+                              ? 'border-emerald-500 bg-emerald-50/70 shadow-xs'
+                              : isVideoRejected && sIdx === 3
+                              ? 'border-rose-400 bg-rose-50/60 shadow-xs'
+                              : isCurrent
                               ? 'border-blue-500 bg-blue-50/60 shadow-sm ring-1 ring-blue-400/30'
                               : isCompleted
                               ? 'border-blue-200 bg-blue-50/40'
@@ -405,7 +535,11 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                         >
                           <div
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold transition-all ${
-                              isCompleted
+                              isVideoApproved && sIdx === 3
+                                ? 'bg-emerald-600 text-white'
+                                : isVideoRejected && sIdx === 3
+                                ? 'bg-rose-600 text-white'
+                                : isCompleted
                                 ? 'bg-blue-600 text-white'
                                 : isCurrent
                                 ? 'bg-blue-600 text-white shadow-sm'
@@ -413,7 +547,7 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                             }`}
                           >
                             <span className="material-symbols-outlined text-[18px]">
-                              {isCompleted ? 'check' : st.icon}
+                              {isCompleted || (isVideoApproved && sIdx === 3) ? 'check' : st.icon}
                             </span>
                           </div>
 
@@ -422,11 +556,27 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                               Bước {sIdx + 1}
                             </div>
                             <div className={`text-xs font-bold truncate ${
-                              isCurrent ? 'text-blue-950 font-extrabold' : isCompleted ? 'text-blue-900' : 'text-slate-700'
+                              isVideoApproved && sIdx === 3
+                                ? 'text-emerald-950 font-extrabold'
+                                : isVideoRejected && sIdx === 3
+                                ? 'text-rose-950 font-extrabold'
+                                : isCurrent
+                                ? 'text-blue-950 font-extrabold'
+                                : isCompleted
+                                ? 'text-blue-900'
+                                : 'text-slate-700'
                             }`}>
                               {st.label}
                             </div>
-                            <div className={`text-[10px] truncate ${isCurrent ? 'text-blue-800' : 'text-slate-500'}`}>
+                            <div className={`text-[10px] truncate ${
+                              isVideoApproved && sIdx === 3
+                                ? 'text-emerald-700 font-semibold'
+                                : isVideoRejected && sIdx === 3
+                                ? 'text-rose-700 font-semibold'
+                                : isCurrent
+                                ? 'text-blue-800'
+                                : 'text-slate-500'
+                            }`}>
                               {st.desc}
                             </div>
                           </div>
@@ -437,26 +587,26 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                 </div>
 
                 {/* Bottom Actions & Video link submission */}
-                <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
                   <div className="text-xs text-slate-600 w-full sm:w-auto">
                     {app.videoLink ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-blue-700 font-bold flex items-center gap-1 shrink-0">
-                          <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                          Đã nộp link video:
+                        <span className="text-indigo-700 font-bold flex items-center gap-1 shrink-0">
+                          <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                          Link video đã nộp:
                         </span>
                         <a
                           href={app.videoLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#6366f1] underline truncate max-w-xs font-semibold"
+                          className="text-[#6366f1] underline truncate max-w-xs font-semibold hover:text-indigo-800"
                         >
                           {app.videoLink}
                         </a>
                       </div>
                     ) : (
                       <span className="text-slate-600 text-[11px] sm:text-xs">
-                        ⚠️ <b>Bước 4:</b> KOC trả video bằng cách Up lên Drive hoặc link TikTok để Admin & Brand duyệt nghiệm thu.
+                        ⚠️ <b>Bước 4:</b> KOC trả video bằng cách dán link TikTok hoặc Google Drive để Admin nghiệm thu.
                       </span>
                     )}
                   </div>
@@ -493,11 +643,30 @@ export const MyCampaignsView: React.FC<MyCampaignsViewProps> = ({
                       </div>
                     ) : (
                       <button
-                        onClick={() => setSelectedAppId(app.id)}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all cursor-pointer"
+                        onClick={() => {
+                          setSelectedAppId(app.id);
+                          setVideoLinkInput(app.videoLink || '');
+                        }}
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                          isVideoRejected
+                            ? 'bg-gradient-to-r from-rose-600 to-amber-600 text-white shadow-rose-500/20 hover:opacity-95'
+                            : isVideoApproved
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-indigo-500/20 hover:opacity-95'
+                        }`}
                       >
-                        <span className="material-symbols-outlined text-[16px]">upload_file</span>
-                        <span>{app.videoLink ? 'Cập nhật link video' : 'Trả video (Drive/TikTok)'}</span>
+                        <span className="material-symbols-outlined text-[16px]">
+                          {isVideoRejected ? 'replay' : isVideoApproved ? 'check_circle' : 'upload_file'}
+                        </span>
+                        <span>
+                          {isVideoRejected
+                            ? 'Nộp lại link video đã sửa'
+                            : isVideoApproved
+                            ? 'Cập nhật lại link'
+                            : app.videoLink
+                            ? 'Cập nhật link video'
+                            : 'Trả video (Drive/TikTok)'}
+                        </span>
                       </button>
                     )}
                   </div>
