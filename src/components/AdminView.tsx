@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Campaign, KOCApplication, ApplicationStatus, AppNotification } from '../types';
+import { Campaign, KOCApplication, ApplicationStatus, AppNotification, KOCUser } from '../types';
 import {
   updateApplicationStatusOnSupabase,
   createCampaignOnSupabase,
   updateCampaignOnSupabase,
   deleteCampaignOnSupabase,
+  getAllRegisteredKOCsFromSupabase,
 } from '../services/supabaseService';
+import { APP_LOGOS } from '../data/mockData';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 // Hàm tính số ngày còn lại theo thời gian thực từ chuỗi ngày kết thúc
@@ -80,6 +82,49 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [appSearch, setAppSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
+
+  // Registered KOCs state for CRM (lấy toàn bộ KOC đã đăng ký trên web, kể cả chưa nộp đơn)
+  const [registeredKOCs, setRegisteredKOCs] = useState<KOCUser[]>([]);
+  const [kocCrmFilter, setKocCrmFilter] = useState<'all' | 'unapplied' | 'applied'>('all');
+  const [kocCrmSearch, setKocCrmSearch] = useState('');
+  const [isLoadingKocs, setIsLoadingKocs] = useState(false);
+
+  const fetchRegisteredKOCs = () => {
+    setIsLoadingKocs(true);
+    getAllRegisteredKOCsFromSupabase()
+      .then((supaUsers) => {
+        let localUsers: KOCUser[] = [];
+        try {
+          const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+          if (savedUsersStr) localUsers = JSON.parse(savedUsersStr);
+        } catch (e) {
+          console.warn(e);
+        }
+
+        const map = new Map<string, KOCUser>();
+        localUsers.forEach((u) => {
+          const h = (u.tiktokHandle || u.name || '').toLowerCase().replace(/[@\s]/g, '');
+          if (h && u.role !== 'admin') map.set(h, u);
+        });
+        supaUsers.forEach((u) => {
+          const h = (u.tiktokHandle || u.name || '').toLowerCase().replace(/[@\s]/g, '');
+          if (h && u.role !== 'admin') {
+            const existing = map.get(h);
+            map.set(h, { ...existing, ...u });
+          }
+        });
+        setRegisteredKOCs(Array.from(map.values()));
+        setIsLoadingKocs(false);
+      })
+      .catch((err) => {
+        console.warn('Lỗi lấy KOC:', err);
+        setIsLoadingKocs(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchRegisteredKOCs();
+  }, [activeAdminTab]);
 
   // Selected application for detail modal
   const [selectedApp, setSelectedApp] = useState<KOCApplication | null>(null);
@@ -3033,94 +3078,369 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
         {/* ---------------------------------------------------------------------
             NỘI DUNG CHI TIẾT 5: DANH BẠ KOC & ĐỐI TÁC (CRM)
+            Hiển thị toàn bộ KOC đã tạo tài khoản trên web kể cả chưa nộp đơn nào
             --------------------------------------------------------------------- */}
-        {activeAdminTab === 'koc-crm' && (
-          <div className="space-y-4">
-            {applications.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-xs">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-[#6366f1] mb-3">
-                  <span className="material-symbols-outlined text-3xl">group_off</span>
-                </div>
-                <h4 className="text-base font-bold text-slate-900">Chưa có KOC nào trong hệ thống</h4>
-                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                  Hệ thống vừa hoàn thiện và ở trạng thái sạch 100%. Khi có KOC thật đăng ký tài khoản hoặc nộp đơn nhận mẫu, danh bạ KOC CRM sẽ tự động hiển thị tại đây.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from(
-                  new Map<string, KOCApplication>(
-                    applications.map((item): [string, KOCApplication] => [item.tiktokHandle || item.kocName, item])
-                  ).values()
-                ).map((koc) => {
-                const kocTotalApps = applications.filter((a) => a.tiktokHandle === koc.tiktokHandle).length;
-                const kocCompletedApps = applications.filter(
-                  (a) => a.tiktokHandle === koc.tiktokHandle && a.status === 'Đã lên bài'
-                ).length;
+        {activeAdminTab === 'koc-crm' && (() => {
+          // 1. Hợp nhất danh sách KOC từ Supabase/LocalStorage và các đơn applications
+          const map = new Map<
+            string,
+            {
+              id: string;
+              name: string;
+              tiktokHandle: string;
+              followers: string;
+              followersCount: number;
+              phone: string;
+              email: string;
+              address: string;
+              avatar: string;
+              categories: string[];
+              verified: boolean;
+              totalApplications: number;
+              completedApplications: number;
+              hasApplied: boolean;
+            }
+          >();
 
-                return (
-                  <div
-                    key={koc.id}
-                    className="rounded-2xl bg-white p-5 shadow-xs border border-slate-200 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-                  >
-                    <div className="flex items-start gap-3.5">
-                      <img
-                        src={koc.avatar}
-                        alt={koc.kocName}
-                        className="h-14 w-14 rounded-full object-cover border-2 border-blue-200 shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-slate-900 text-sm truncate flex items-center gap-1">
-                            {koc.kocName}
-                            {renderKocLoyaltyStar(koc.tiktokHandle, koc.kocName)}
-                            {koc.verified && <span className="material-symbols-outlined text-[15px] text-blue-600">verified</span>}
-                          </h4>
-                          <span className="rounded bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.5 shrink-0 border border-blue-200">
-                            {koc.followersCount > 30000 ? 'Micro KOC' : 'Nano KOC'}
-                          </span>
-                        </div>
-                        <a
-                          href={`https://tiktok.com/@${koc.tiktokHandle.replace('@', '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs font-bold text-blue-600 hover:underline block truncate mt-0.5"
-                        >
-                          {koc.tiktokHandle}
-                        </a>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          📊 <strong>{koc.followers}</strong> followers • {koc.avgViews}
-                        </p>
-                      </div>
-                    </div>
+          // Thêm KOC đã đăng ký tài khoản trên web
+          registeredKOCs.forEach((u) => {
+            const h = (u.tiktokHandle || u.name || '').toLowerCase().replace(/[@\s]/g, '');
+            if (!h || u.role === 'admin') return;
 
-                    <div className="rounded-xl bg-blue-50/60 p-3 text-xs space-y-1.5 border border-blue-100">
-                      <p className="text-slate-700">📞 SĐT: <strong className="text-slate-900 font-mono">{koc.phone}</strong></p>
-                      <p className="text-slate-700 truncate">✉️ Email: <span className="text-slate-900">{koc.email}</span></p>
-                      <p className="text-slate-700 line-clamp-2">📍 Địa chỉ: {koc.address}</p>
-                    </div>
+            const userApps = applications.filter(
+              (a) => (a.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === h
+            );
 
-                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                      <div className="text-[11px] text-slate-500">
-                        Đã tham gia: <strong className="text-slate-900">{kocTotalApps}</strong> • Đạt chuẩn: <strong className="text-blue-600 font-bold">{kocCompletedApps}</strong>
-                      </div>
-                      <a
-                        href={`https://zalo.me/${koc.phone.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 font-bold text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">chat</span>
-                        Chat Zalo
-                      </a>
+            const fStr = u.followers || 'KOC';
+            const numF = parseInt(fStr.replace(/[^0-9]/g, '')) || 0;
+            const calcCount = fStr.toLowerCase().includes('k') ? numF * 1000 : numF;
+
+            map.set(h, {
+              id: u.id || `koc-${h}`,
+              name: u.name || h,
+              tiktokHandle: u.tiktokHandle || `@${h}`,
+              followers: u.followers || 'KOC',
+              followersCount: calcCount,
+              phone: u.phone || '',
+              email: u.email || '',
+              address: u.address || (u.city ? `${u.district ? u.district + ', ' : ''}${u.city}` : ''),
+              avatar: u.avatar || APP_LOGOS.userProfile,
+              categories: u.categories || [],
+              verified: !!u.verified,
+              totalApplications: userApps.length,
+              completedApplications: userApps.filter((a) => a.status === 'Đã lên bài').length,
+              hasApplied: userApps.length > 0,
+            });
+          });
+
+          // Bổ sung hoặc cập nhật từ applications
+          applications.forEach((app) => {
+            const h = (app.tiktokHandle || app.kocName || '').toLowerCase().replace(/[@\s]/g, '');
+            if (!h) return;
+
+            const userApps = applications.filter(
+              (a) => (a.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === h
+            );
+
+            const existing = map.get(h);
+            if (existing) {
+              map.set(h, {
+                ...existing,
+                name: existing.name || app.kocName,
+                phone: existing.phone || app.phone,
+                email: existing.email || app.email,
+                address: existing.address || app.address,
+                avatar:
+                  existing.avatar && !existing.avatar.includes('dicebear')
+                    ? existing.avatar
+                    : app.avatar || existing.avatar,
+                totalApplications: userApps.length,
+                completedApplications: userApps.filter((a) => a.status === 'Đã lên bài').length,
+                hasApplied: true,
+              });
+            } else {
+              map.set(h, {
+                id: app.id,
+                name: app.kocName,
+                tiktokHandle: app.tiktokHandle,
+                followers: app.followers || `${app.followersCount || 0}`,
+                followersCount: app.followersCount || 0,
+                phone: app.phone || '',
+                email: app.email || '',
+                address: app.address || '',
+                avatar: app.avatar || APP_LOGOS.userProfile,
+                categories: [],
+                verified: !!app.verified,
+                totalApplications: userApps.length,
+                completedApplications: userApps.filter((a) => a.status === 'Đã lên bài').length,
+                hasApplied: true,
+              });
+            }
+          });
+
+          const allKOCs = Array.from(map.values());
+
+          // 2. Lọc theo bộ lọc và tìm kiếm
+          const filteredKOCs = allKOCs.filter((koc) => {
+            if (kocCrmFilter === 'unapplied' && koc.hasApplied) return false;
+            if (kocCrmFilter === 'applied' && !koc.hasApplied) return false;
+
+            if (kocCrmSearch.trim()) {
+              const q = kocCrmSearch.toLowerCase().trim();
+              const matchName = (koc.name || '').toLowerCase().includes(q);
+              const matchHandle = (koc.tiktokHandle || '').toLowerCase().includes(q);
+              const matchPhone = (koc.phone || '').toLowerCase().includes(q);
+              const matchEmail = (koc.email || '').toLowerCase().includes(q);
+              return matchName || matchHandle || matchPhone || matchEmail;
+            }
+
+            return true;
+          });
+
+          const unappliedCount = allKOCs.filter((k) => !k.hasApplied).length;
+          const appliedCount = allKOCs.filter((k) => k.hasApplied).length;
+
+          return (
+            <div className="space-y-4">
+              {/* Thẻ Thống kê & Bộ lọc KOC CRM */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-purple-600 text-[22px]">contact_page</span>
+                      <h3 className="font-['Plus_Jakarta_Sans'] text-base font-extrabold text-slate-900">
+                        Danh bạ & Quản trị KOC (CRM)
+                      </h3>
                     </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Theo dõi toàn bộ KOC đã đăng ký tài khoản trên web (kể cả KOC mới tạo tài khoản chưa nộp đơn nào) và KOC đang chạy chiến dịch.
+                    </p>
                   </div>
-                );
-              })}
+                  <button
+                    type="button"
+                    onClick={fetchRegisteredKOCs}
+                    disabled={isLoadingKocs}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                    title="Tải lại danh sách KOC từ máy chủ Supabase"
+                  >
+                    <span className={`material-symbols-outlined text-[16px] ${isLoadingKocs ? 'animate-spin' : ''}`}>
+                      refresh
+                    </span>
+                    <span>{isLoadingKocs ? 'Đang tải...' : 'Làm mới danh sách'}</span>
+                  </button>
+                </div>
+
+                {/* 3 Thẻ thống kê số lượng */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
+                  <div className="rounded-xl bg-purple-50/70 border border-purple-100 p-3">
+                    <p className="text-[11px] font-semibold text-purple-700">Tổng KOC trong hệ thống</p>
+                    <p className="text-xl font-extrabold text-purple-900 mt-0.5">{allKOCs.length} KOC</p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50/70 border border-amber-100 p-3">
+                    <p className="text-[11px] font-semibold text-amber-700">⚡ Mới tạo tài khoản (Chưa nộp đơn)</p>
+                    <p className="text-xl font-extrabold text-amber-900 mt-0.5">{unappliedCount} KOC</p>
+                  </div>
+                  <div className="rounded-xl bg-emerald-50/70 border border-emerald-100 p-3">
+                    <p className="text-[11px] font-semibold text-emerald-700">🎯 Đã tham gia chiến dịch</p>
+                    <p className="text-xl font-extrabold text-emerald-900 mt-0.5">{appliedCount} KOC</p>
+                  </div>
+                </div>
+
+                {/* Bộ lọc tab và thanh tìm kiếm */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setKocCrmFilter('all')}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        kocCrmFilter === 'all'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Tất cả KOC ({allKOCs.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKocCrmFilter('unapplied')}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        kocCrmFilter === 'unapplied'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      ⚡ Mới tạo tài khoản ({unappliedCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKocCrmFilter('applied')}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        kocCrmFilter === 'applied'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      🎯 Đã nộp đơn ({appliedCount})
+                    </button>
+                  </div>
+
+                  <div className="relative w-full md:w-64">
+                    <span className="material-symbols-outlined text-slate-400 absolute left-3 top-2.5 text-[18px]">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={kocCrmSearch}
+                      onChange={(e) => setKocCrmSearch(e.target.value)}
+                      placeholder="Tìm tên, ID TikTok, SĐT..."
+                      className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Danh sách thẻ KOC */}
+              {filteredKOCs.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-xs">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-[#6366f1] mb-3">
+                    <span className="material-symbols-outlined text-3xl">person_search</span>
+                  </div>
+                  <h4 className="text-base font-bold text-slate-900">
+                    {kocCrmSearch ? 'Không tìm thấy KOC nào phù hợp' : 'Chưa có KOC nào trong danh mục này'}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    {kocCrmSearch
+                      ? 'Hãy thử thay đổi từ khóa tìm kiếm hoặc bấm nút "Làm mới danh sách".'
+                      : 'Khi có KOC đăng ký tài khoản mới trên website hoặc gửi đơn nhận mẫu, thông tin sẽ tự động hiển thị tại đây.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredKOCs.map((koc) => (
+                    <div
+                      key={koc.id || koc.tiktokHandle}
+                      className="rounded-2xl bg-white p-5 shadow-xs border border-slate-200 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                    >
+                      <div className="flex items-start gap-3.5">
+                        <img
+                          src={koc.avatar || APP_LOGOS.userProfile}
+                          alt={koc.name}
+                          className="h-14 w-14 rounded-full object-cover border-2 border-purple-200 shrink-0 bg-slate-100"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <h4 className="font-bold text-slate-900 text-sm truncate flex items-center gap-1">
+                              {koc.name}
+                              {renderKocLoyaltyStar(koc.tiktokHandle, koc.name)}
+                              {koc.verified && (
+                                <span className="material-symbols-outlined text-[15px] text-blue-600">
+                                  verified
+                                </span>
+                              )}
+                            </h4>
+                            {koc.hasApplied ? (
+                              <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 shrink-0 border border-emerald-200">
+                                Đã nộp ({koc.totalApplications})
+                              </span>
+                            ) : (
+                              <span className="rounded bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 shrink-0 border border-amber-200 flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[12px]">bolt</span>
+                                <span>Chưa nộp đơn</span>
+                              </span>
+                            )}
+                          </div>
+                          <a
+                            href={`https://tiktok.com/@${koc.tiktokHandle.replace('@', '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-bold text-purple-600 hover:underline block truncate mt-0.5"
+                          >
+                            {koc.tiktokHandle}
+                          </a>
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            📊 <strong>{koc.followers}</strong> followers
+                          </p>
+                          {koc.categories && koc.categories.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {koc.categories.map((c, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded"
+                                >
+                                  {c}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Thông tin liên hệ */}
+                      <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1.5 border border-slate-100">
+                        <p className="text-slate-700">
+                          📞 SĐT:{' '}
+                          {koc.phone ? (
+                            <strong className="text-slate-900 font-mono">{koc.phone}</strong>
+                          ) : (
+                            <span className="text-slate-400 italic">Chưa cập nhật</span>
+                          )}
+                        </p>
+                        <p className="text-slate-700 truncate">
+                          ✉️ Email:{' '}
+                          {koc.email ? (
+                            <span className="text-slate-900">{koc.email}</span>
+                          ) : (
+                            <span className="text-slate-400 italic">Chưa cập nhật</span>
+                          )}
+                        </p>
+                        {koc.address && (
+                          <p className="text-slate-700 line-clamp-2">📍 Địa chỉ: {koc.address}</p>
+                        )}
+                      </div>
+
+                      {/* Footer trạng thái & liên hệ */}
+                      <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+                        <div className="text-[11px] text-slate-500">
+                          {koc.hasApplied ? (
+                            <span>
+                              Đã nộp: <strong className="text-slate-900">{koc.totalApplications} đơn</strong> • Đạt: <strong className="text-emerald-600 font-bold">{koc.completedApplications}</strong>
+                            </span>
+                          ) : (
+                            <span className="text-amber-700 font-medium flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">person_check</span>
+                              <span>Tài khoản mới tạo</span>
+                            </span>
+                          )}
+                        </div>
+                        {koc.phone ? (
+                          <a
+                            href={`https://zalo.me/${koc.phone.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 font-bold text-blue-600 hover:text-blue-800 hover:underline shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">chat</span>
+                            Chat Zalo
+                          </a>
+                        ) : (
+                          <a
+                            href={`https://tiktok.com/@${koc.tiktokHandle.replace('@', '')}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 font-bold text-purple-600 hover:text-purple-800 hover:underline shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                            Kênh TikTok
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          );
+        })()}
       </main>
 
       {/* DETAIL & SHIPPING UPDATE MODAL */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { KOCUser } from '../types';
 import { APP_LOGOS } from '../data/mockData';
+import { saveKOCProfileToSupabase } from '../services/supabaseService';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -240,6 +241,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     localStorage.setItem('koctrend_registered_users', JSON.stringify([...savedUsers, newUser]));
     persistRememberedUser(newUser, rememberMe);
+    saveKOCProfileToSupabase(newUser).catch((err) => console.warn('Lưu Supabase KOC thất bại:', err));
     onLoginSuccess(newUser, true);
   };
 
@@ -362,6 +364,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     localStorage.setItem('koctrend_registered_users', JSON.stringify(savedUsers));
     localStorage.setItem('koctrend_koc_profile', JSON.stringify(targetUser));
     persistRememberedUser(targetUser, true);
+    saveKOCProfileToSupabase(targetUser).catch((err) => console.warn('Lưu Supabase KOC thất bại:', err));
 
     // Đăng nhập ngay lập tức cho người dùng
     onLoginSuccess(targetUser, false);

@@ -543,3 +543,36 @@ export async function getKOCProfileFromSupabase(targetHandle: string): Promise<K
     return null;
   }
 }
+
+// 13. Lấy toàn bộ danh sách KOC đã đăng ký tài khoản từ Supabase (kể cả chưa tham gia chiến dịch nào)
+export async function getAllRegisteredKOCsFromSupabase(): Promise<KOCUser[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('id, title, description, tiktokHandle, created_at')
+      .like('id', '__KOC_PROFILE__%')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    const list: KOCUser[] = [];
+    data.forEach((row) => {
+      if (row.description) {
+        try {
+          const parsed = JSON.parse(row.description) as KOCUser;
+          if (parsed && (parsed.tiktokHandle || parsed.name)) {
+            list.push(parsed);
+          }
+        } catch (e) {
+          console.warn('Lỗi parse KOC Profile:', e);
+        }
+      }
+    });
+    return list;
+  } catch (err) {
+    console.warn('Lỗi tải danh sách KOC từ Supabase:', err);
+    return [];
+  }
+}
