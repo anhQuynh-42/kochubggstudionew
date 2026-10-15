@@ -5,7 +5,7 @@ import { APP_LOGOS } from '../data/mockData';
 interface LoginModalProps {
   onClose: () => void;
   onLoginSuccess: (user: KOCUser, isNewRegistration?: boolean) => void;
-  initialMode?: 'login' | 'register';
+  initialMode?: 'login' | 'register' | 'forgot_password';
   promptMessage?: string | null;
   onOpenCreateProfile?: () => void;
 }
@@ -25,7 +25,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialMode = 'login',
   promptMessage,
 }) => {
-  const [authMode, setAuthMode] = useState<'login' | 'register'>(initialMode);
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot_password'>(initialMode);
 
   // Login form states
   const [loginMethod, setLoginMethod] = useState<'tiktok' | 'phone'>('tiktok');
@@ -33,6 +33,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(true);
+  const [rememberedUser, setRememberedUser] = useState<KOCUser | null>(null);
 
   // Register form states
   const [regName, setRegName] = useState('');
@@ -41,13 +43,67 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regFollowers, setRegFollowers] = useState('1K+');
+
+  // Forgot password form states
+  const [forgotHandle, setForgotHandle] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
+
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccessNotice, setLoginSuccessNotice] = useState<string | null>(null);
 
+  // Tải thông tin tài khoản đã ghi nhớ trên máy này
+  useEffect(() => {
+    try {
+      const rememberedStr = localStorage.getItem('koctrend_remembered_account');
+      if (rememberedStr) {
+        const parsed: KOCUser = JSON.parse(rememberedStr);
+        setRememberedUser(parsed);
+        if (parsed.tiktokHandle) {
+          setLoginHandle(parsed.tiktokHandle);
+          setForgotHandle(parsed.tiktokHandle);
+        }
+      } else {
+        const profileStr = localStorage.getItem('koctrend_koc_profile');
+        if (profileStr) {
+          const parsed: KOCUser = JSON.parse(profileStr);
+          setRememberedUser(parsed);
+          if (parsed.tiktokHandle) {
+            setLoginHandle(parsed.tiktokHandle);
+            setForgotHandle(parsed.tiktokHandle);
+          }
+        }
+      }
 
+      const prefRemember = localStorage.getItem('koctrend_remember_me');
+      if (prefRemember !== null) {
+        setRememberMe(prefRemember === 'true');
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }, []);
+
+  // Xử lý lưu hoặc xoá tài khoản ghi nhớ
+  const persistRememberedUser = (user: KOCUser, shouldRemember: boolean) => {
+    try {
+      localStorage.setItem('koctrend_remember_me', shouldRemember ? 'true' : 'false');
+      if (shouldRemember) {
+        localStorage.setItem('koctrend_remembered_account', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('koctrend_remembered_account');
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+    setLoginSuccessNotice(null);
     const handleValue = loginHandle.trim().toLowerCase();
     const cleanHandle = handleValue ? (handleValue.startsWith('@') ? handleValue : `@${handleValue}`) : '';
     const phoneValue = loginPhone.trim();
@@ -71,6 +127,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           city: 'Hà Nội',
           password: 'kocity6102026',
         };
+        persistRememberedUser(adminUser, rememberMe);
         onLoginSuccess(adminUser, false);
         return;
       } else {
@@ -115,7 +172,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             (loginMethod === 'phone' && activePhoneNorm === normTargetPhone)
           ) {
             foundUser = activeUser;
-            // Thêm vào savedUsers để lưu trữ bền vững
             savedUsers = [...savedUsers, activeUser];
             localStorage.setItem('koctrend_registered_users', JSON.stringify(savedUsers));
           }
@@ -127,15 +183,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     if (foundUser) {
       const role = foundUser.role || 'koc';
-      onLoginSuccess({ ...foundUser, role }, false);
+      const completeUser = { ...foundUser, role };
+      persistRememberedUser(completeUser, rememberMe);
+      onLoginSuccess(completeUser, false);
     } else {
-      setLoginError('Tài khoản hoặc mật khẩu không chính xác. KOC có thể đăng ký nhanh bên tab "Đăng ký tài khoản".');
+      setLoginError(
+        'Tài khoản hoặc mật khẩu không chính xác. Nếu quên mật khẩu, bạn có thể bấm "Quên mật khẩu?" ngay bên dưới để đặt lại mà không lo mất dữ liệu.'
+      );
     }
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+    setLoginSuccessNotice(null);
     const cleanHandle = regHandle.trim().startsWith('@')
       ? regHandle.trim()
       : `@${regHandle.trim() || 'new.koc'}`;
@@ -150,7 +211,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     );
 
     if (exists) {
-      setLoginError('Tài khoản TikTok này đã được đăng ký.');
+      setLoginError('Tài khoản TikTok này đã được đăng ký. Bạn có thể sang tab Đăng nhập hoặc bấm Quên mật khẩu.');
       return;
     }
 
@@ -178,7 +239,132 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     };
 
     localStorage.setItem('koctrend_registered_users', JSON.stringify([...savedUsers, newUser]));
+    persistRememberedUser(newUser, rememberMe);
     onLoginSuccess(newUser, true);
+  };
+
+  // 3. XỬ LÝ QUÊN MẬT KHẨU & ĐẶT LẠI MẬT KHẨU MỚI (BẢO TOÀN 100% DỮ LIỆU)
+  const handleForgotPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    setLoginSuccessNotice(null);
+
+    const handleValue = forgotHandle.trim().toLowerCase();
+    const cleanHandle = handleValue ? (handleValue.startsWith('@') ? handleValue : `@${handleValue}`) : '';
+    const newPass = forgotNewPassword.trim();
+    const confirmPass = forgotConfirmPassword.trim();
+
+    if (!cleanHandle) {
+      setLoginError('Vui lòng nhập Handle TikTok của tài khoản cần lấy lại.');
+      return;
+    }
+
+    if (newPass.length < 6) {
+      setLoginError('Mật khẩu mới phải có tối thiểu 6 ký tự.');
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      setLoginError('Mật khẩu xác nhận không khớp với mật khẩu mới.');
+      return;
+    }
+
+    // Nếu là tài khoản Admin
+    if (cleanHandle === '@adminwebkocity1235') {
+      setLoginError('Tài khoản Quản trị viên sử dụng mật khẩu hệ thống cố định: kocity6102026. Bạn hãy quay lại Đăng nhập để sử dụng mật khẩu này.');
+      return;
+    }
+
+    const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+    let savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
+    const normTargetHandle = cleanHandle.toLowerCase().replace(/[@\s]/g, '');
+
+    let foundIndex = savedUsers.findIndex(
+      (u) => (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle
+    );
+
+    let targetUser: KOCUser;
+
+    if (foundIndex >= 0) {
+      // Giữ nguyên 100% toàn bộ thông tin hồ sơ, chỉ cập nhật password mới
+      targetUser = { ...savedUsers[foundIndex], password: newPass };
+      savedUsers[foundIndex] = targetUser;
+    } else {
+      // Nếu chưa có trong savedUsers nhưng có trong active profile hoặc đơn ứng tuyển: khôi phục nguyên vẹn
+      let fallbackName = cleanHandle.replace('@', '');
+      let fallbackAvatar = APP_LOGOS.userProfile;
+      let fallbackFollowers = '1K+';
+      let fallbackPhone = '';
+      let fallbackEmail = `${cleanHandle.replace('@', '')}@gmail.com`;
+      let fallbackCategories = ['Làm đẹp & Mỹ phẩm'];
+
+      try {
+        const activeProfileStr = localStorage.getItem('koctrend_koc_profile');
+        if (activeProfileStr) {
+          const activeUser: KOCUser = JSON.parse(activeProfileStr);
+          if ((activeUser.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle) {
+            fallbackName = activeUser.name || fallbackName;
+            fallbackAvatar = activeUser.avatar || fallbackAvatar;
+            fallbackFollowers = activeUser.followers || fallbackFollowers;
+            fallbackPhone = activeUser.phone || fallbackPhone;
+            fallbackEmail = activeUser.email || fallbackEmail;
+            fallbackCategories = activeUser.categories || fallbackCategories;
+          }
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+
+      try {
+        const appsStr = localStorage.getItem('koctrend_applications');
+        if (appsStr) {
+          const apps = JSON.parse(appsStr);
+          const foundApp = apps.find(
+            (a: { tiktokHandle?: string; kocName?: string; phone?: string; email?: string }) =>
+              (a.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle
+          );
+          if (foundApp) {
+            fallbackName = foundApp.kocName || fallbackName;
+            fallbackPhone = foundApp.phone || fallbackPhone;
+            fallbackEmail = foundApp.email || fallbackEmail;
+          }
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+
+      targetUser = {
+        id: `koc-reg-${Date.now()}`,
+        name: fallbackName,
+        role: 'koc',
+        avatar: fallbackAvatar,
+        tiktokHandle: cleanHandle,
+        followers: fallbackFollowers,
+        phone: fallbackPhone,
+        email: fallbackEmail,
+        password: newPass,
+        verified: false,
+        city: '',
+        district: '',
+        address: '',
+        shippingNote: '',
+        bio: '',
+        categories: fallbackCategories,
+        avgViews: '',
+        engagementRate: '',
+        sampleDeliveredCount: 0,
+        completedVideosCount: 0,
+      };
+      savedUsers = [...savedUsers, targetUser];
+    }
+
+    // Lưu trữ bền vững dữ liệu mới cập nhật
+    localStorage.setItem('koctrend_registered_users', JSON.stringify(savedUsers));
+    localStorage.setItem('koctrend_koc_profile', JSON.stringify(targetUser));
+    persistRememberedUser(targetUser, true);
+
+    // Đăng nhập ngay lập tức cho người dùng
+    onLoginSuccess(targetUser, false);
   };
 
   return (
@@ -215,36 +401,72 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </div>
         )}
 
+        {loginSuccessNotice && (
+          <div className="mb-4 rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-emerald-600 text-[18px] shrink-0 mt-0.5">
+              check_circle
+            </span>
+            <p className="text-xs text-emerald-950 font-medium leading-relaxed">
+              {loginSuccessNotice}
+            </p>
+          </div>
+        )}
+
         {/* Mode Switcher Tabs */}
-        <div className="flex rounded-2xl bg-slate-100 p-1 mb-5">
-          <button
-            type="button"
-            onClick={() => setAuthMode('login')}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition-all cursor-pointer ${
-              authMode === 'login'
-                ? 'bg-white text-[#6366f1] shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">login</span>
-            <span>Đăng nhập KOC</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthMode('register')}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition-all cursor-pointer ${
-              authMode === 'register'
-                ? 'bg-white text-[#6366f1] shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">person_add</span>
-            <span>Đăng ký tài khoản</span>
-          </button>
-        </div>
+        {authMode !== 'forgot_password' ? (
+          <div className="flex rounded-2xl bg-slate-100 p-1 mb-5">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('login');
+                setLoginError(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition-all cursor-pointer ${
+                authMode === 'login'
+                  ? 'bg-white text-[#6366f1] shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">login</span>
+              <span>Đăng nhập KOC</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('register');
+                setLoginError(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition-all cursor-pointer ${
+                authMode === 'register'
+                  ? 'bg-white text-[#6366f1] shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">person_add</span>
+              <span>Đăng ký tài khoản</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('login');
+                setLoginError(null);
+              }}
+              className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-[#6366f1] transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span>Quay lại Đăng nhập</span>
+            </button>
+            <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+              Khôi phục mật khẩu
+            </span>
+          </div>
+        )}
 
         {/* TAB 1: LOGIN */}
-        {authMode === 'login' ? (
+        {authMode === 'login' && (
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white">
@@ -258,7 +480,35 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               Đăng nhập để xem danh sách chiến dịch của tôi, hoàn thiện hồ sơ KOC và tham gia các chiến dịch nhận mẫu.
             </p>
 
-
+            {/* Quick 1-click Login for Remembered User */}
+            {rememberedUser && rememberedUser.role !== 'admin' && (
+              <div className="mb-4 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 p-3 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <img
+                    src={rememberedUser.avatar || APP_LOGOS.userProfile}
+                    alt={rememberedUser.name}
+                    className="h-9 w-9 rounded-full object-cover border border-indigo-200 shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-900 truncate">
+                      {rememberedUser.name}
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      {rememberedUser.tiktokHandle} • Đã lưu trên máy
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onLoginSuccess(rememberedUser, false)}
+                  className="shrink-0 flex items-center gap-1 rounded-xl bg-[#6366f1] hover:bg-[#4f46e5] text-white px-3 py-1.5 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                  title="Đăng nhập ngay với tài khoản đã lưu"
+                >
+                  <span>Vào ngay</span>
+                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </button>
+              </div>
+            )}
 
             {/* Login Method Subtabs */}
             <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-semibold mb-3">
@@ -342,6 +592,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
               </div>
 
+              {/* Remember me & Forgot password row */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center gap-2 text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#6366f1] focus:ring-[#6366f1] cursor-pointer"
+                  />
+                  <span className="text-[11px] font-semibold text-slate-600">Lưu đăng nhập lần sau</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('forgot_password');
+                    setForgotHandle(loginHandle);
+                    setLoginError(null);
+                  }}
+                  className="text-[11px] font-bold text-[#6366f1] hover:text-[#4f46e5] hover:underline cursor-pointer"
+                >
+                  Quên mật khẩu?
+                </button>
+              </div>
+
               <button
                 type="submit"
                 className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
@@ -364,8 +638,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </p>
             </div>
           </div>
-        ) : (
-          /* TAB 2: REGISTER */
+        )}
+
+        {/* TAB 2: REGISTER */}
+        {authMode === 'register' && (
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white">
@@ -470,6 +746,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
               </div>
 
+              {/* Remember me on register */}
+              <div className="flex items-center text-xs pt-0.5">
+                <label className="flex items-center gap-2 text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#6366f1] focus:ring-[#6366f1] cursor-pointer"
+                  />
+                  <span className="text-[11px] font-semibold text-slate-600">Lưu đăng nhập tài khoản này trên thiết bị</span>
+                </label>
+              </div>
+
               <div className="rounded-xl bg-indigo-50 p-2.5 text-[11px] text-indigo-900 flex items-start gap-2 border border-indigo-200">
                 <span className="material-symbols-outlined text-[16px] text-[#6366f1] shrink-0 mt-0.5">
                   verified
@@ -499,6 +788,127 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   Đăng nhập tại đây
                 </button>
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: FORGOT PASSWORD */}
+        {authMode === 'forgot_password' && (
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-rose-500 text-white">
+                <span className="material-symbols-outlined text-sm">lock_reset</span>
+              </div>
+              <h3 className="font-['Plus_Jakarta_Sans'] text-base font-extrabold text-slate-900">
+                Lấy lại mật khẩu tài khoản
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Nhập Handle TikTok của bạn và tạo mật khẩu mới. <strong>Mọi dữ liệu hồ sơ và chiến dịch của bạn được bảo toàn 100%.</strong>
+            </p>
+
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Handle TikTok đã đăng ký <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">@</span>
+                  <input
+                    type="text"
+                    value={forgotHandle.replace('@', '')}
+                    onChange={(e) => setForgotHandle(e.target.value)}
+                    placeholder="minhthu.beauty"
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-7 pr-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Mật khẩu mới <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showForgotNewPassword ? 'text' : 'password'}
+                    value={forgotNewPassword}
+                    onChange={(e) => setForgotNewPassword(e.target.value)}
+                    placeholder="Tối thiểu 6 ký tự"
+                    minLength={6}
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-10 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 flex items-center justify-center cursor-pointer"
+                    title={showForgotNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showForgotNewPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Xác nhận lại mật khẩu mới <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showForgotConfirmPassword ? 'text' : 'password'}
+                    value={forgotConfirmPassword}
+                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                    placeholder="Nhập lại chính xác mật khẩu mới"
+                    minLength={6}
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-10 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotConfirmPassword(!showForgotConfirmPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 flex items-center justify-center cursor-pointer"
+                    title={showForgotConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showForgotConfirmPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-amber-50 p-2.5 text-[11px] text-amber-900 flex items-start gap-2 border border-amber-200">
+                <span className="material-symbols-outlined text-[16px] text-amber-600 shrink-0 mt-0.5">
+                  verified_user
+                </span>
+                <span>
+                  Việc đặt lại mật khẩu <strong>không làm thay đổi hay mất bất kỳ dữ liệu</strong> nào: danh sách đơn nhận mẫu, trạng thái duyệt đơn và hồ sơ Media Kit của bạn vẫn nguyên vẹn 100%.
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 py-2.5 text-xs font-bold text-white shadow-md shadow-amber-500/20 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+              >
+                <span>Cập nhật mật khẩu & Đăng nhập ngay</span>
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+              </button>
+            </form>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('login');
+                  setLoginError(null);
+                }}
+                className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">arrow_back</span>
+                <span>Quay lại trang Đăng nhập</span>
+              </button>
             </div>
           </div>
         )}
