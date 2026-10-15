@@ -658,7 +658,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <form onSubmit={handleRegisterSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Họ và tên của bạn <span className="text-red-500">*</span>
+                  Tên tài khoản <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
