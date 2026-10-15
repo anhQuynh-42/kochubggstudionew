@@ -42,7 +42,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [regCategory, setRegCategory] = useState('Làm đẹp & Mỹ phẩm');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
-  const [regFollowers, setRegFollowers] = useState('1K+');
+  const [regFollowers, setRegFollowers] = useState('');
 
   // Forgot password form states
   const [forgotHandle, setForgotHandle] = useState('');
@@ -221,7 +221,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       role: 'koc',
       avatar: APP_LOGOS.userProfile,
       tiktokHandle: cleanHandle,
-      followers: regFollowers.trim() || '1K+',
+      followers: regFollowers.trim() || 'KOC',
       phone: '',
       email: `${cleanHandle.replace('@', '')}@gmail.com`,
       password: regPassword,
@@ -690,13 +690,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Lượng followers (Từ 1K)
+                    Lượng followers
                   </label>
                   <input
                     type="text"
                     value={regFollowers}
                     onChange={(e) => setRegFollowers(e.target.value)}
-                    placeholder="VD: 1K, 2.5K, 15.000..."
+                    placeholder="VD: 500, 1.2K, 50.000..."
                     className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
                   />
                 </div>
