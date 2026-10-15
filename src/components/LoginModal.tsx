@@ -32,14 +32,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [loginHandle, setLoginHandle] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Register form states
   const [regName, setRegName] = useState('');
   const [regHandle, setRegHandle] = useState('');
-  const [regPhone, setRegPhone] = useState('');
   const [regCategory, setRegCategory] = useState('Làm đẹp & Mỹ phẩm');
   const [regPassword, setRegPassword] = useState('');
-  const [regFollowers, setRegFollowers] = useState('10K+');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [regFollowers, setRegFollowers] = useState('1K+');
   const [loginError, setLoginError] = useState<string | null>(null);
 
 
@@ -143,16 +144,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     const savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
 
     const normRegHandle = cleanHandle.toLowerCase().replace(/[@\s]/g, '');
-    const normRegPhone = regPhone.trim().replace(/[\s.-]/g, '');
 
     const exists = savedUsers.some(
-      (u) =>
-        (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normRegHandle ||
-        (normRegPhone !== '' && (u.phone || '').replace(/[\s.-]/g, '') === normRegPhone)
+      (u) => (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normRegHandle
     );
 
     if (exists) {
-      setLoginError('Tài khoản TikTok hoặc số điện thoại này đã được đăng ký.');
+      setLoginError('Tài khoản TikTok này đã được đăng ký.');
       return;
     }
 
@@ -162,8 +160,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       role: 'koc',
       avatar: APP_LOGOS.userProfile,
       tiktokHandle: cleanHandle,
-      followers: regFollowers,
-      phone: regPhone.trim() || '',
+      followers: regFollowers.trim() || '1K+',
+      phone: '',
       email: `${cleanHandle.replace('@', '')}@gmail.com`,
       password: regPassword,
       verified: false,
@@ -322,14 +320,26 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <label className="block text-xs font-bold text-slate-800 mb-1">
                   Mật khẩu
                 </label>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-10 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 flex items-center justify-center cursor-pointer"
+                    title={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showLoginPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
               </div>
 
               <button
@@ -404,33 +414,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Lượng followers
+                    Lượng followers (Từ 1K)
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={regFollowers}
                     onChange={(e) => setRegFollowers(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white py-2 px-2.5 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
-                  >
-                    <option value="5K+">5K - 10K (Nano)</option>
-                    <option value="15K+">10K - 50K (Micro)</option>
-                    <option value="50K+">50K - 100K (Mid-tier)</option>
-                    <option value="100K+">100K+ (Top Creator)</option>
-                  </select>
+                    placeholder="VD: 1K, 2.5K, 15.000..."
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                  />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Số điện thoại nhận hàng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={regPhone}
-                  onChange={(e) => setRegPhone(e.target.value)}
-                  placeholder="0912.xxx.xxx"
-                  className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
-                  required
-                />
               </div>
 
               <div>
@@ -454,15 +447,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <label className="block text-xs font-bold text-slate-800 mb-1">
                   Mật khẩu bảo vệ tài khoản <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="password"
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
-                  placeholder="Tối thiểu 6 ký tự"
-                  minLength={6}
-                  className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showRegPassword ? 'text' : 'password'}
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="Tối thiểu 6 ký tự"
+                    minLength={6}
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-10 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1 flex items-center justify-center cursor-pointer"
+                    title={showRegPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showRegPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
               </div>
 
               <div className="rounded-xl bg-indigo-50 p-2.5 text-[11px] text-indigo-900 flex items-start gap-2 border border-indigo-200">

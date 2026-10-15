@@ -118,7 +118,9 @@ export async function getCampaignsFromSupabase(): Promise<Campaign[] | null> {
     }
 
     if (!data) return [];
-    return data.map((item) => parseCampaignFromSupabase(item as Record<string, unknown>));
+    return data
+      .filter((item) => !(item as { id?: string }).id?.startsWith('__'))
+      .map((item) => parseCampaignFromSupabase(item as Record<string, unknown>));
   } catch (err) {
     console.error('Lỗi kết nối Supabase campaigns:', err);
     return null;
@@ -239,7 +241,8 @@ export function subscribeToCampaignsRealtime(
         table: 'campaigns',
       },
       (payload) => {
-        if (payload.new && (payload.new as { id?: string }).id !== '__SITE_CONFIG__') {
+        const id = (payload.new as { id?: string })?.id;
+        if (payload.new && id && !id.startsWith('__')) {
           const parsed = parseCampaignFromSupabase(payload.new as Record<string, unknown>);
           if (onInsert) onInsert(parsed);
         }
@@ -253,7 +256,8 @@ export function subscribeToCampaignsRealtime(
         table: 'campaigns',
       },
       (payload) => {
-        if (payload.new && (payload.new as { id?: string }).id !== '__SITE_CONFIG__') {
+        const id = (payload.new as { id?: string })?.id;
+        if (payload.new && id && !id.startsWith('__')) {
           const parsed = parseCampaignFromSupabase(payload.new as Record<string, unknown>);
           if (onUpdate) onUpdate(parsed);
         }
@@ -267,9 +271,9 @@ export function subscribeToCampaignsRealtime(
         table: 'campaigns',
       },
       (payload) => {
-        if (payload.old && (payload.old as { id?: string }).id !== '__SITE_CONFIG__') {
-          const delId = (payload.old as { id?: string }).id;
-          if (delId && onDelete) onDelete(delId);
+        const delId = (payload.old as { id?: string })?.id;
+        if (delId && !delId.startsWith('__')) {
+          if (onDelete) onDelete(delId);
         }
       }
     )
