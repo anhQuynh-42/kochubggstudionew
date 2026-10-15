@@ -378,8 +378,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
 
-        {/* Header Prompt if any */}
-        {promptMessage && (
+        {/* Header Prompt if any (ẩn ở tab đăng ký) */}
+        {promptMessage && authMode !== 'register' && (
           <div className="mb-4 rounded-2xl bg-indigo-50 border border-indigo-200 p-3 flex items-start gap-2.5">
             <span className="material-symbols-outlined text-[#6366f1] text-[18px] shrink-0 mt-0.5">
               info

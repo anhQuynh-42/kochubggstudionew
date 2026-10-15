@@ -496,7 +496,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2">
               <button
                 id="header-register-btn"
-                onClick={() => onOpenLogin('register', 'Đăng ký tài khoản KOC để nhận mẫu 0đ và quản lý các chiến dịch!')}
+                onClick={() => onOpenLogin('register')}
                 className="hidden sm:flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50/80 hover:bg-purple-100 px-3.5 py-2 text-xs sm:text-sm font-bold text-[#6366f1] transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">person_add</span>
