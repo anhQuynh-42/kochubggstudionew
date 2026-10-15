@@ -255,7 +255,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     const confirmPass = forgotConfirmPassword.trim();
 
     if (!cleanHandle) {
-      setLoginError('Vui lòng nhập Handle TikTok của tài khoản cần lấy lại.');
+      setLoginError('Vui lòng nhập ID TikTok của tài khoản cần lấy lại.');
       return;
     }
 
@@ -536,7 +536,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {loginMethod === 'tiktok' ? (
                 <div>
                   <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Handle TikTok
+                    ID TikTok
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">@</span>
@@ -673,7 +673,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Handle TikTok <span className="text-red-500">*</span>
+                    ID TikTok <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-2.5 top-2 text-xs font-bold text-slate-400">@</span>
@@ -804,13 +804,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </h3>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Nhập Handle TikTok của bạn và tạo mật khẩu mới. <strong>Mọi dữ liệu hồ sơ và chiến dịch của bạn được bảo toàn 100%.</strong>
+              Nhập ID TikTok của bạn và tạo mật khẩu mới. <strong>Mọi dữ liệu hồ sơ và chiến dịch của bạn được bảo toàn 100%.</strong>
             </p>
 
             <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Handle TikTok đã đăng ký <span className="text-red-500">*</span>
+                  ID TikTok đã đăng ký <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">@</span>
