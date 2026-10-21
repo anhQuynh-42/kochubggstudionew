@@ -214,70 +214,76 @@ export const HomePage: React.FC = () => {
           )}
         />
 
-        {/* Bầu trời ngàn sao lấp lánh (sao đứng yên, chỉ sao băng chuyển động) */}
+        {/* Bầu trời ngàn sao lấp lánh (Sao đứng yên hoàn toàn chỉ lấp lánh, chỉ duy nhất sao băng chuyển động) */}
         {isNight && (
           <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
             <style>{`
-              @keyframes starTwinkle1 {
-                0%, 100% { opacity: 0.25; }
-                50% { opacity: 1; filter: drop-shadow(0 0 4px #ffffff); }
+              @keyframes starTwinkle {
+                0%, 100% { opacity: 0.15; }
+                50% { opacity: 1; }
               }
-              @keyframes starTwinkle2 {
-                0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 3px #fef08a); }
-                50% { opacity: 0.2; }
-              }
-              @keyframes starTwinkle3 {
-                0%, 100% { opacity: 0.3; }
-                40% { opacity: 1; filter: drop-shadow(0 0 4px #a5f3fc); }
-                75% { opacity: 0.15; }
-              }
-              @keyframes shootingStarFlight {
+              @keyframes shootingStarMove {
                 0% {
-                  transform: translate(0, 0) rotate(-26deg);
+                  transform: translate(0, 0) rotate(-32deg);
                   opacity: 0;
                 }
-                3% {
+                2% {
                   opacity: 1;
                 }
-                14% {
-                  transform: translate(-340px, 170px) rotate(-26deg);
+                16% {
+                  transform: translate(-360px, 220px) rotate(-32deg);
                   opacity: 0;
                 }
                 100% {
-                  transform: translate(-340px, 170px) rotate(-26deg);
+                  transform: translate(-360px, 220px) rotate(-32deg);
                   opacity: 0;
                 }
               }
-              .kc-star-twinkle-1 { animation: starTwinkle1 2.8s ease-in-out infinite; }
-              .kc-star-twinkle-2 { animation: starTwinkle2 3.4s ease-in-out infinite 0.7s; }
-              .kc-star-twinkle-3 { animation: starTwinkle3 4.1s ease-in-out infinite 1.4s; }
-              .kc-shooting-star {
-                animation: shootingStarFlight 6.5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite 1.5s;
+              .kc-twinkle-1 { animation: starTwinkle 2.2s ease-in-out infinite; }
+              .kc-twinkle-2 { animation: starTwinkle 2.9s ease-in-out infinite 0.7s; }
+              .kc-twinkle-3 { animation: starTwinkle 3.5s ease-in-out infinite 1.3s; }
+              .kc-twinkle-4 { animation: starTwinkle 2.5s ease-in-out infinite 1.8s; }
+              .kc-shooting-star-track {
+                position: absolute;
+                top: 15px;
+                right: 18%;
+                width: 120px;
+                height: 2px;
+                background: linear-gradient(90deg, transparent 0%, rgba(236, 72, 153, 0.5) 45%, rgba(255, 255, 255, 0.95) 100%);
+                border-radius: 9999px;
+                filter: drop-shadow(0 0 3px #ffffff);
+                opacity: 0;
+                animation: shootingStarMove 6s linear infinite 1.5s;
               }
             `}</style>
 
-            {/* SAO BĂNG: VẬT THỂ DUY NHẤT CHUYỂN ĐỘNG TRÊN BẦU TRỜI */}
-            <div
-              className="kc-shooting-star absolute right-24 top-5 h-[2px] w-28 rounded-full bg-gradient-to-r from-transparent via-fuchsia-300 to-white"
-              style={{ filter: 'drop-shadow(0 0 4px #ffffff)' }}
-            />
+            {/* Chỉ DUY NHẤT sao băng là chuyển động lướt qua bầu trời */}
+            <div className="kc-shooting-star-track" />
 
-            {/* CÁC NGÔI SAO: ĐỨNG YÊN 100% TẠI CHỖ, CHỈ LẤP LÁNH (TWINKLE) */}
+            {/* Các ngôi sao ĐỨNG YÊN HOÀN TOÀN, chỉ lấp lánh độ sáng (opacity) */}
             <svg className="absolute inset-0 h-full w-full" fill="none">
-              <circle cx="8%" cy="14%" r="1.4" fill="#ffffff" className="kc-star-twinkle-1" />
-              <circle cx="18%" cy="22%" r="1.2" fill="#fef08a" className="kc-star-twinkle-2" />
-              <circle cx="28%" cy="12%" r="1.5" fill="#ffffff" className="kc-star-twinkle-3" />
-              <circle cx="38%" cy="20%" r="1.2" fill="#a5f3fc" className="kc-star-twinkle-1" />
-              <circle cx="48%" cy="14%" r="1.4" fill="#ffffff" className="kc-star-twinkle-2" />
-              <circle cx="58%" cy="24%" r="1.2" fill="#fef08a" className="kc-star-twinkle-3" />
-              <circle cx="68%" cy="12%" r="1.5" fill="#ffffff" className="kc-star-twinkle-1" />
-              <circle cx="78%" cy="22%" r="1.2" fill="#a5f3fc" className="kc-star-twinkle-2" />
-              <circle cx="88%" cy="14%" r="1.4" fill="#ffffff" className="kc-star-twinkle-3" />
-              <circle cx="94%" cy="24%" r="1.2" fill="#fbcfe8" className="kc-star-twinkle-1" />
+              {/* Sao tròn li ti đứng yên lấp lánh */}
+              <circle cx="8%" cy="14%" r="1.4" fill="#ffffff" className="kc-twinkle-1" />
+              <circle cx="15%" cy="28%" r="1.1" fill="#fef08a" className="kc-twinkle-3" />
+              <circle cx="21%" cy="11%" r="1.5" fill="#ffffff" className="kc-twinkle-2" />
+              <circle cx="29%" cy="22%" r="1.2" fill="#a5f3fc" className="kc-twinkle-4" />
+              <circle cx="36%" cy="15%" r="1.4" fill="#ffffff" className="kc-twinkle-1" />
+              <circle cx="43%" cy="26%" r="1.1" fill="#fef08a" className="kc-twinkle-3" />
+              <circle cx="51%" cy="10%" r="1.6" fill="#ffffff" className="kc-twinkle-2" />
+              <circle cx="58%" cy="20%" r="1.2" fill="#fbcfe8" className="kc-twinkle-4" />
+              <circle cx="66%" cy="13%" r="1.4" fill="#ffffff" className="kc-twinkle-1" />
+              <circle cx="73%" cy="25%" r="1.2" fill="#a5f3fc" className="kc-twinkle-3" />
+              <circle cx="81%" cy="11%" r="1.5" fill="#ffffff" className="kc-twinkle-2" />
+              <circle cx="89%" cy="19%" r="1.3" fill="#fef08a" className="kc-twinkle-4" />
+              <circle cx="95%" cy="14%" r="1.2" fill="#ffffff" className="kc-twinkle-1" />
+              <circle cx="18%" cy="38%" r="1.1" fill="#ffffff" className="kc-twinkle-2" />
+              <circle cx="84%" cy="36%" r="1.2" fill="#ffffff" className="kc-twinkle-3" />
 
-              {/* 2 ngôi sao 4 cánh đứng yên lấp lánh */}
-              <path d="M 150,30 L 151.5,34 L 155,35.5 L 151.5,37 L 150,41 L 148.5,37 L 145,35.5 L 148.5,34 Z" fill="#ffffff" className="kc-star-twinkle-1" />
-              <path d="M 1080,32 L 1081.5,36 L 1085,37.5 L 1081.5,39 L 1080,43 L 1078.5,39 L 1075,37.5 L 1078.5,36 Z" fill="#fef08a" className="kc-star-twinkle-2" />
+              {/* Ngôi sao 4 cánh lấp lánh (Đứng yên tại chỗ) */}
+              <path d="M 140,28 L 142,33 L 147,34.5 L 142,36 L 140,41 L 138,36 L 133,34.5 L 138,33 Z" fill="#ffffff" className="kc-twinkle-1" />
+              <path d="M 490,24 L 491.5,28 L 495,29.5 L 491.5,31 L 490,35 L 488.5,31 L 485,29.5 L 488.5,28 Z" fill="#a5f3fc" className="kc-twinkle-4" />
+              <path d="M 870,22 L 872,27 L 877,28.5 L 872,30 L 870,35 L 868,30 L 863,28.5 L 868,27 Z" fill="#fef08a" className="kc-twinkle-2" />
+              <path d="M 1220,26 L 1221.5,30 L 1225,31.5 L 1221.5,33 L 1220,37 L 1218.5,33 L 1215,31.5 L 1218.5,30 Z" fill="#ffffff" className="kc-twinkle-3" />
             </svg>
           </div>
         )}
