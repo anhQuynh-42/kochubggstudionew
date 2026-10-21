@@ -5,11 +5,14 @@ import React from 'react';
  * Tái hiện thành phố KOCity với các toà nhà studio, tháp truyền hình phát sóng,
  * ánh đèn cửa sổ và beacon nhấp nháy, chuyển tiếp mượt mà từ Hero banner xuống hàng LIVE.
  */
-export const KocitySkyline: React.FC<{ className?: string }> = ({ className = '' }) => {
+export const KocitySkyline: React.FC<{ className?: string; isNight?: boolean }> = ({
+  className = '',
+  isNight = false,
+}) => {
   return (
     <div
       aria-hidden="true"
-      className={`relative w-full overflow-hidden select-none pointer-events-none ${className}`}
+      className={`relative w-full overflow-hidden select-none pointer-events-none transition-all duration-700 ${className}`}
     >
       <style>{`
         @keyframes kocityBeacon {
@@ -78,25 +81,25 @@ export const KocitySkyline: React.FC<{ className?: string }> = ({ className = ''
         className="block h-14 w-full sm:h-20 md:h-24 lg:h-26"
       >
         <defs>
-          {/* Lớp xa: tím nhạt mờ ảo */}
+          {/* Lớp xa: tím nhạt ban ngày hoặc tím than sâu ban đêm */}
           <linearGradient id="kc-skyline-back" x1="720" y1="0" x2="720" y2="96" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.45" />
-            <stop offset="55%" stopColor="#c4b5fd" stopOpacity="0.30" />
-            <stop offset="100%" stopColor="#fafafc" stopOpacity="0.15" />
+            <stop offset="0%" stopColor={isNight ? '#221152' : '#a78bfa'} stopOpacity={isNight ? 0.95 : 0.45} />
+            <stop offset="55%" stopColor={isNight ? '#180c3b' : '#c4b5fd'} stopOpacity={isNight ? 0.8 : 0.3} />
+            <stop offset="100%" stopColor="#fafafc" stopOpacity={isNight ? 0.05 : 0.15} />
           </linearGradient>
 
           {/* Lớp gần: tím hồng rực rỡ mang bản sắc KOCity */}
           <linearGradient id="kc-skyline-front" x1="720" y1="18" x2="720" y2="96" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.65" />
-            <stop offset="35%" stopColor="#a855f7" stopOpacity="0.55" />
-            <stop offset="70%" stopColor="#ec4899" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#fafafc" stopOpacity="0.95" />
+            <stop offset="0%" stopColor={isNight ? '#3b1275' : '#8b5cf6'} stopOpacity={isNight ? 0.95 : 0.65} />
+            <stop offset="35%" stopColor={isNight ? '#581c87' : '#a855f7'} stopOpacity={isNight ? 0.88 : 0.55} />
+            <stop offset="70%" stopColor={isNight ? '#701a75' : '#ec4899'} stopOpacity={isNight ? 0.75 : 0.35} />
+            <stop offset="100%" stopColor="#fafafc" stopOpacity={0.95} />
           </linearGradient>
 
           {/* Màn sương đáy làm mượt đường nối với nền trang */}
           <linearGradient id="kc-skyline-fog" x1="720" y1="60" x2="720" y2="96" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#fafafc" stopOpacity="0" />
-            <stop offset="70%" stopColor="#fafafc" stopOpacity="0.65" />
+            <stop offset="70%" stopColor="#fafafc" stopOpacity={isNight ? 0.8 : 0.65} />
             <stop offset="100%" stopColor="#fafafc" stopOpacity="1" />
           </linearGradient>
 

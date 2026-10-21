@@ -98,6 +98,25 @@ export const HomePage: React.FC = () => {
   const [heroSheetOpen, setHeroSheetOpen] = useState(false);
   const activeFilters = (sort !== 'popular' ? 1 : 0) + (tier ? 1 : 0) + (savedOnly ? 1 : 0);
 
+  // Chế độ Ngày / Đêm cho khối banner KOCity (lưu vào localStorage)
+  const [isNight, setIsNight] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('kocity_hero_theme') === 'night';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleNight = () => {
+    setIsNight((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('kocity_hero_theme', next ? 'night' : 'day');
+      } catch {}
+      return next;
+    });
+  };
+
   // Link "Cách hoạt động" từ menu → cuộn tới đúng mục
   useEffect(() => {
     if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: 'smooth' });
@@ -149,35 +168,150 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* ===== Hero KOCity Creator (Full màn hình, gọn gàng, không ảnh cồng kềnh) ===== */}
-      <section className="relative w-full overflow-hidden border-b border-violet-100/80 bg-[linear-gradient(135deg,#fde7f3_0%,#ede9fe_35%,#dbeafe_65%,#fef3c7_100%)]">
-        <div aria-hidden className="pointer-events-none absolute -left-24 top-6 h-72 w-72 rounded-full bg-pink-300/35 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full bg-indigo-300/35 blur-3xl" />
+      {/* ===== Hero KOCity Creator (Full màn hình, hỗ trợ Bật/Tắt đèn Bầu trời đêm) ===== */}
+      <section
+        className={cx(
+          'relative w-full overflow-hidden transition-all duration-700 ease-in-out border-b',
+          isNight
+            ? 'border-violet-950/80 bg-[linear-gradient(135deg,#0a0618_0%,#160c33_35%,#1f114a_70%,#0f0a24_100%)] text-white'
+            : 'border-violet-100/80 bg-[linear-gradient(135deg,#fde7f3_0%,#ede9fe_35%,#dbeafe_65%,#fef3c7_100%)]'
+        )}
+      >
+        {/* Nút công tắc Tắt/Bật đèn (Day/Night switch) */}
+        <div className="absolute right-3.5 top-3.5 z-20 sm:right-6 sm:top-5">
+          <button
+            type="button"
+            onClick={toggleNight}
+            aria-label={isNight ? 'Bật đèn (Chế độ ban ngày)' : 'Tắt đèn (Chế độ bầu trời đêm)'}
+            className={cx(
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-300 cursor-pointer shadow-xs backdrop-blur-md ring-1',
+              isNight
+                ? 'bg-violet-950/70 text-amber-300 ring-amber-300/40 hover:bg-violet-900/80 hover:text-amber-200 hover:shadow-amber-500/20'
+                : 'bg-white/85 text-slate-700 ring-violet-200/90 hover:bg-white hover:text-slate-950 hover:shadow-violet-500/15'
+            )}
+          >
+            <Icon
+              name={isNight ? 'light_mode' : 'dark_mode'}
+              className={cx('text-[16px] transition-transform duration-300', isNight ? 'text-amber-300 rotate-45' : 'text-violet-600')}
+            />
+            <span className="font-semibold">{isNight ? 'Bật đèn' : 'Tắt đèn'}</span>
+          </button>
+        </div>
 
-        <div className="mx-auto max-w-4xl px-4 pt-6 pb-2 text-center sm:px-6 sm:pt-8 sm:pb-3 lg:pt-9 lg:pb-4">
+        {/* Ánh sáng mờ nghệ thuật */}
+        <div
+          aria-hidden
+          className={cx(
+            'pointer-events-none absolute -left-24 top-6 h-72 w-72 rounded-full blur-3xl transition-all duration-700',
+            isNight ? 'bg-violet-600/25' : 'bg-pink-300/35'
+          )}
+        />
+        <div
+          aria-hidden
+          className={cx(
+            'pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full blur-3xl transition-all duration-700',
+            isNight ? 'bg-fuchsia-600/20' : 'bg-indigo-300/35'
+          )}
+        />
+
+        {/* Bầu trời ngàn sao lấp lánh (Starfield khi Tắt đèn) */}
+        {isNight && (
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <style>{`
+              @keyframes starBlink {
+                0%, 100% { opacity: 0.25; transform: scale(0.85); }
+                50% { opacity: 1; transform: scale(1.3); }
+              }
+              @keyframes shootingStarAnim {
+                0% { transform: translate(0, 0) rotate(-28deg); opacity: 0; }
+                5% { opacity: 1; }
+                18% { transform: translate(-260px, 140px) rotate(-28deg); opacity: 0; }
+                100% { transform: translate(-260px, 140px) rotate(-28deg); opacity: 0; }
+              }
+              .kc-star-1 { animation: starBlink 2.2s ease-in-out infinite; }
+              .kc-star-2 { animation: starBlink 3.1s ease-in-out infinite 0.7s; }
+              .kc-star-3 { animation: starBlink 2.7s ease-in-out infinite 1.3s; }
+              .kc-shooting-star {
+                animation: shootingStarAnim 7s linear infinite 2s;
+              }
+            `}</style>
+
+            {/* Dải sao băng mini lướt qua */}
+            <div className="kc-shooting-star absolute top-6 right-24 h-0.5 w-24 bg-gradient-to-r from-transparent via-fuchsia-300 to-white opacity-0 blur-[0.5px]" />
+
+            {/* Các ngôi sao ngẫu nhiên trên bầu trời */}
+            <svg className="absolute inset-0 h-full w-full" fill="none">
+              <circle cx="8%" cy="18%" r="1.5" fill="#ffffff" className="kc-star-1" />
+              <circle cx="15%" cy="32%" r="1.2" fill="#fef08a" className="kc-star-2" />
+              <circle cx="22%" cy="12%" r="2" fill="#ffffff" className="kc-star-3" />
+              <circle cx="28%" cy="25%" r="1" fill="#a5f3fc" className="kc-star-1" />
+              <circle cx="35%" cy="15%" r="1.6" fill="#fef08a" className="kc-star-2" />
+              <circle cx="42%" cy="28%" r="1" fill="#ffffff" className="kc-star-3" />
+              <circle cx="52%" cy="10%" r="2" fill="#ffffff" className="kc-star-1" />
+              <circle cx="58%" cy="22%" r="1.3" fill="#a5f3fc" className="kc-star-2" />
+              <circle cx="65%" cy="14%" r="1.5" fill="#fef08a" className="kc-star-3" />
+              <circle cx="74%" cy="26%" r="1.8" fill="#ffffff" className="kc-star-1" />
+              <circle cx="82%" cy="12%" r="1.2" fill="#ffffff" className="kc-star-2" />
+              <circle cx="89%" cy="20%" r="2" fill="#fbcfe8" className="kc-star-3" />
+              <circle cx="94%" cy="30%" r="1.2" fill="#ffffff" className="kc-star-1" />
+              <circle cx="18%" cy="45%" r="1" fill="#ffffff" className="kc-star-2" />
+              <circle cx="80%" cy="45%" r="1.2" fill="#a5f3fc" className="kc-star-3" />
+              <circle cx="62%" cy="38%" r="1" fill="#ffffff" className="kc-star-1" />
+
+              {/* Ngôi sao lấp lánh 4 cánh (Cross stars) */}
+              <path d="M 120,40 L 122,46 L 128,48 L 122,50 L 120,56 L 118,50 L 112,48 L 118,46 Z" fill="#ffffff" opacity="0.85" className="kc-star-1" />
+              <path d="M 880,30 L 882,35 L 887,37 L 882,39 L 880,44 L 878,39 L 873,37 L 878,35 Z" fill="#fef08a" opacity="0.9" className="kc-star-3" />
+              <path d="M 1260,50 L 1262,55 L 1267,57 L 1262,59 L 1260,64 L 1258,59 L 1253,57 L 1258,55 Z" fill="#ffffff" opacity="0.85" className="kc-star-2" />
+            </svg>
+          </div>
+        )}
+
+        <div className="relative z-10 mx-auto max-w-4xl px-4 pt-6 pb-2 text-center sm:px-6 sm:pt-8 sm:pb-3 lg:pt-9 lg:pb-4">
           {currentUser && !isAdmin && (
-            <div className="mb-3 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-800 shadow-sm backdrop-blur ring-1 ring-violet-200/80 sm:mb-3.5 sm:py-1.5 sm:text-sm">
+            <div
+              className={cx(
+                'mb-3 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full px-3.5 py-1 text-xs font-medium shadow-sm backdrop-blur transition-colors sm:mb-3.5 sm:py-1.5 sm:text-sm',
+                isNight
+                  ? 'bg-white/10 text-white ring-1 ring-white/15'
+                  : 'bg-white/90 text-slate-800 ring-1 ring-violet-200/80'
+              )}
+            >
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-[11px] font-bold text-white uppercase sm:h-6 sm:w-6 sm:text-xs">
                 {currentUser.name ? currentUser.name.charAt(0) : 'K'}
               </span>
-              <span>Chào <strong className="font-semibold text-slate-900">{currentUser.name}</strong> 👋</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-violet-700"><strong>{pendingCount}</strong> chờ duyệt</span>
-              <span className="text-slate-300">·</span>
-              <span className="text-fuchsia-700"><strong>{selectedCount}</strong> đang làm</span>
+              <span>Chào <strong className={cx('font-semibold', isNight ? 'text-white' : 'text-slate-900')}>{currentUser.name}</strong> 👋</span>
+              <span className={isNight ? 'text-white/30' : 'text-slate-300'}>•</span>
+              <span className={isNight ? 'text-violet-300' : 'text-violet-700'}><strong>{pendingCount}</strong> chờ duyệt</span>
+              <span className={isNight ? 'text-white/30' : 'text-slate-300'}>·</span>
+              <span className={isNight ? 'text-fuchsia-300' : 'text-fuchsia-700'}><strong>{selectedCount}</strong> đang làm</span>
               <Link
                 to={ROUTES.myApplications}
-                className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800 transition hover:bg-violet-200"
+                className={cx(
+                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold transition',
+                  isNight ? 'bg-white/15 text-violet-200 hover:bg-white/25' : 'bg-violet-100 text-violet-800 hover:bg-violet-200'
+                )}
               >
                 Xem đơn <Icon name="arrow_forward" className="text-[13px]" />
               </Link>
             </div>
           )}
 
-          <h1 className="font-display text-2xl font-bold tracking-tight text-[#4c1d95] sm:text-3xl md:text-4xl lg:text-5xl">
+          <h1
+            className={cx(
+              'font-display text-2xl font-bold tracking-tight transition-colors duration-500 sm:text-3xl md:text-4xl lg:text-5xl',
+              isNight
+                ? 'text-white drop-shadow-[0_0_25px_rgba(168,85,247,0.7)]'
+                : 'text-[#4c1d95]'
+            )}
+          >
             KOCity Creator
           </h1>
-          <p className="mx-auto mt-2 max-w-xl text-xs leading-relaxed text-slate-600 sm:mt-2.5 sm:text-sm md:text-base">
+          <p
+            className={cx(
+              'mx-auto mt-2 max-w-xl text-xs leading-relaxed transition-colors duration-500 sm:mt-2.5 sm:text-sm md:text-base',
+              isNight ? 'text-slate-300' : 'text-slate-600'
+            )}
+          >
             Nền tảng kết nối Nano & Micro KOC TikTok với Brand. Nhận mẫu 0đ tận nhà, lên video theo brief và nhận hoa hồng minh bạch theo từng đơn.
           </p>
 
@@ -194,7 +328,12 @@ export const HomePage: React.FC = () => {
               <Button
                 variant="outline"
                 size="md"
-                className="rounded-full bg-white/90 px-4 text-slate-800 ring-1 ring-violet-200 backdrop-blur hover:bg-white sm:h-11 sm:px-6"
+                className={cx(
+                  'rounded-full px-4 backdrop-blur sm:h-11 sm:px-6',
+                  isNight
+                    ? 'bg-white/10 text-white ring-1 ring-white/20 hover:bg-white/20'
+                    : 'bg-white/90 text-slate-800 ring-1 ring-violet-200 hover:bg-white'
+                )}
                 onClick={() => navigate(ROUTES.myApplications)}
               >
                 Đơn của tôi {pendingCount + selectedCount > 0 ? `(${pendingCount + selectedCount})` : ''}
@@ -203,20 +342,33 @@ export const HomePage: React.FC = () => {
           </div>
 
           {/* 4 Số liệu nhanh dạng 1 hàng siêu gọn */}
-          <div className="mx-auto mt-5 max-w-2xl border-t border-violet-200/50 pt-4 sm:mt-6">
+          <div
+            className={cx(
+              'mx-auto mt-5 max-w-2xl border-t pt-4 transition-colors duration-500 sm:mt-6',
+              isNight ? 'border-violet-500/20' : 'border-violet-200/50'
+            )}
+          >
             <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
               {heroStats.map((s) => (
-                <div key={s.label} className="card-fx flex flex-col-reverse rounded-xl bg-white/85 px-2.5 py-1.5 text-center shadow-xs backdrop-blur ring-1 ring-violet-100 sm:px-3 sm:py-2">
-                  <dt className="text-[10px] text-slate-500 sm:text-[11px]">{s.label}</dt>
-                  <dd className="font-display text-base font-bold text-[#6d28d9] sm:text-lg">{s.value}</dd>
+                <div
+                  key={s.label}
+                  className={cx(
+                    'card-fx flex flex-col-reverse rounded-xl px-2.5 py-1.5 text-center shadow-xs backdrop-blur transition-all duration-500 sm:px-3 sm:py-2',
+                    isNight
+                      ? 'bg-white/10 text-slate-300 ring-1 ring-white/15 shadow-purple-950/40'
+                      : 'bg-white/85 text-slate-500 ring-1 ring-violet-100'
+                  )}
+                >
+                  <dt className={cx('text-[10px] sm:text-[11px]', isNight ? 'text-slate-300' : 'text-slate-500')}>{s.label}</dt>
+                  <dd className={cx('font-display text-base font-bold sm:text-lg', isNight ? 'text-fuchsia-300' : 'text-[#6d28d9]')}>{s.value}</dd>
                 </div>
               ))}
             </dl>
           </div>
         </div>
 
-        {/* Dải thành phố KOCity Silhouette (Phương án 3: 2 lớp + ánh đèn chuyển động) */}
-        <KocitySkyline className="-mb-[1px]" />
+        {/* Dải thành phố KOCity Silhouette (Phương án 3: 2 lớp + ánh đèn chuyển động + hỗ trợ chế độ đêm) */}
+        <KocitySkyline isNight={isNight} className="-mb-[1px]" />
       </section>
 
       {/* Phần còn lại của trang (nằm trong container max-w-6xl căn giữa) */}
