@@ -214,54 +214,36 @@ export const HomePage: React.FC = () => {
           )}
         />
 
-        {/* Bầu trời ngàn sao lấp lánh (Starfield khi Tắt đèn) */}
+        {/* Bầu trời ngàn sao êm dịu, tĩnh lặng (Starfield khi Tắt đèn - không rối mắt) */}
         {isNight && (
           <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
             <style>{`
-              @keyframes starBlink {
-                0%, 100% { opacity: 0.25; transform: scale(0.85); }
-                50% { opacity: 1; transform: scale(1.3); }
+              @keyframes starBreathe1 {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 0.8; }
               }
-              @keyframes shootingStarAnim {
-                0% { transform: translate(0, 0) rotate(-28deg); opacity: 0; }
-                5% { opacity: 1; }
-                18% { transform: translate(-260px, 140px) rotate(-28deg); opacity: 0; }
-                100% { transform: translate(-260px, 140px) rotate(-28deg); opacity: 0; }
+              @keyframes starBreathe2 {
+                0%, 100% { opacity: 0.75; }
+                50% { opacity: 0.25; }
               }
-              .kc-star-1 { animation: starBlink 2.2s ease-in-out infinite; }
-              .kc-star-2 { animation: starBlink 3.1s ease-in-out infinite 0.7s; }
-              .kc-star-3 { animation: starBlink 2.7s ease-in-out infinite 1.3s; }
-              .kc-shooting-star {
-                animation: shootingStarAnim 7s linear infinite 2s;
-              }
+              .kc-star-gentle-1 { animation: starBreathe1 5s ease-in-out infinite; }
+              .kc-star-gentle-2 { animation: starBreathe2 6.5s ease-in-out infinite 1.8s; }
             `}</style>
 
-            {/* Dải sao băng mini lướt qua */}
-            <div className="kc-shooting-star absolute top-6 right-24 h-0.5 w-24 bg-gradient-to-r from-transparent via-fuchsia-300 to-white opacity-0 blur-[0.5px]" />
-
-            {/* Các ngôi sao ngẫu nhiên trên bầu trời */}
+            {/* Các ngôi sao tĩnh, dịu mắt ở phần trên bầu trời */}
             <svg className="absolute inset-0 h-full w-full" fill="none">
-              <circle cx="8%" cy="18%" r="1.5" fill="#ffffff" className="kc-star-1" />
-              <circle cx="15%" cy="32%" r="1.2" fill="#fef08a" className="kc-star-2" />
-              <circle cx="22%" cy="12%" r="2" fill="#ffffff" className="kc-star-3" />
-              <circle cx="28%" cy="25%" r="1" fill="#a5f3fc" className="kc-star-1" />
-              <circle cx="35%" cy="15%" r="1.6" fill="#fef08a" className="kc-star-2" />
-              <circle cx="42%" cy="28%" r="1" fill="#ffffff" className="kc-star-3" />
-              <circle cx="52%" cy="10%" r="2" fill="#ffffff" className="kc-star-1" />
-              <circle cx="58%" cy="22%" r="1.3" fill="#a5f3fc" className="kc-star-2" />
-              <circle cx="65%" cy="14%" r="1.5" fill="#fef08a" className="kc-star-3" />
-              <circle cx="74%" cy="26%" r="1.8" fill="#ffffff" className="kc-star-1" />
-              <circle cx="82%" cy="12%" r="1.2" fill="#ffffff" className="kc-star-2" />
-              <circle cx="89%" cy="20%" r="2" fill="#fbcfe8" className="kc-star-3" />
-              <circle cx="94%" cy="30%" r="1.2" fill="#ffffff" className="kc-star-1" />
-              <circle cx="18%" cy="45%" r="1" fill="#ffffff" className="kc-star-2" />
-              <circle cx="80%" cy="45%" r="1.2" fill="#a5f3fc" className="kc-star-3" />
-              <circle cx="62%" cy="38%" r="1" fill="#ffffff" className="kc-star-1" />
+              <circle cx="10%" cy="14%" r="1.3" fill="#ffffff" className="kc-star-gentle-1" />
+              <circle cx="22%" cy="20%" r="1.1" fill="#fef08a" className="kc-star-gentle-2" />
+              <circle cx="34%" cy="12%" r="1.4" fill="#ffffff" className="kc-star-gentle-1" />
+              <circle cx="48%" cy="18%" r="1.2" fill="#a5f3fc" className="kc-star-gentle-2" />
+              <circle cx="62%" cy="13%" r="1.3" fill="#ffffff" className="kc-star-gentle-1" />
+              <circle cx="76%" cy="22%" r="1.2" fill="#fef08a" className="kc-star-gentle-2" />
+              <circle cx="88%" cy="15%" r="1.4" fill="#ffffff" className="kc-star-gentle-1" />
+              <circle cx="95%" cy="25%" r="1.1" fill="#fbcfe8" className="kc-star-gentle-2" />
 
-              {/* Ngôi sao lấp lánh 4 cánh (Cross stars) */}
-              <path d="M 120,40 L 122,46 L 128,48 L 122,50 L 120,56 L 118,50 L 112,48 L 118,46 Z" fill="#ffffff" opacity="0.85" className="kc-star-1" />
-              <path d="M 880,30 L 882,35 L 887,37 L 882,39 L 880,44 L 878,39 L 873,37 L 878,35 Z" fill="#fef08a" opacity="0.9" className="kc-star-3" />
-              <path d="M 1260,50 L 1262,55 L 1267,57 L 1262,59 L 1260,64 L 1258,59 L 1253,57 L 1258,55 Z" fill="#ffffff" opacity="0.85" className="kc-star-2" />
+              {/* Chỉ 2 ngôi sao 4 cánh nhỏ điểm xuyết tĩnh */}
+              <path d="M 140,28 L 141.5,32 L 145,33.5 L 141.5,35 L 140,39 L 138.5,35 L 135,33.5 L 138.5,32 Z" fill="#ffffff" opacity="0.75" className="kc-star-gentle-1" />
+              <path d="M 1120,32 L 1121.5,36 L 1125,37.5 L 1121.5,39 L 1120,43 L 1118.5,39 L 1115,37.5 L 1118.5,36 Z" fill="#fef08a" opacity="0.8" className="kc-star-gentle-2" />
             </svg>
           </div>
         )}
