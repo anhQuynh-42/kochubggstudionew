@@ -9,6 +9,7 @@ import { ROUTES, ZALO_GROUP_URL } from '../../lib/constants';
 import { useSiteUI } from '../SiteUI';
 import { CampaignCard } from '../components/CampaignCard';
 import { HeroImageSheet } from '../components/HeroImageSheet';
+import { KocitySkyline } from '../components/KocitySkyline';
 import { Badge, Button, Chip, EmptyState, Icon, SectionTitle, Sheet, cx } from '../ui';
 
 type SortKey = 'popular' | 'commission' | 'spots' | 'ending';
@@ -153,7 +154,7 @@ export const HomePage: React.FC = () => {
         <div aria-hidden className="pointer-events-none absolute -left-24 top-6 h-72 w-72 rounded-full bg-pink-300/35 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full bg-indigo-300/35 blur-3xl" />
 
-        <div className="mx-auto max-w-4xl px-4 py-6 text-center sm:px-6 sm:py-8 lg:py-9">
+        <div className="mx-auto max-w-4xl px-4 pt-6 pb-2 text-center sm:px-6 sm:pt-8 sm:pb-3 lg:pt-9 lg:pb-4">
           {currentUser && !isAdmin && (
             <div className="mb-3 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-800 shadow-sm backdrop-blur ring-1 ring-violet-200/80 sm:mb-3.5 sm:py-1.5 sm:text-sm">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-[11px] font-bold text-white uppercase sm:h-6 sm:w-6 sm:text-xs">
@@ -213,6 +214,9 @@ export const HomePage: React.FC = () => {
             </dl>
           </div>
         </div>
+
+        {/* Dải thành phố KOCity Silhouette (Phương án 3: 2 lớp + ánh đèn chuyển động) */}
+        <KocitySkyline className="-mb-[1px]" />
       </section>
 
       {/* Phần còn lại của trang (nằm trong container max-w-6xl căn giữa) */}
