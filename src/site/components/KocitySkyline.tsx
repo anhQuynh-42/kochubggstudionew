@@ -267,35 +267,82 @@ export const KocitySkyline: React.FC<{ className?: string }> = ({ className = ''
         <circle cx="115" cy="14" r="1.5" fill="#a855f7" opacity="0.75" />
         <circle cx="970" cy="16" r="1.5" fill="#ec4899" opacity="0.75" />
 
-        {/* ===== ĐIỂM XUYẾT 1-2 BÓNG CREATOR VECTOR TÍ HON TRÊN NÓC NHÀ ===== */}
-        {/* Điểm xuyết 1: Bạn KOC ngồi vắt vẻo mép nóc toà nhà (x=234, y=40) đung đưa chân + đốm sáng điện thoại */}
+        {/* ===== ĐIỂM XUYẾT 2 BÓNG CREATOR VECTOR RÕ NÉT TRÊN NÓC NHÀ ===== */}
+        {/* Điểm xuyết 1: Bạn KOC ngồi vắt vẻo mép nóc toà nhà (x=240, y=40) đung đưa chân + điện thoại selfie phát sáng */}
         <g id="koc-tiny-sitting">
-          {/* Đầu */}
-          <circle cx="234" cy="32" r="2.2" fill="#581c87" />
-          {/* Thân & tay cầm điện thoại */}
-          <path d="M 232,34.2 C 232,34.2 236.5,34.2 236.5,37 L 236.5,40 L 232,40 Z" fill="#581c87" />
-          <path d="M 232.5,36 L 229.5,37" stroke="#581c87" strokeWidth="1" strokeLinecap="round" />
-          {/* Chân vắt qua mép tường đung đưa */}
-          <path d="M 236.5,40 L 238,40 L 238,46 L 236.5,46 Z" fill="#581c87" className="kc-dangling-legs" />
-          {/* Đốm sáng trắng điện thoại tí hon */}
-          <circle cx="228.5" cy="37" r="1" fill="#ffffff" filter="drop-shadow(0 0 2px rgba(255,255,255,0.9))" />
-          <circle cx="228.5" cy="37" r="2" fill="#a855f7" opacity="0.5" className="kc-w1" />
+          {/* Đầu & búi tóc kẹp */}
+          <circle cx="230" cy="18" r="5" fill="#3b0764" />
+          <circle cx="225" cy="15" r="2.4" fill="#3b0764" />
+
+          {/* Thân ngồi tựa thoải mái */}
+          <path
+            d="M 225,23 C 225,23 235,23 236,27 L 238,39 L 224,39 Z"
+            fill="#3b0764"
+          />
+
+          {/* Cánh tay giơ điện thoại quay selfie */}
+          <path
+            d="M 226,27 L 218,25"
+            stroke="#3b0764"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+
+          {/* Điện thoại phát sáng trên tay */}
+          <rect x="214" y="20" width="4.5" height="7.5" rx="1" fill="#ffffff" filter="drop-shadow(0 0 3px #ffffff)" />
+          <rect x="215" y="21" width="2.5" height="5.5" rx="0.5" fill="#38bdf8" />
+
+          {/* Đôi chân vắt qua mép tường đung đưa */}
+          <g className="kc-dangling-legs">
+            {/* Đùi gác qua mép */}
+            <path d="M 235,37 L 244,38 L 244,43 L 235,42 Z" fill="#3b0764" />
+            {/* Cẳng chân thả thõng */}
+            <path d="M 241,41 L 243,53 L 247,53 L 244,41 Z" fill="#3b0764" />
+            {/* Giày sneaker hồng */}
+            <path d="M 243,51 L 249,53 L 248,55 L 242,54 Z" fill="#ec4899" />
+          </g>
         </g>
 
-        {/* Điểm xuyết 2: Bạn KOC livestream cạnh cây đèn Ring light tí hon trên sân thượng (x=805-816, y=42) */}
+        {/* Điểm xuyết 2: Bạn KOC livestream cạnh cây đèn Ring light trên sân thượng (x=790-825, y=42) */}
         <g id="koc-tiny-livestream">
-          {/* Bạn KOC đứng pose tay */}
-          <circle cx="806" cy="32" r="2.2" fill="#581c87" />
-          <path d="M 804,34.2 L 808,34.2 L 809,42 L 803,42 Z" fill="#581c87" />
-          <path d="M 807,36 L 810,35.5" stroke="#581c87" strokeWidth="1" strokeLinecap="round" />
-          {/* Cây đèn Livestream / Ring light tí hon */}
-          <line x1="814" y1="36" x2="814" y2="42" stroke="#581c87" strokeWidth="0.8" />
-          <line x1="814" y1="39.5" x2="812" y2="42" stroke="#581c87" strokeWidth="0.8" />
-          <line x1="814" y1="39.5" x2="816" y2="42" stroke="#581c87" strokeWidth="0.8" />
-          {/* Vòng tròn Ring light phát sáng */}
-          <circle cx="814" cy="33.5" r="2.5" fill="none" stroke="#ffffff" strokeWidth="0.9" filter="drop-shadow(0 0 2px rgba(255,255,255,0.9))" />
-          {/* Tâm đèn / đốm sáng trắng livestream */}
-          <circle cx="814" cy="33.5" r="1.1" fill="#fef08a" className="kc-w2" />
+          {/* Bạn KOC đứng: Đầu & Tai nghe tai mèo phát sáng */}
+          <circle cx="798" cy="18" r="5" fill="#3b0764" />
+          <path d="M 794,15 L 795,10.5 L 798,14 Z" fill="#ec4899" />
+          <path d="M 798,14 L 801,10.5 L 802,15 Z" fill="#ec4899" />
+
+          {/* Thân người đứng dáng Creator */}
+          <path
+            d="M 793,23 L 803,23 L 804,42 L 792,42 Z"
+            fill="#3b0764"
+          />
+
+          {/* Cánh tay giơ tương tác camera */}
+          <path
+            d="M 801,27 L 808,24"
+            stroke="#3b0764"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+
+          {/* CÂY ĐÈN RING LIGHT TRÊN TRIPOD */}
+          {/* 3 Chân tripod */}
+          <line x1="818" y1="26" x2="818" y2="42" stroke="#3b0764" strokeWidth="1.8" />
+          <line x1="818" y1="33" x2="812" y2="42" stroke="#3b0764" strokeWidth="1.8" />
+          <line x1="818" y1="33" x2="824" y2="42" stroke="#3b0764" strokeWidth="1.8" />
+
+          {/* Vòng tròn Ring light phát sáng tròn rõ rệt */}
+          <circle
+            cx="818"
+            cy="17"
+            r="8"
+            fill="rgba(254, 240, 138, 0.25)"
+            stroke="#ffffff"
+            strokeWidth="2.5"
+            filter="drop-shadow(0 0 5px rgba(255, 255, 255, 0.95))"
+          />
+          {/* Smartphone kẹp giữa Ring light */}
+          <rect x="816.5" y="14" width="3" height="6" rx="0.5" fill="#ec4899" />
+          <circle cx="818" cy="17" r="1.2" fill="#ffffff" className="kc-w1" />
         </g>
 
         {/* ===== MÀN SƯƠNG ĐÁY CHUYỂN TIẾP MƯỢT VÀO NỀN TRANG (BOTTOM FOG) ===== */}
