@@ -339,6 +339,25 @@ export const HomePage: React.FC = () => {
                 Đơn của tôi {pendingCount + selectedCount > 0 ? `(${pendingCount + selectedCount})` : ''}
               </Button>
             )}
+
+            {/* Nút công tắc Bật/Tắt đèn ở ngay trung tâm cạnh nút Tham gia ngay */}
+            <button
+              type="button"
+              onClick={toggleNight}
+              aria-label={isNight ? 'Bật đèn ban ngày' : 'Tắt đèn ngắm thành phố đêm'}
+              className={cx(
+                'inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all duration-300 cursor-pointer shadow-sm backdrop-blur-md ring-1 sm:h-11 sm:px-5 sm:text-sm',
+                isNight
+                  ? 'bg-amber-400/20 text-amber-200 ring-amber-300/50 hover:bg-amber-400/30'
+                  : 'bg-white/95 text-violet-900 ring-violet-200 hover:bg-white hover:text-violet-950'
+              )}
+            >
+              <Icon
+                name={isNight ? 'light_mode' : 'dark_mode'}
+                className={cx('text-[18px] transition-transform duration-300', isNight ? 'text-amber-300 rotate-45' : 'text-violet-600')}
+              />
+              <span>{isNight ? 'Bật đèn' : 'Tắt đèn (Đêm sao)'}</span>
+            </button>
           </div>
 
           {/* 4 Số liệu nhanh dạng 1 hàng siêu gọn */}
