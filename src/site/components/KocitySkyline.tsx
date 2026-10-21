@@ -56,6 +56,14 @@ export const KocitySkyline: React.FC<{ className?: string }> = ({ className = ''
         .kc-wave-2 {
           animation: kocitySignalWave 2.4s cubic-bezier(0, 0.2, 0.8, 1) infinite 1.2s;
         }
+        @keyframes kocityDanglingLegs {
+          0%, 100% { transform: rotate(-5deg); }
+          50% { transform: rotate(8deg); }
+        }
+        .kc-dangling-legs {
+          transform-origin: 236.5px 40px;
+          animation: kocityDanglingLegs 2.2s ease-in-out infinite;
+        }
         .kc-w1 { animation: kocityWindow1 3.2s ease-in-out infinite; }
         .kc-w2 { animation: kocityWindow2 2.7s ease-in-out infinite 0.5s; }
         .kc-w3 { animation: kocityWindow3 3.8s ease-in-out infinite 1.1s; }
@@ -258,6 +266,37 @@ export const KocitySkyline: React.FC<{ className?: string }> = ({ className = ''
         {/* Tháp phụ xa */}
         <circle cx="115" cy="14" r="1.5" fill="#a855f7" opacity="0.75" />
         <circle cx="970" cy="16" r="1.5" fill="#ec4899" opacity="0.75" />
+
+        {/* ===== ĐIỂM XUYẾT 1-2 BÓNG CREATOR VECTOR TÍ HON TRÊN NÓC NHÀ ===== */}
+        {/* Điểm xuyết 1: Bạn KOC ngồi vắt vẻo mép nóc toà nhà (x=234, y=40) đung đưa chân + đốm sáng điện thoại */}
+        <g id="koc-tiny-sitting">
+          {/* Đầu */}
+          <circle cx="234" cy="32" r="2.2" fill="#581c87" />
+          {/* Thân & tay cầm điện thoại */}
+          <path d="M 232,34.2 C 232,34.2 236.5,34.2 236.5,37 L 236.5,40 L 232,40 Z" fill="#581c87" />
+          <path d="M 232.5,36 L 229.5,37" stroke="#581c87" strokeWidth="1" strokeLinecap="round" />
+          {/* Chân vắt qua mép tường đung đưa */}
+          <path d="M 236.5,40 L 238,40 L 238,46 L 236.5,46 Z" fill="#581c87" className="kc-dangling-legs" />
+          {/* Đốm sáng trắng điện thoại tí hon */}
+          <circle cx="228.5" cy="37" r="1" fill="#ffffff" filter="drop-shadow(0 0 2px rgba(255,255,255,0.9))" />
+          <circle cx="228.5" cy="37" r="2" fill="#a855f7" opacity="0.5" className="kc-w1" />
+        </g>
+
+        {/* Điểm xuyết 2: Bạn KOC livestream cạnh cây đèn Ring light tí hon trên sân thượng (x=805-816, y=42) */}
+        <g id="koc-tiny-livestream">
+          {/* Bạn KOC đứng pose tay */}
+          <circle cx="806" cy="32" r="2.2" fill="#581c87" />
+          <path d="M 804,34.2 L 808,34.2 L 809,42 L 803,42 Z" fill="#581c87" />
+          <path d="M 807,36 L 810,35.5" stroke="#581c87" strokeWidth="1" strokeLinecap="round" />
+          {/* Cây đèn Livestream / Ring light tí hon */}
+          <line x1="814" y1="36" x2="814" y2="42" stroke="#581c87" strokeWidth="0.8" />
+          <line x1="814" y1="39.5" x2="812" y2="42" stroke="#581c87" strokeWidth="0.8" />
+          <line x1="814" y1="39.5" x2="816" y2="42" stroke="#581c87" strokeWidth="0.8" />
+          {/* Vòng tròn Ring light phát sáng */}
+          <circle cx="814" cy="33.5" r="2.5" fill="none" stroke="#ffffff" strokeWidth="0.9" filter="drop-shadow(0 0 2px rgba(255,255,255,0.9))" />
+          {/* Tâm đèn / đốm sáng trắng livestream */}
+          <circle cx="814" cy="33.5" r="1.1" fill="#fef08a" className="kc-w2" />
+        </g>
 
         {/* ===== MÀN SƯƠNG ĐÁY CHUYỂN TIẾP MƯỢT VÀO NỀN TRANG (BOTTOM FOG) ===== */}
         <rect x="0" y="65" width="1440" height="31" fill="url(#kc-skyline-fog)" />
