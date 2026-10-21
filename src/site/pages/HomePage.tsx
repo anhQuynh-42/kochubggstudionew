@@ -147,18 +147,18 @@ export const HomePage: React.FC = () => {
   }).length;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 sm:pt-8">
-      {/* ===== Hero KOCity Creator (Bố cục 2 cột gọn gàng, siêu nhẹ trên mobile) ===== */}
-      <section className="relative">
-        <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#fde7f3_0%,#ede9fe_35%,#dbeafe_65%,#fef3c7_100%)] p-4 sm:rounded-[32px] sm:p-7 lg:p-9">
-          <div aria-hidden className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-pink-300/40 blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full bg-indigo-300/40 blur-3xl" />
+    <div className="w-full">
+      {/* ===== Hero KOCity Creator (Full màn hình edge-to-edge, chiều cao ngắn & tinh tế) ===== */}
+      <section className="relative w-full overflow-hidden border-b border-violet-100/80 bg-[linear-gradient(135deg,#fde7f3_0%,#ede9fe_35%,#dbeafe_65%,#fef3c7_100%)]">
+        <div aria-hidden className="pointer-events-none absolute -left-24 top-6 h-72 w-72 rounded-full bg-pink-300/35 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full bg-indigo-300/35 blur-3xl" />
 
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:py-8">
           <div className="relative grid items-center gap-6 lg:grid-cols-12 lg:gap-8">
             {/* Cột trái: Thông điệp + Lời chào + CTA + Số liệu */}
             <div className="text-left lg:col-span-7">
               {currentUser && !isAdmin && (
-                <div className="mb-3 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-white/90 px-3.5 py-1.5 text-xs font-medium text-slate-800 shadow-sm backdrop-blur ring-1 ring-violet-200/80 sm:text-sm">
+                <div className="mb-2.5 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-800 shadow-sm backdrop-blur ring-1 ring-violet-200/80 sm:mb-3 sm:py-1.5 sm:text-sm">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-[11px] font-bold text-white uppercase sm:h-6 sm:w-6 sm:text-xs">
                     {currentUser.name ? currentUser.name.charAt(0) : 'K'}
                   </span>
@@ -176,18 +176,18 @@ export const HomePage: React.FC = () => {
                 </div>
               )}
 
-              <h1 className="font-display text-2xl font-bold tracking-tight text-[#4c1d95] sm:text-3xl lg:text-4xl xl:text-5xl">
+              <h1 className="font-display text-2xl font-bold tracking-tight text-[#4c1d95] sm:text-3xl lg:text-4xl">
                 KOCity Creator
               </h1>
-              <p className="mt-2 max-w-xl text-xs leading-relaxed text-slate-600 sm:mt-2.5 sm:text-sm md:text-base">
+              <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-sm md:text-base">
                 Nền tảng kết nối Nano & Micro KOC TikTok với Brand. Nhận mẫu 0đ tận nhà, lên video theo brief và nhận hoa hồng minh bạch theo từng đơn.
               </p>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2.5 sm:mt-5 sm:gap-3">
+              <div className="mt-3.5 flex flex-wrap items-center gap-2.5 sm:mt-4 sm:gap-3">
                 <Button
                   variant="primary"
-                  size="lg"
-                  className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] px-6 shadow-md shadow-pink-500/20 hover:opacity-95 sm:px-7"
+                  size="md"
+                  className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] px-5 shadow-md shadow-pink-500/20 hover:opacity-95 sm:h-11 sm:px-6"
                   onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
                 >
                   {currentUser ? 'Khám phá mẫu 0đ ngay' : 'Tham gia ngay'}
@@ -195,8 +195,8 @@ export const HomePage: React.FC = () => {
                 {currentUser && !isAdmin && (
                   <Button
                     variant="outline"
-                    size="lg"
-                    className="rounded-full bg-white/90 px-5 text-slate-800 ring-1 ring-violet-200 backdrop-blur hover:bg-white"
+                    size="md"
+                    className="rounded-full bg-white/90 px-4 text-slate-800 ring-1 ring-violet-200 backdrop-blur hover:bg-white sm:h-11 sm:px-5"
                     onClick={() => navigate(ROUTES.myApplications)}
                   >
                     Đơn của tôi {pendingCount + selectedCount > 0 ? `(${pendingCount + selectedCount})` : ''}
@@ -204,11 +204,11 @@ export const HomePage: React.FC = () => {
                 )}
               </div>
 
-              {/* 4 Số liệu nhanh lồng gọn gàng vào trong cột trái */}
-              <div className="mt-5 border-t border-violet-200/60 pt-4">
+              {/* 4 Số liệu nhanh dạng 1 hàng siêu gọn */}
+              <div className="mt-4 border-t border-violet-200/50 pt-3">
                 <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
                   {heroStats.map((s) => (
-                    <div key={s.label} className="card-fx flex flex-col-reverse rounded-xl bg-white/85 px-2.5 py-1.5 text-left shadow-sm backdrop-blur ring-1 ring-violet-100 sm:px-3 sm:py-2">
+                    <div key={s.label} className="card-fx flex flex-col-reverse rounded-xl bg-white/85 px-2.5 py-1.5 text-left shadow-xs backdrop-blur ring-1 ring-violet-100 sm:px-3 sm:py-2">
                       <dt className="text-[10px] text-slate-500 sm:text-[11px]">{s.label}</dt>
                       <dd className="font-display text-base font-bold text-[#6d28d9] sm:text-lg">{s.value}</dd>
                     </div>
@@ -217,16 +217,16 @@ export const HomePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Cột phải: Khung ảnh vòm KOC (Ẩn trên Mobile để màn hình siêu gọn, hiển thị sang trọng trên Desktop) */}
+            {/* Cột phải: Khung ảnh vòm KOC (Ẩn trên Mobile để màn hình siêu gọn, hiển thị thanh thoát trên Desktop) */}
             <div className="relative hidden lg:col-span-5 lg:block">
-              <div className="relative mx-auto max-w-[320px]">
-                <div className="aspect-[4/5] overflow-hidden rounded-t-[120px] rounded-b-[28px] bg-gradient-to-b from-violet-300 to-fuchsia-300 shadow-xl ring-4 ring-white/60">
+              <div className="relative mx-auto max-w-[270px]">
+                <div className="aspect-[4/5] overflow-hidden rounded-t-[100px] rounded-b-[24px] bg-gradient-to-b from-violet-300 to-fuchsia-300 shadow-lg ring-4 ring-white/60">
                   <img src={heroImage} alt="KOC quay video mở hộp sản phẩm" className="h-full w-full object-cover" />
                 </div>
-                <FloatLabel icon="redeem" className="-left-4 bottom-10 shadow-md">Mẫu 0đ tận tay</FloatLabel>
-                <FloatLabel icon="percent" className="-right-4 top-8 shadow-md">Hoa hồng minh bạch</FloatLabel>
+                <FloatLabel icon="redeem" className="-left-3 bottom-8 shadow-sm">Mẫu 0đ tận tay</FloatLabel>
+                <FloatLabel icon="percent" className="-right-3 top-6 shadow-sm">Hoa hồng minh bạch</FloatLabel>
                 {isAdmin && (
-                  <Button variant="dark" size="sm" className="absolute right-3 bottom-3 bg-black/60 shadow" onClick={() => setHeroSheetOpen(true)}>
+                  <Button variant="dark" size="sm" className="absolute right-2 bottom-2 bg-black/60 shadow" onClick={() => setHeroSheetOpen(true)}>
                     <Icon name="photo_camera" className="text-[16px]" />
                   </Button>
                 )}
@@ -236,228 +236,230 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {liveActivity.length > 0 && <LiveTicker items={liveActivity} />}
+      {/* Phần còn lại của trang (nằm trong container max-w-6xl căn giữa) */}
+      <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6">
+        {liveActivity.length > 0 && <LiveTicker items={liveActivity} />}
 
-      {/* ===== Danh sách mẫu (đẩy lên ngay dưới Hero & LiveTicker) ===== */}
-      <section className="pt-8 sm:pt-12">
-        <SectionTitle id="mau-dang-mo" title="Mẫu đang mở" subtitle={`${visible.length} chiến dịch`} />
+        {/* ===== Danh sách mẫu (đẩy lên ngay dưới Hero & LiveTicker) ===== */}
+        <section className="pt-6 sm:pt-10">
+          <SectionTitle id="mau-dang-mo" title="Mẫu đang mở" subtitle={`${visible.length} chiến dịch`} />
 
-        <div className="sticky top-16 z-30 -mx-4 mt-3 bg-[#fafafc]/90 px-4 pb-3 pt-2 backdrop-blur-md sm:-mx-6 sm:px-6">
-          <div className="flex gap-2">
-            <label className="relative flex-1">
-              <span className="sr-only">Tìm chiến dịch</span>
-              <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-slate-400" />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Tìm brand, sản phẩm..."
-                className="h-11 w-full rounded-2xl bg-white pl-10 pr-3 text-base text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => setFilterOpen(true)}
-              aria-haspopup="dialog"
-              className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white px-3.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:ring-violet-300 cursor-pointer"
-            >
-              <Icon name="tune" className="text-[20px]" />
-              <span className="hidden sm:inline">Lọc & sắp xếp</span>
-              {activeFilters > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#8b5cf6] px-1 text-[10px] font-bold text-white">
-                  {activeFilters}
-                </span>
-              )}
-            </button>
-          </div>
-          <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-            {CATEGORIES.map((c) => (
-              <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
-                {c.label}
-              </Chip>
-            ))}
-          </div>
-        </div>
-
-        {visible.length === 0 ? (
-          <div className="mt-2">
-            <EmptyState
-              icon="search_off"
-              title="Chưa có chiến dịch phù hợp"
-              description="Thử bỏ bớt bộ lọc hoặc đổi từ khóa nhé."
-              action={<Button variant="dark" onClick={resetFilters}>Xóa bộ lọc</Button>}
-            />
-          </div>
-        ) : (
-          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-            {visible.map((c) => {
-              const applied = Boolean(getExistingApplication(c.id));
-              return (
-                <CampaignCard
-                  key={c.id}
-                  campaign={c}
-                  isBookmarked={bookmarkedIds.includes(c.id)}
-                  hasApplied={applied}
-                  onApply={() => (applied ? navigate(ROUTES.myApplications) : requestApply(c))}
-                  onToggleBookmark={() => toggleBookmark(c)}
+          <div className="sticky top-16 z-30 -mx-4 mt-3 bg-[#fafafc]/90 px-4 pb-3 pt-2 backdrop-blur-md sm:-mx-6 sm:px-6">
+            <div className="flex gap-2">
+              <label className="relative flex-1">
+                <span className="sr-only">Tìm chiến dịch</span>
+                <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-slate-400" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Tìm brand, sản phẩm..."
+                  className="h-11 w-full rounded-2xl bg-white pl-10 pr-3 text-base text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm"
                 />
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* ===== Hình thức kiếm tiền (Freecast + Affiliate) ===== */}
-      <section id="cach-hoat-dong" className="mt-20 scroll-mt-20">
-        <h2 className="text-center font-display text-xl font-bold text-slate-950 sm:text-2xl">Hình thức kiếm tiền với KOCity</h2>
-        <div className="mt-6 grid items-center gap-8 rounded-[28px] bg-gradient-to-br from-violet-50 via-white to-pink-50 p-5 ring-1 ring-violet-100 sm:p-8 md:grid-cols-2">
-          <div className="relative mx-auto w-full max-w-xs">
-            <div aria-hidden className="absolute -inset-4 -z-0 rounded-[32px] bg-white/70 shadow-xl shadow-violet-500/10" />
-            {campaigns[0] && (
-              <div className="relative">
-                <CampaignCard
-                  campaign={campaigns[0]}
-                  isBookmarked={bookmarkedIds.includes(campaigns[0].id)}
-                  hasApplied={Boolean(getExistingApplication(campaigns[0].id))}
-                  onApply={() => requestApply(campaigns[0])}
-                  onToggleBookmark={() => toggleBookmark(campaigns[0])}
-                />
-              </div>
-            )}
-          </div>
-          <div>
-            <h3 className="font-display text-2xl font-bold text-[#6d28d9]">Nhận mẫu 0đ + Hoa hồng theo đơn</h3>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <Badge tone="violet">Freecast</Badge>
-              <Badge tone="pink">Affiliate TikTok Shop</Badge>
+              </label>
+              <button
+                type="button"
+                onClick={() => setFilterOpen(true)}
+                aria-haspopup="dialog"
+                className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white px-3.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:ring-violet-300 cursor-pointer"
+              >
+                <Icon name="tune" className="text-[20px]" />
+                <span className="hidden sm:inline">Lọc & sắp xếp</span>
+                {activeFilters > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#8b5cf6] px-1 text-[10px] font-bold text-white">
+                    {activeFilters}
+                  </span>
+                )}
+              </button>
             </div>
-            <ol className="mt-5 space-y-4">
-              {HOW_IT_WORKS.map((s, i) => (
-                <li key={s.title} className="flex gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#6d28d9] text-sm font-bold text-white">{i + 1}</span>
-                  <div>
-                    <p className="font-semibold text-slate-900">{s.title}</p>
-                    <p className="text-sm text-slate-600">{s.desc}</p>
-                  </div>
-                </li>
+            <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              {CATEGORIES.map((c) => (
+                <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
+                  {c.label}
+                </Chip>
               ))}
-            </ol>
+            </div>
+          </div>
+
+          {visible.length === 0 ? (
+            <div className="mt-2">
+              <EmptyState
+                icon="search_off"
+                title="Chưa có chiến dịch phù hợp"
+                description="Thử bỏ bớt bộ lọc hoặc đổi từ khóa nhé."
+                action={<Button variant="dark" onClick={resetFilters}>Xóa bộ lọc</Button>}
+              />
+            </div>
+          ) : (
+            <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+              {visible.map((c) => {
+                const applied = Boolean(getExistingApplication(c.id));
+                return (
+                  <CampaignCard
+                    key={c.id}
+                    campaign={c}
+                    isBookmarked={bookmarkedIds.includes(c.id)}
+                    hasApplied={applied}
+                    onApply={() => (applied ? navigate(ROUTES.myApplications) : requestApply(c))}
+                    onToggleBookmark={() => toggleBookmark(c)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ===== Hình thức kiếm tiền (Freecast + Affiliate) ===== */}
+        <section id="cach-hoat-dong" className="mt-20 scroll-mt-20">
+          <h2 className="text-center font-display text-xl font-bold text-slate-950 sm:text-2xl">Hình thức kiếm tiền với KOCity</h2>
+          <div className="mt-6 grid items-center gap-8 rounded-[28px] bg-gradient-to-br from-violet-50 via-white to-pink-50 p-5 ring-1 ring-violet-100 sm:p-8 md:grid-cols-2">
+            <div className="relative mx-auto w-full max-w-xs">
+              <div aria-hidden className="absolute -inset-4 -z-0 rounded-[32px] bg-white/70 shadow-xl shadow-violet-500/10" />
+              {campaigns[0] && (
+                <div className="relative">
+                  <CampaignCard
+                    campaign={campaigns[0]}
+                    isBookmarked={bookmarkedIds.includes(campaigns[0].id)}
+                    hasApplied={Boolean(getExistingApplication(campaigns[0].id))}
+                    onApply={() => requestApply(campaigns[0])}
+                    onToggleBookmark={() => toggleBookmark(campaigns[0])}
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="font-display text-2xl font-bold text-[#6d28d9]">Nhận mẫu 0đ + Hoa hồng theo đơn</h3>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Badge tone="violet">Freecast</Badge>
+                <Badge tone="pink">Affiliate TikTok Shop</Badge>
+              </div>
+              <ol className="mt-5 space-y-4">
+                {HOW_IT_WORKS.map((s, i) => (
+                  <li key={s.title} className="flex gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#6d28d9] text-sm font-bold text-white">{i + 1}</span>
+                    <div>
+                      <p className="font-semibold text-slate-900">{s.title}</p>
+                      <p className="text-sm text-slate-600">{s.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <Button
+                variant="primary"
+                className="mt-6 rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
+                onClick={() => document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Lên đầu xem mẫu
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== Ai có thể tham gia ===== */}
+        <section className="mt-20">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-xl font-bold text-slate-950 sm:text-2xl">Ai có thể tham gia KOCity?</h2>
             <Button
               variant="primary"
-              className="mt-6 rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
-              onClick={() => document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' })}
+              size="sm"
+              className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
+              onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
             >
-              Lên đầu xem mẫu
+              {currentUser ? 'Xem mẫu ngay' : 'Tham gia ngay'}
             </Button>
           </div>
-        </div>
-      </section>
+          <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
+            {PERSONAS.map((p, i) => (
+              <article key={p.title} className="card-fx relative aspect-[3/4] w-[75%] shrink-0 snap-center overflow-hidden rounded-[24px] sm:w-auto">
+                <img src={personaImages[i]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-white/15 p-3.5 text-white ring-1 ring-white/30 backdrop-blur-md">
+                  <h3 className="font-bold">{p.title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-white/85">{p.desc}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
-      {/* ===== Ai có thể tham gia ===== */}
-      <section className="mt-20">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-display text-xl font-bold text-slate-950 sm:text-2xl">Ai có thể tham gia KOCity?</h2>
-          <Button
-            variant="primary"
-            size="sm"
-            className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
-            onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
+        {/* ===== Vì sao chọn KOCity ===== */}
+        <section className="-mx-4 mt-20 bg-[linear-gradient(180deg,#f5f3ff_0%,#fdf2f8_100%)] px-4 py-14 sm:-mx-6 sm:rounded-[32px] sm:px-10">
+          <h2 className="text-center font-display text-xl font-bold text-slate-950 sm:text-2xl">Vì sao nên chọn KOCity</h2>
+          <ol className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-3">
+            {REASONS.map((r, i) => (
+              <li key={r} className="card-fx rounded-2xl bg-white p-5 ring-1 ring-violet-100">
+                <p className="font-display text-lg font-bold text-[#6d28d9]">0{i + 1}.</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{r}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* ===== Câu hỏi thường gặp ===== */}
+        <section className="mx-auto mt-20 max-w-3xl">
+          <h2 className="text-center font-display text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Câu hỏi thường gặp</h2>
+          <div className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+            {FAQ.map((f) => (
+              <details key={f.q} className="group py-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">
+                  {f.q}
+                  <Icon name="add" className="shrink-0 text-[22px] text-[#7c3aed] transition-transform group-open:rotate-45" />
+                </summary>
+                <p className="mt-3 pr-8 text-[15px] leading-relaxed text-slate-600">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        {/* ===== Hỗ trợ qua Zalo ===== */}
+        <section className="mt-20 text-center">
+          <h2 className="font-display text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Cần hỗ trợ?</h2>
+          <p className="mx-auto mt-2 max-w-md text-slate-500">Hỏi về brief, tiến độ duyệt hay vận đơn — Admin trả lời trực tiếp trong nhóm Zalo.</p>
+          <a
+            href={ZALO_GROUP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#0068ff] px-6 text-[15px] font-semibold text-white hover:bg-[#0058d6]"
           >
-            {currentUser ? 'Xem mẫu ngay' : 'Tham gia ngay'}
-          </Button>
-        </div>
-        <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
-          {PERSONAS.map((p, i) => (
-            <article key={p.title} className="card-fx relative aspect-[3/4] w-[75%] shrink-0 snap-center overflow-hidden rounded-[24px] sm:w-auto">
-              <img src={personaImages[i]} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-              <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-white/15 p-3.5 text-white ring-1 ring-white/30 backdrop-blur-md">
-                <h3 className="font-bold">{p.title}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-white/85">{p.desc}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+            Vào nhóm Zalo KOC <Icon name="arrow_outward" className="text-[18px]" />
+          </a>
+        </section>
 
-      {/* ===== Vì sao chọn KOCity ===== */}
-      <section className="-mx-4 mt-20 bg-[linear-gradient(180deg,#f5f3ff_0%,#fdf2f8_100%)] px-4 py-14 sm:-mx-6 sm:rounded-[32px] sm:px-10">
-        <h2 className="text-center font-display text-xl font-bold text-slate-950 sm:text-2xl">Vì sao nên chọn KOCity</h2>
-        <ol className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-3">
-          {REASONS.map((r, i) => (
-            <li key={r} className="card-fx rounded-2xl bg-white p-5 ring-1 ring-violet-100">
-              <p className="font-display text-lg font-bold text-[#6d28d9]">0{i + 1}.</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{r}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+        {isAdmin && <HeroImageSheet open={heroSheetOpen} onClose={() => setHeroSheetOpen(false)} />}
 
-
-      {/* ===== Câu hỏi thường gặp ===== */}
-      <section className="mx-auto mt-20 max-w-3xl">
-        <h2 className="text-center font-display text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Câu hỏi thường gặp</h2>
-        <div className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
-          {FAQ.map((f) => (
-            <details key={f.q} className="group py-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">
-                {f.q}
-                <Icon name="add" className="shrink-0 text-[22px] text-[#7c3aed] transition-transform group-open:rotate-45" />
-              </summary>
-              <p className="mt-3 pr-8 text-[15px] leading-relaxed text-slate-600">{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      {/* ===== Hỗ trợ qua Zalo ===== */}
-      <section className="mt-20 text-center">
-        <h2 className="font-display text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Cần hỗ trợ?</h2>
-        <p className="mx-auto mt-2 max-w-md text-slate-500">Hỏi về brief, tiến độ duyệt hay vận đơn — Admin trả lời trực tiếp trong nhóm Zalo.</p>
-        <a
-          href={ZALO_GROUP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#0068ff] px-6 text-[15px] font-semibold text-white hover:bg-[#0058d6]"
+        {/* ===== Bảng lọc ===== */}
+        <Sheet
+          open={filterOpen}
+          onClose={() => setFilterOpen(false)}
+          title="Lọc & sắp xếp"
+          footer={
+            <div className="flex gap-2">
+              <Button variant="outline" size="lg" onClick={resetFilters} className="flex-1">
+                Đặt lại
+              </Button>
+              <Button variant="dark" size="lg" onClick={() => setFilterOpen(false)} className="flex-[2]">
+                Xem {visible.length} chiến dịch
+              </Button>
+            </div>
+          }
         >
-          Vào nhóm Zalo KOC <Icon name="arrow_outward" className="text-[18px]" />
-        </a>
-      </section>
-
-      {isAdmin && <HeroImageSheet open={heroSheetOpen} onClose={() => setHeroSheetOpen(false)} />}
-
-      {/* ===== Bảng lọc ===== */}
-      <Sheet
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        title="Lọc & sắp xếp"
-        footer={
-          <div className="flex gap-2">
-            <Button variant="outline" size="lg" onClick={resetFilters} className="flex-1">
-              Đặt lại
-            </Button>
-            <Button variant="dark" size="lg" onClick={() => setFilterOpen(false)} className="flex-[2]">
-              Xem {visible.length} chiến dịch
-            </Button>
-          </div>
-        }
-      >
-        <FilterGroup label="Sắp xếp">
-          {SORTS.map((s) => (
-            <Chip key={s.id} active={sort === s.id} onClick={() => setSort(s.id)}>{s.label}</Chip>
-          ))}
-        </FilterGroup>
-        <FilterGroup label="Quy mô kênh của bạn">
-          {FOLLOWER_TIERS.map((t) => (
-            <Chip key={t.id} active={tier === t.id} onClick={() => setTier(t.id)}>{t.label}</Chip>
-          ))}
-        </FilterGroup>
-        <FilterGroup label="Khác">
-          <Chip active={savedOnly} onClick={() => setSavedOnly((v) => !v)}>
-            <Icon name="favorite" filled={savedOnly} className="mr-1 text-[16px]" /> Đã lưu ({bookmarkedIds.length})
-          </Chip>
-        </FilterGroup>
-      </Sheet>
+          <FilterGroup label="Sắp xếp">
+            {SORTS.map((s) => (
+              <Chip key={s.id} active={sort === s.id} onClick={() => setSort(s.id)}>{s.label}</Chip>
+            ))}
+          </FilterGroup>
+          <FilterGroup label="Quy mô kênh của bạn">
+            {FOLLOWER_TIERS.map((t) => (
+              <Chip key={t.id} active={tier === t.id} onClick={() => setTier(t.id)}>{t.label}</Chip>
+            ))}
+          </FilterGroup>
+          <FilterGroup label="Khác">
+            <Chip active={savedOnly} onClick={() => setSavedOnly((v) => !v)}>
+              <Icon name="favorite" filled={savedOnly} className="mr-1 text-[16px]" /> Đã lưu ({bookmarkedIds.length})
+            </Chip>
+          </FilterGroup>
+        </Sheet>
+      </div>
     </div>
   );
 };
