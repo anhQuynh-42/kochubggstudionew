@@ -158,6 +158,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     commissionRate: '10%',
     bookingFee: 'Freecast (Mẫu 0đ)',
     daysLeft: 20,
+    endDate: '',
     description: '',
     productHeroImage: '',
   });

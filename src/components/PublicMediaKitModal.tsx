@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { APP_LOGOS } from '../data/mockData';
-import { ZALO_GROUP_URL } from './ZaloCommunityWidget';
+import { ZALO_GROUP_URL } from '../lib/constants';
 import { copyTextToClipboard } from '../lib/clipboard';
 
 export interface PublicMediaKitData {
