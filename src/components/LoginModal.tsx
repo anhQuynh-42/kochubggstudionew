@@ -29,7 +29,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot_password'>(initialMode);
 
   // Login form states
-  const [loginMethod, setLoginMethod] = useState<'tiktok' | 'phone'>('tiktok');
   const [loginHandle, setLoginHandle] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -62,6 +61,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       if (rememberedStr) {
         const parsed: KOCUser = JSON.parse(rememberedStr);
         setRememberedUser(parsed);
+        if (parsed.phone) {
+          setLoginPhone(parsed.phone);
+        } else if (parsed.tiktokHandle) {
+          setLoginPhone(parsed.tiktokHandle);
+        }
         if (parsed.tiktokHandle) {
           setLoginHandle(parsed.tiktokHandle);
           setForgotHandle(parsed.tiktokHandle);
@@ -71,6 +75,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         if (profileStr) {
           const parsed: KOCUser = JSON.parse(profileStr);
           setRememberedUser(parsed);
+          if (parsed.phone) {
+            setLoginPhone(parsed.phone);
+          } else if (parsed.tiktokHandle) {
+            setLoginPhone(parsed.tiktokHandle);
+          }
           if (parsed.tiktokHandle) {
             setLoginHandle(parsed.tiktokHandle);
             setForgotHandle(parsed.tiktokHandle);
@@ -105,15 +114,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     e.preventDefault();
     setLoginError(null);
     setLoginSuccessNotice(null);
-    const handleValue = loginHandle.trim().toLowerCase();
-    const cleanHandle = handleValue ? (handleValue.startsWith('@') ? handleValue : `@${handleValue}`) : '';
-    const phoneValue = loginPhone.trim();
+
+    const rawInput = loginPhone.trim();
+    const cleanPhone = rawInput.replace(/[\s.-]/g, '');
+    const cleanHandle = rawInput.toLowerCase().replace(/[@\s]/g, '');
     const enteredPassword = loginPassword.trim();
 
-    // 1. KIỂM TRA ĐĂNG NHẬP ADMIN CHÍNH XÁC:
-    // ID TikTok: @adminwebkocity1235
+    if (!rawInput) {
+      setLoginError('Vui lòng nhập số điện thoại để đăng nhập.');
+      return;
+    }
+
+    // 1. KIỂM TRA ĐĂNG NHẬP ADMIN:
+    // Hỗ trợ đăng nhập qua SĐT Admin: 0999.888.999 (0999888999) hoặc ID: adminwebkocity1235
     // Mật khẩu: kocity6102026
-    if (loginMethod === 'tiktok' && cleanHandle === '@adminwebkocity1235') {
+    const isAdminIdentity = cleanPhone === '0999888999' || cleanHandle === 'adminwebkocity1235';
+    if (isAdminIdentity) {
       if (enteredPassword === 'kocity6102026') {
         const adminUser: KOCUser = {
           id: 'admin-kocity-root',
@@ -141,24 +157,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     const savedUsersStr = localStorage.getItem('koctrend_registered_users');
     let savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
 
-    let foundUser: KOCUser | undefined = undefined;
-
-    const normTargetHandle = cleanHandle.toLowerCase().replace(/[@\s]/g, '');
-    const normTargetPhone = phoneValue.replace(/[\s.-]/g, '');
-
-    if (loginMethod === 'tiktok') {
-      foundUser = savedUsers.find(
-        (u) =>
-          (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle &&
-          (!enteredPassword || !u.password || u.password === enteredPassword)
-      );
-    } else {
-      foundUser = savedUsers.find(
-        (u) =>
-          (u.phone || '').replace(/[\s.-]/g, '') === normTargetPhone &&
-          (!enteredPassword || !u.password || u.password === enteredPassword)
-      );
-    }
+    let foundUser = savedUsers.find((u) => {
+      const userPhoneNorm = (u.phone || '').replace(/[\s.-]/g, '');
+      const userHandleNorm = (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '');
+      const matchIdentity =
+        (cleanPhone && userPhoneNorm === cleanPhone) ||
+        (cleanHandle && userHandleNorm === cleanHandle);
+      const matchPass = !enteredPassword || !u.password || u.password === enteredPassword;
+      return matchIdentity && matchPass;
+    });
 
     // Fallback: nếu chưa có trong savedUsers nhưng có trong hồ sơ đang lưu koctrend_koc_profile
     if (!foundUser) {
@@ -166,11 +173,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         const activeProfileStr = localStorage.getItem('koctrend_koc_profile');
         if (activeProfileStr) {
           const activeUser: KOCUser = JSON.parse(activeProfileStr);
-          const activeHandleNorm = (activeUser.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '');
           const activePhoneNorm = (activeUser.phone || '').replace(/[\s.-]/g, '');
+          const activeHandleNorm = (activeUser.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '');
           if (
-            (loginMethod === 'tiktok' && activeHandleNorm === normTargetHandle) ||
-            (loginMethod === 'phone' && activePhoneNorm === normTargetPhone)
+            (cleanPhone && activePhoneNorm === cleanPhone) ||
+            (cleanHandle && activeHandleNorm === cleanHandle)
           ) {
             foundUser = activeUser;
             savedUsers = [...savedUsers, activeUser];
@@ -189,7 +196,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       onLoginSuccess(completeUser, false);
     } else {
       setLoginError(
-        'Tài khoản hoặc mật khẩu không chính xác. Nếu quên mật khẩu, bạn có thể bấm "Quên mật khẩu?" ngay bên dưới để đặt lại mà không lo mất dữ liệu.'
+        'Số điện thoại hoặc mật khẩu không chính xác. Nếu quên mật khẩu, bạn có thể bấm "Quên mật khẩu?" ngay bên dưới để đặt lại mà không lo mất dữ liệu.'
       );
     }
   };
@@ -251,13 +258,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setLoginError(null);
     setLoginSuccessNotice(null);
 
-    const handleValue = forgotHandle.trim().toLowerCase();
-    const cleanHandle = handleValue ? (handleValue.startsWith('@') ? handleValue : `@${handleValue}`) : '';
+    const rawVal = forgotHandle.trim();
+    const cleanPhone = rawVal.replace(/[\s.-]/g, '');
+    const normTargetHandle = rawVal.toLowerCase().replace(/[@\s]/g, '');
     const newPass = forgotNewPassword.trim();
     const confirmPass = forgotConfirmPassword.trim();
 
-    if (!cleanHandle) {
-      setLoginError('Vui lòng nhập ID TikTok của tài khoản cần lấy lại.');
+    if (!rawVal) {
+      setLoginError('Vui lòng nhập Số điện thoại hoặc ID TikTok của tài khoản cần lấy lại.');
       return;
     }
 
@@ -272,17 +280,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
 
     // Nếu là tài khoản Admin
-    if (cleanHandle === '@adminwebkocity1235') {
+    if (cleanPhone === '0999888999' || normTargetHandle === 'adminwebkocity1235') {
       setLoginError('Tài khoản Quản trị viên sử dụng mật khẩu hệ thống cố định: kocity6102026. Bạn hãy quay lại Đăng nhập để sử dụng mật khẩu này.');
       return;
     }
 
     const savedUsersStr = localStorage.getItem('koctrend_registered_users');
     let savedUsers: KOCUser[] = savedUsersStr ? JSON.parse(savedUsersStr) : [];
-    const normTargetHandle = cleanHandle.toLowerCase().replace(/[@\s]/g, '');
 
     let foundIndex = savedUsers.findIndex(
-      (u) => (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle
+      (u) =>
+        (u.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle ||
+        (cleanPhone && (u.phone || '').replace(/[\s.-]/g, '') === cleanPhone)
     );
 
     let targetUser: KOCUser;
@@ -293,18 +302,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       savedUsers[foundIndex] = targetUser;
     } else {
       // Nếu chưa có trong savedUsers nhưng có trong active profile hoặc đơn ứng tuyển: khôi phục nguyên vẹn
-      let fallbackName = cleanHandle.replace('@', '');
+      let fallbackName = rawVal.replace('@', '');
       let fallbackAvatar = APP_LOGOS.userProfile;
       let fallbackFollowers = '1K+';
-      let fallbackPhone = '';
-      let fallbackEmail = `${cleanHandle.replace('@', '')}@gmail.com`;
+      let fallbackPhone = cleanPhone || '';
+      let fallbackEmail = `${rawVal.replace('@', '')}@gmail.com`;
       let fallbackCategories = ['Làm đẹp & Mỹ phẩm'];
 
       try {
         const activeProfileStr = localStorage.getItem('koctrend_koc_profile');
         if (activeProfileStr) {
           const activeUser: KOCUser = JSON.parse(activeProfileStr);
-          if ((activeUser.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle) {
+          const activePhoneNorm = (activeUser.phone || '').replace(/[\s.-]/g, '');
+          const activeHandleNorm = (activeUser.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '');
+          if (
+            (cleanPhone && activePhoneNorm === cleanPhone) ||
+            (normTargetHandle && activeHandleNorm === normTargetHandle)
+          ) {
             fallbackName = activeUser.name || fallbackName;
             fallbackAvatar = activeUser.avatar || fallbackAvatar;
             fallbackFollowers = activeUser.followers || fallbackFollowers;
@@ -322,8 +336,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         if (appsStr) {
           const apps = JSON.parse(appsStr);
           const foundApp = apps.find(
-            (a: { tiktokHandle?: string; kocName?: string; phone?: string; email?: string }) =>
-              (a.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '') === normTargetHandle
+            (a: { tiktokHandle?: string; kocName?: string; phone?: string; email?: string }) => {
+              const appPhoneNorm = (a.phone || '').replace(/[\s.-]/g, '');
+              const appHandleNorm = (a.tiktokHandle || '').toLowerCase().replace(/[@\s]/g, '');
+              return (cleanPhone && appPhoneNorm === cleanPhone) || (normTargetHandle && appHandleNorm === normTargetHandle);
+            }
           );
           if (foundApp) {
             fallbackName = foundApp.kocName || fallbackName;
@@ -513,61 +530,25 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
             )}
 
-            {/* Login Method Subtabs */}
-            <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-semibold mb-3">
-              <button
-                type="button"
-                onClick={() => setLoginMethod('tiktok')}
-                className={`flex-1 rounded-lg py-1 transition-all cursor-pointer ${
-                  loginMethod === 'tiktok' ? 'bg-white text-[#6366f1] shadow-xs font-bold' : 'text-slate-500'
-                }`}
-              >
-                Kênh TikTok
-              </button>
-              <button
-                type="button"
-                onClick={() => setLoginMethod('phone')}
-                className={`flex-1 rounded-lg py-1 transition-all cursor-pointer ${
-                  loginMethod === 'phone' ? 'bg-white text-[#6366f1] shadow-xs font-bold' : 'text-slate-500'
-                }`}
-              >
-                Số điện thoại
-              </button>
-            </div>
-
             <form onSubmit={handleLoginSubmit} className="space-y-3">
-              {loginMethod === 'tiktok' ? (
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    ID TikTok
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">@</span>
-                    <input
-                      type="text"
-                      value={loginHandle.replace('@', '')}
-                      onChange={(e) => setLoginHandle(e.target.value)}
-                      placeholder="minhthu.beauty"
-                      className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-7 pr-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
-                      required
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Số điện thoại đã đăng ký
-                  </label>
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Số điện thoại <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">
+                    call
+                  </span>
                   <input
                     type="tel"
                     value={loginPhone}
                     onChange={(e) => setLoginPhone(e.target.value)}
-                    placeholder="0908.xxx.xxx"
-                    className="w-full rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                    placeholder="Nhập số điện thoại đã đăng ký (VD: 0908.xxx.xxx)"
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
                     required
                   />
                 </div>
-              )}
+              </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1">
@@ -610,7 +591,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   type="button"
                   onClick={() => {
                     setAuthMode('forgot_password');
-                    setForgotHandle(loginHandle);
+                    setForgotHandle(loginPhone || loginHandle);
                     setLoginError(null);
                   }}
                   className="text-[11px] font-bold text-[#6366f1] hover:text-[#4f46e5] hover:underline cursor-pointer"
@@ -807,22 +788,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </h3>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Nhập ID TikTok của bạn và tạo mật khẩu mới. <strong>Mọi dữ liệu hồ sơ và chiến dịch của bạn được bảo toàn 100%.</strong>
+              Nhập Số điện thoại hoặc ID TikTok của bạn để tạo mật khẩu mới. <strong>Mọi dữ liệu hồ sơ và chiến dịch của bạn được bảo toàn 100%.</strong>
             </p>
 
             <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-1">
-                  ID TikTok đã đăng ký <span className="text-red-500">*</span>
+                  Số điện thoại hoặc ID TikTok đã đăng ký <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">@</span>
+                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">
+                    badge
+                  </span>
                   <input
                     type="text"
-                    value={forgotHandle.replace('@', '')}
+                    value={forgotHandle}
                     onChange={(e) => setForgotHandle(e.target.value)}
-                    placeholder="minhthu.beauty"
-                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-7 pr-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
+                    placeholder="VD: 0908.xxx.xxx hoặc @minhthu.beauty"
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1] focus:outline-none"
                     required
                   />
                 </div>
