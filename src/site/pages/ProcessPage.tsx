@@ -255,14 +255,14 @@ export const ProcessPage: React.FC = () => {
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-medium text-slate-500">
             <Link to={ROUTES.home} className="hover:text-slate-900">Trang chủ</Link>
             <Icon name="chevron_right" className="text-[14px] text-slate-400" />
-            <span className="text-[#7c3aed] font-semibold">Quy trình dịch vụ</span>
+            <span className="text-[#7c3aed] font-semibold">Hành trình nhận job</span>
           </nav>
 
           <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl md:text-5xl">
-            Quy trình dịch vụ KOCity
+            Hành trình nhận job cùng Kocity
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">
-            Bằng kinh nghiệm và hệ sinh thái Nano & Micro KOC sâu rộng, chúng tôi là cầu nối tin cậy giữa Brand và Creator — tối ưu hóa khối lượng công việc, minh bạch hoa hồng và tối đa hóa hiệu quả bán hàng trên TikTok Shop.
+            Với kinh nghiệm kết nối thương hiệu và hệ sinh thái Nano & Micro KOC rộng khắp, KOCity mang đến cơ hội hợp tác với các brand uy tín cho nhà sáng tạo nội dung chỉ từ 1.000 follower. Dễ dàng tìm kiếm job phù hợp, ứng tuyển nhanh chóng với quy trình đơn giản, tối ưu và từng bước phát triển trên TikTok Shop cùng KOCity.
           </p>
 
           {/* Tab Switcher: KOC vs Brand */}
