@@ -288,48 +288,47 @@ export const HomePage: React.FC = () => {
           )}
         </section>
 
-        {/* ===== Hình thức kiếm tiền (Freecast + Affiliate) ===== */}
-        <section id="cach-hoat-dong" className="mt-20 scroll-mt-20">
-          <h2 className="text-center font-display text-xl font-bold text-slate-950 sm:text-2xl">Hình thức kiếm tiền với KOCity</h2>
-          <div className="mt-6 grid items-center gap-8 rounded-[28px] bg-gradient-to-br from-violet-50 via-white to-pink-50 p-5 ring-1 ring-violet-100 sm:p-8 md:grid-cols-2">
-            <div className="relative mx-auto w-full max-w-xs">
-              <div aria-hidden className="absolute -inset-4 -z-0 rounded-[32px] bg-white/70 shadow-xl shadow-violet-500/10" />
-              {campaigns[0] && (
-                <div className="relative">
-                  <CampaignCard
-                    campaign={campaigns[0]}
-                    isBookmarked={bookmarkedIds.includes(campaigns[0].id)}
-                    hasApplied={Boolean(getExistingApplication(campaigns[0].id))}
-                    onApply={() => requestApply(campaigns[0])}
-                    onToggleBookmark={() => toggleBookmark(campaigns[0])}
-                  />
-                </div>
-              )}
-            </div>
-            <div>
-              <h3 className="font-display text-2xl font-bold text-[#6d28d9]">Nhận mẫu 0đ + Hoa hồng theo đơn</h3>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <Badge tone="violet">Freecast</Badge>
-                <Badge tone="pink">Affiliate TikTok Shop</Badge>
+        {/* ===== Khối giới thiệu Quy trình dịch vụ KOCity ===== */}
+        <section id="cach-hoat-dong" className="mt-16 scroll-mt-20 overflow-hidden rounded-[28px] bg-gradient-to-br from-violet-900 via-indigo-900 to-[#4c1d95] p-6 text-white shadow-xl shadow-violet-900/10 sm:p-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-pink-200 backdrop-blur ring-1 ring-white/20">
+                <Icon name="alt_route" className="text-[14px]" /> Lộ trình minh bạch
+              </span>
+              <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                Quy trình hợp tác chuẩn mực
+              </h2>
+              <p className="mt-2 text-xs leading-relaxed text-white/85 sm:text-sm">
+                Từ bước đăng ký nhận mẫu 0đ, giao hàng tận nhà, đến lên video TikTok Shop và rút hoa hồng đối soát minh bạch. Khám phá quy trình chuyên nghiệp dành cho cả KOC và Brand.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-white/90">
+                <span className="flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1">
+                  <Icon name="check" className="text-[14px] text-emerald-400" /> 4 Bước nhận mẫu KOC
+                </span>
+                <span className="flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1">
+                  <Icon name="check" className="text-[14px] text-emerald-400" /> 5 Bước dịch vụ Brand
+                </span>
+                <span className="flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1">
+                  <Icon name="check" className="text-[14px] text-emerald-400" /> Cam kết 100% 0đ
+                </span>
               </div>
-              <ol className="mt-5 space-y-4">
-                {HOW_IT_WORKS.map((s, i) => (
-                  <li key={s.title} className="flex gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#6d28d9] text-sm font-bold text-white">{i + 1}</span>
-                    <div>
-                      <p className="font-semibold text-slate-900">{s.title}</p>
-                      <p className="text-sm text-slate-600">{s.desc}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <Button
-                variant="primary"
-                className="mt-6 rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
-                onClick={() => document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' })}
+            </div>
+
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+              <Link
+                to={ROUTES.process}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-slate-900 shadow-md transition hover:bg-slate-100 active:scale-95"
               >
-                Lên đầu xem mẫu
-              </Button>
+                Xem chi tiết quy trình <Icon name="arrow_forward" className="text-[18px] text-[#7c3aed]" />
+              </Link>
+              <a
+                href={ZALO_GROUP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white/15 px-6 text-sm font-semibold text-white backdrop-blur hover:bg-white/25"
+              >
+                Hỏi đáp nhóm Zalo KOC <Icon name="chat" className="text-[16px]" />
+              </a>
             </div>
           </div>
         </section>

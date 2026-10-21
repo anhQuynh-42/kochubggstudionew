@@ -7,6 +7,7 @@ import { Avatar, Button, Icon, cx } from './ui';
 
 const NAV = [
   { to: ROUTES.home, label: 'Khám phá', icon: 'explore', end: true },
+  { to: ROUTES.process, label: 'Quy trình', icon: 'alt_route' },
   { to: ROUTES.progress, label: 'Tiến độ', icon: 'monitoring' },
   { to: ROUTES.myApplications, label: 'Đơn của tôi', icon: 'inventory_2' },
   { to: ROUTES.notifications, label: 'Thông báo', icon: 'notifications' },
@@ -219,7 +220,7 @@ const BottomNav: React.FC = () => {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
     >
       <ul className="grid grid-cols-4">
-        {NAV.filter((item) => item.to !== ROUTES.progress).map((item) => (
+        {NAV.filter((item) => item.to !== ROUTES.progress && item.to !== ROUTES.process).map((item) => (
           <li key={item.to}>
             <NavLink to={item.to} end={item.end} className="flex h-[4.25rem] flex-col items-center justify-center gap-1">
               {({ isActive }) => (
@@ -249,6 +250,11 @@ const Footer: React.FC = () => (
       <div>
         <Logo />
         <p className="mt-3 max-w-sm text-sm text-slate-500">Nền tảng nhận mẫu 0đ và hợp tác hoa hồng dành cho Nano & Micro KOC TikTok.</p>
+        <div className="mt-3">
+          <Link to={ROUTES.process} className="inline-flex items-center gap-1 text-xs font-semibold text-[#7c3aed] hover:underline">
+            Xem quy trình dịch vụ KOCity <Icon name="arrow_forward" className="text-[12px]" />
+          </Link>
+        </div>
       </div>
       <div>
         <h3 className="text-sm font-bold text-slate-900">Cộng đồng</h3>

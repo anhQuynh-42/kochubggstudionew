@@ -18,6 +18,7 @@ export const BRAND_CONTACT = {
 export const ROUTES = {
   home: '/',
   campaign: (id: string) => `/c/${encodeURIComponent(id)}`,
+  process: '/quy-trinh',
   progress: '/tien-do',
   myApplications: '/don-cua-toi',
   notifications: '/thong-bao',

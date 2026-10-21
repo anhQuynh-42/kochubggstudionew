@@ -10,6 +10,7 @@ import { MyApplicationsPage } from './site/pages/MyApplicationsPage';
 import { NotificationsPage } from './site/pages/NotificationsPage';
 import { ProfilePage } from './site/pages/ProfilePage';
 import { ProgressPage } from './site/pages/ProgressPage';
+import { ProcessPage } from './site/pages/ProcessPage';
 import { Button, EmptyState } from './site/ui';
 import { AdminView } from './components/AdminView';
 import { PublicMediaKitModal, PublicMediaKitData } from './components/PublicMediaKitModal';
@@ -28,6 +29,7 @@ export const App: React.FC = () => (
           <Route element={<SiteLayout />}>
             <Route index element={<HomePage />} />
             <Route path="/c/:id" element={<CampaignPage />} />
+            <Route path={ROUTES.process} element={<ProcessPage />} />
             <Route path={ROUTES.progress} element={<ProgressPage />} />
             <Route path={ROUTES.myApplications} element={<MyApplicationsPage />} />
             <Route path={ROUTES.notifications} element={<NotificationsPage />} />
