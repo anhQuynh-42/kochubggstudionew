@@ -516,32 +516,46 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                     </span>
 
                     {/* Highlight TikTok Videos */}
-                    {data.highlightVideos && data.highlightVideos.length > 0 && (
+                    {data.highlightVideos && data.highlightVideos.filter(Boolean).length > 0 && (
                       <div className="space-y-1.5 pt-1">
-                        <p className="text-[10px] font-semibold text-slate-600">Video TikTok tiêu biểu:</p>
-                        <div className="grid gap-1.5">
-                          {data.highlightVideos.filter(Boolean).map((vUrl, idx) => (
-                            <a
-                              key={idx}
-                              href={vUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 text-white hover:bg-black transition-colors shadow-2xs group"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-6 h-6 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
-                                  <span className="material-symbols-outlined text-pink-400 text-[15px]">play_circle</span>
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-700">
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px] text-pink-600">play_circle</span>
+                            Video TikTok tiêu biểu ({data.highlightVideos.filter(Boolean).length})
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-normal">Bấm để mở xem clip</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {data.highlightVideos.filter(Boolean).map((rawUrl, idx) => {
+                            const cleanUrl = rawUrl.trim().split('?')[0];
+                            let channelName = '';
+                            try {
+                              const match = cleanUrl.match(/@([^/?#]+)/);
+                              if (match && match[1]) channelName = `@${match[1]}`;
+                            } catch (e) {}
+
+                            return (
+                              <a
+                                key={idx}
+                                href={rawUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-2 rounded-xl bg-slate-900 hover:bg-black text-white transition-all shadow-2xs group border border-slate-800 hover:border-pink-500/50 min-w-0"
+                                title={`Mở xem video #${idx + 1} trên TikTok`}
+                              >
+                                <div className="w-6 h-6 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                  <span className="material-symbols-outlined text-pink-400 text-[14px]">play_arrow</span>
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-bold text-white truncate">Video nổi bật #{idx + 1}</p>
-                                  <p className="text-[10px] text-slate-300 truncate">{vUrl}</p>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[11px] font-bold text-white truncate leading-tight">Clip #{idx + 1}</p>
+                                  <p className="text-[9px] text-slate-400 truncate">{channelName || 'TikTok Video'}</p>
                                 </div>
-                              </div>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-300 bg-white/10 px-2 py-1 rounded-lg shrink-0 group-hover:bg-white/20">
-                                Xem video <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-                              </span>
-                            </a>
-                          ))}
+                                <span className="material-symbols-outlined text-slate-400 group-hover:text-pink-300 text-[13px] shrink-0">
+                                  open_in_new
+                                </span>
+                              </a>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

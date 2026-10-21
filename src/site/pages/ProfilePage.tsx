@@ -111,11 +111,15 @@ export const ProfilePage: React.FC = () => {
     e.target.value = '';
   };
 
-  // Vấn đề 3: Cập nhật danh sách top 3 video TikTok nổi bật
+  // Vấn đề 3: Cập nhật danh sách top 3 video TikTok nổi bật (tự động làm sạch query params)
   const highlightVideos = draft.highlightVideos || ['', '', ''];
   const updateHighlightVideo = (index: number, val: string) => {
     const next = [...highlightVideos];
-    next[index] = val;
+    let cleaned = val.trim();
+    if (cleaned.includes('tiktok.com') && cleaned.includes('?')) {
+      cleaned = cleaned.split('?')[0];
+    }
+    next[index] = cleaned;
     set('highlightVideos', next);
   };
 
