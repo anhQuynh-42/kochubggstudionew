@@ -214,36 +214,70 @@ export const HomePage: React.FC = () => {
           )}
         />
 
-        {/* Bầu trời ngàn sao êm dịu, tĩnh lặng (Starfield khi Tắt đèn - không rối mắt) */}
+        {/* Bầu trời ngàn sao lấp lánh (sao đứng yên, chỉ sao băng chuyển động) */}
         {isNight && (
           <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
             <style>{`
-              @keyframes starBreathe1 {
+              @keyframes starTwinkle1 {
+                0%, 100% { opacity: 0.25; }
+                50% { opacity: 1; filter: drop-shadow(0 0 4px #ffffff); }
+              }
+              @keyframes starTwinkle2 {
+                0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 3px #fef08a); }
+                50% { opacity: 0.2; }
+              }
+              @keyframes starTwinkle3 {
                 0%, 100% { opacity: 0.3; }
-                50% { opacity: 0.8; }
+                40% { opacity: 1; filter: drop-shadow(0 0 4px #a5f3fc); }
+                75% { opacity: 0.15; }
               }
-              @keyframes starBreathe2 {
-                0%, 100% { opacity: 0.75; }
-                50% { opacity: 0.25; }
+              @keyframes shootingStarFlight {
+                0% {
+                  transform: translate(0, 0) rotate(-26deg);
+                  opacity: 0;
+                }
+                3% {
+                  opacity: 1;
+                }
+                14% {
+                  transform: translate(-340px, 170px) rotate(-26deg);
+                  opacity: 0;
+                }
+                100% {
+                  transform: translate(-340px, 170px) rotate(-26deg);
+                  opacity: 0;
+                }
               }
-              .kc-star-gentle-1 { animation: starBreathe1 5s ease-in-out infinite; }
-              .kc-star-gentle-2 { animation: starBreathe2 6.5s ease-in-out infinite 1.8s; }
+              .kc-star-twinkle-1 { animation: starTwinkle1 2.8s ease-in-out infinite; }
+              .kc-star-twinkle-2 { animation: starTwinkle2 3.4s ease-in-out infinite 0.7s; }
+              .kc-star-twinkle-3 { animation: starTwinkle3 4.1s ease-in-out infinite 1.4s; }
+              .kc-shooting-star {
+                animation: shootingStarFlight 6.5s cubic-bezier(0.25, 0.1, 0.25, 1) infinite 1.5s;
+              }
             `}</style>
 
-            {/* Các ngôi sao tĩnh, dịu mắt ở phần trên bầu trời */}
-            <svg className="absolute inset-0 h-full w-full" fill="none">
-              <circle cx="10%" cy="14%" r="1.3" fill="#ffffff" className="kc-star-gentle-1" />
-              <circle cx="22%" cy="20%" r="1.1" fill="#fef08a" className="kc-star-gentle-2" />
-              <circle cx="34%" cy="12%" r="1.4" fill="#ffffff" className="kc-star-gentle-1" />
-              <circle cx="48%" cy="18%" r="1.2" fill="#a5f3fc" className="kc-star-gentle-2" />
-              <circle cx="62%" cy="13%" r="1.3" fill="#ffffff" className="kc-star-gentle-1" />
-              <circle cx="76%" cy="22%" r="1.2" fill="#fef08a" className="kc-star-gentle-2" />
-              <circle cx="88%" cy="15%" r="1.4" fill="#ffffff" className="kc-star-gentle-1" />
-              <circle cx="95%" cy="25%" r="1.1" fill="#fbcfe8" className="kc-star-gentle-2" />
+            {/* SAO BĂNG: VẬT THỂ DUY NHẤT CHUYỂN ĐỘNG TRÊN BẦU TRỜI */}
+            <div
+              className="kc-shooting-star absolute right-24 top-5 h-[2px] w-28 rounded-full bg-gradient-to-r from-transparent via-fuchsia-300 to-white"
+              style={{ filter: 'drop-shadow(0 0 4px #ffffff)' }}
+            />
 
-              {/* Chỉ 2 ngôi sao 4 cánh nhỏ điểm xuyết tĩnh */}
-              <path d="M 140,28 L 141.5,32 L 145,33.5 L 141.5,35 L 140,39 L 138.5,35 L 135,33.5 L 138.5,32 Z" fill="#ffffff" opacity="0.75" className="kc-star-gentle-1" />
-              <path d="M 1120,32 L 1121.5,36 L 1125,37.5 L 1121.5,39 L 1120,43 L 1118.5,39 L 1115,37.5 L 1118.5,36 Z" fill="#fef08a" opacity="0.8" className="kc-star-gentle-2" />
+            {/* CÁC NGÔI SAO: ĐỨNG YÊN 100% TẠI CHỖ, CHỈ LẤP LÁNH (TWINKLE) */}
+            <svg className="absolute inset-0 h-full w-full" fill="none">
+              <circle cx="8%" cy="14%" r="1.4" fill="#ffffff" className="kc-star-twinkle-1" />
+              <circle cx="18%" cy="22%" r="1.2" fill="#fef08a" className="kc-star-twinkle-2" />
+              <circle cx="28%" cy="12%" r="1.5" fill="#ffffff" className="kc-star-twinkle-3" />
+              <circle cx="38%" cy="20%" r="1.2" fill="#a5f3fc" className="kc-star-twinkle-1" />
+              <circle cx="48%" cy="14%" r="1.4" fill="#ffffff" className="kc-star-twinkle-2" />
+              <circle cx="58%" cy="24%" r="1.2" fill="#fef08a" className="kc-star-twinkle-3" />
+              <circle cx="68%" cy="12%" r="1.5" fill="#ffffff" className="kc-star-twinkle-1" />
+              <circle cx="78%" cy="22%" r="1.2" fill="#a5f3fc" className="kc-star-twinkle-2" />
+              <circle cx="88%" cy="14%" r="1.4" fill="#ffffff" className="kc-star-twinkle-3" />
+              <circle cx="94%" cy="24%" r="1.2" fill="#fbcfe8" className="kc-star-twinkle-1" />
+
+              {/* 2 ngôi sao 4 cánh đứng yên lấp lánh */}
+              <path d="M 150,30 L 151.5,34 L 155,35.5 L 151.5,37 L 150,41 L 148.5,37 L 145,35.5 L 148.5,34 Z" fill="#ffffff" className="kc-star-twinkle-1" />
+              <path d="M 1080,32 L 1081.5,36 L 1085,37.5 L 1081.5,39 L 1080,43 L 1078.5,39 L 1075,37.5 L 1078.5,36 Z" fill="#fef08a" className="kc-star-twinkle-2" />
             </svg>
           </div>
         )}
