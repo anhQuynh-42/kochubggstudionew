@@ -30,6 +30,11 @@ export interface PublicMediaKitData {
     dataUrl?: string;
     type?: string;
   };
+  highlightVideos?: string[];
+  workPhone?: string;
+  workEmail?: string;
+  phone?: string;
+  email?: string;
   targetAudience?: string;
   targetAudienceImage?: string;
   contentStyle?: string[] | string;
@@ -503,12 +508,43 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
                 </div>
 
                 {/* Portfolio & Case Studies */}
-                {(data.portfolioDriveLink || data.portfolioFile) && (
+                {(data.portfolioDriveLink || data.portfolioFile || (data.highlightVideos && data.highlightVideos.length > 0)) && (
                   <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 space-y-2">
                     <span className="text-[10px] font-bold text-indigo-950 uppercase tracking-wider block flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px] text-[#613bd1]">folder_shared</span>
-                      Portfolio hoặc Video nổi bật
+                      Portfolio & Video TikTok nổi bật
                     </span>
+
+                    {/* Highlight TikTok Videos */}
+                    {data.highlightVideos && data.highlightVideos.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <p className="text-[10px] font-semibold text-slate-600">Video TikTok tiêu biểu:</p>
+                        <div className="grid gap-1.5">
+                          {data.highlightVideos.filter(Boolean).map((vUrl, idx) => (
+                            <a
+                              key={idx}
+                              href={vUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900 text-white hover:bg-black transition-colors shadow-2xs group"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-6 h-6 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
+                                  <span className="material-symbols-outlined text-pink-400 text-[15px]">play_circle</span>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-white truncate">Video nổi bật #{idx + 1}</p>
+                                  <p className="text-[10px] text-slate-300 truncate">{vUrl}</p>
+                                </div>
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-300 bg-white/10 px-2 py-1 rounded-lg shrink-0 group-hover:bg-white/20">
+                                Xem video <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* File Portfolio or Uploaded Video */}
                     {data.portfolioFile && (
@@ -696,15 +732,22 @@ export const PublicMediaKitModal: React.FC<PublicMediaKitModalProps> = ({
 
           <div className="flex items-center gap-2">
             {/* Nút 3: Liên hệ Zalo / Hợp tác */}
-            <a
-              href={ZALO_GROUP_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] hover:opacity-95 py-2.5 px-4 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer text-center"
-            >
-              <span className="material-symbols-outlined text-[16px]">chat</span>
-              <span>Liên hệ hợp tác (Zalo)</span>
-            </a>
+            {(() => {
+              const contactPhone = data.workPhone || data.phone;
+              const cleanContactPhone = contactPhone ? contactPhone.replace(/[\s.-]/g, '') : '';
+              const directZaloUrl = cleanContactPhone ? `https://zalo.me/${cleanContactPhone}` : ZALO_GROUP_URL;
+              return (
+                <a
+                  href={directZaloUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#613bd1] to-[#316bbf] hover:opacity-95 py-2.5 px-4 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer text-center"
+                >
+                  <span className="material-symbols-outlined text-[16px]">chat</span>
+                  <span>{cleanContactPhone ? 'Nhắn Zalo Booking' : 'Liên hệ hợp tác (Zalo)'}</span>
+                </a>
+              );
+            })()}
 
             {/* Nút 4: Khám phá chiến dịch Kocity */}
             {onExploreCampaigns && (

@@ -159,6 +159,9 @@ export interface KOCUser {
     type?: string;
     uploadedAt?: string;
   };
+  highlightVideos?: string[];
+  workPhone?: string;
+  workEmail?: string;
   sampleDeliveredCount?: number;
   completedVideosCount?: number;
   completedCampaignsCount?: number;
