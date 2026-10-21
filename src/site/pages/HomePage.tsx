@@ -148,90 +148,69 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* ===== Hero KOCity Creator (Full màn hình edge-to-edge, chiều cao ngắn & tinh tế) ===== */}
+      {/* ===== Hero KOCity Creator (Full màn hình, gọn gàng, không ảnh cồng kềnh) ===== */}
       <section className="relative w-full overflow-hidden border-b border-violet-100/80 bg-[linear-gradient(135deg,#fde7f3_0%,#ede9fe_35%,#dbeafe_65%,#fef3c7_100%)]">
         <div aria-hidden className="pointer-events-none absolute -left-24 top-6 h-72 w-72 rounded-full bg-pink-300/35 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full bg-indigo-300/35 blur-3xl" />
 
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:py-8">
-          <div className="relative grid items-center gap-6 lg:grid-cols-12 lg:gap-8">
-            {/* Cột trái: Thông điệp + Lời chào + CTA + Số liệu */}
-            <div className="text-left lg:col-span-7">
-              {currentUser && !isAdmin && (
-                <div className="mb-2.5 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-800 shadow-sm backdrop-blur ring-1 ring-violet-200/80 sm:mb-3 sm:py-1.5 sm:text-sm">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-[11px] font-bold text-white uppercase sm:h-6 sm:w-6 sm:text-xs">
-                    {currentUser.name ? currentUser.name.charAt(0) : 'K'}
-                  </span>
-                  <span>Chào <strong className="font-semibold text-slate-900">{currentUser.name}</strong> 👋</span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-violet-700"><strong>{pendingCount}</strong> chờ duyệt</span>
-                  <span className="text-slate-300">·</span>
-                  <span className="text-fuchsia-700"><strong>{selectedCount}</strong> đang làm</span>
-                  <Link
-                    to={ROUTES.myApplications}
-                    className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800 transition hover:bg-violet-200"
-                  >
-                    Xem đơn <Icon name="arrow_forward" className="text-[13px]" />
-                  </Link>
-                </div>
-              )}
-
-              <h1 className="font-display text-2xl font-bold tracking-tight text-[#4c1d95] sm:text-3xl lg:text-4xl">
-                KOCity Creator
-              </h1>
-              <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-slate-600 sm:mt-2 sm:text-sm md:text-base">
-                Nền tảng kết nối Nano & Micro KOC TikTok với Brand. Nhận mẫu 0đ tận nhà, lên video theo brief và nhận hoa hồng minh bạch theo từng đơn.
-              </p>
-
-              <div className="mt-3.5 flex flex-wrap items-center gap-2.5 sm:mt-4 sm:gap-3">
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] px-5 shadow-md shadow-pink-500/20 hover:opacity-95 sm:h-11 sm:px-6"
-                  onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
-                >
-                  {currentUser ? 'Khám phá mẫu 0đ ngay' : 'Tham gia ngay'}
-                </Button>
-                {currentUser && !isAdmin && (
-                  <Button
-                    variant="outline"
-                    size="md"
-                    className="rounded-full bg-white/90 px-4 text-slate-800 ring-1 ring-violet-200 backdrop-blur hover:bg-white sm:h-11 sm:px-5"
-                    onClick={() => navigate(ROUTES.myApplications)}
-                  >
-                    Đơn của tôi {pendingCount + selectedCount > 0 ? `(${pendingCount + selectedCount})` : ''}
-                  </Button>
-                )}
-              </div>
-
-              {/* 4 Số liệu nhanh dạng 1 hàng siêu gọn */}
-              <div className="mt-4 border-t border-violet-200/50 pt-3">
-                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
-                  {heroStats.map((s) => (
-                    <div key={s.label} className="card-fx flex flex-col-reverse rounded-xl bg-white/85 px-2.5 py-1.5 text-left shadow-xs backdrop-blur ring-1 ring-violet-100 sm:px-3 sm:py-2">
-                      <dt className="text-[10px] text-slate-500 sm:text-[11px]">{s.label}</dt>
-                      <dd className="font-display text-base font-bold text-[#6d28d9] sm:text-lg">{s.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
+        <div className="mx-auto max-w-4xl px-4 py-6 text-center sm:px-6 sm:py-8 lg:py-9">
+          {currentUser && !isAdmin && (
+            <div className="mb-3 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-800 shadow-sm backdrop-blur ring-1 ring-violet-200/80 sm:mb-3.5 sm:py-1.5 sm:text-sm">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-500 text-[11px] font-bold text-white uppercase sm:h-6 sm:w-6 sm:text-xs">
+                {currentUser.name ? currentUser.name.charAt(0) : 'K'}
+              </span>
+              <span>Chào <strong className="font-semibold text-slate-900">{currentUser.name}</strong> 👋</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-violet-700"><strong>{pendingCount}</strong> chờ duyệt</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-fuchsia-700"><strong>{selectedCount}</strong> đang làm</span>
+              <Link
+                to={ROUTES.myApplications}
+                className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800 transition hover:bg-violet-200"
+              >
+                Xem đơn <Icon name="arrow_forward" className="text-[13px]" />
+              </Link>
             </div>
+          )}
 
-            {/* Cột phải: Khung ảnh vòm KOC (Ẩn trên Mobile để màn hình siêu gọn, hiển thị thanh thoát trên Desktop) */}
-            <div className="relative hidden lg:col-span-5 lg:block">
-              <div className="relative mx-auto max-w-[270px]">
-                <div className="aspect-[4/5] overflow-hidden rounded-t-[100px] rounded-b-[24px] bg-gradient-to-b from-violet-300 to-fuchsia-300 shadow-lg ring-4 ring-white/60">
-                  <img src={heroImage} alt="KOC quay video mở hộp sản phẩm" className="h-full w-full object-cover" />
+          <h1 className="font-display text-2xl font-bold tracking-tight text-[#4c1d95] sm:text-3xl md:text-4xl lg:text-5xl">
+            KOCity Creator
+          </h1>
+          <p className="mx-auto mt-2 max-w-xl text-xs leading-relaxed text-slate-600 sm:mt-2.5 sm:text-sm md:text-base">
+            Nền tảng kết nối Nano & Micro KOC TikTok với Brand. Nhận mẫu 0đ tận nhà, lên video theo brief và nhận hoa hồng minh bạch theo từng đơn.
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 sm:mt-5 sm:gap-3">
+            <Button
+              variant="primary"
+              size="md"
+              className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] px-5 shadow-md shadow-pink-500/20 hover:opacity-95 sm:h-11 sm:px-7"
+              onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
+            >
+              {currentUser ? 'Khám phá mẫu 0đ ngay' : 'Tham gia ngay'}
+            </Button>
+            {currentUser && !isAdmin && (
+              <Button
+                variant="outline"
+                size="md"
+                className="rounded-full bg-white/90 px-4 text-slate-800 ring-1 ring-violet-200 backdrop-blur hover:bg-white sm:h-11 sm:px-6"
+                onClick={() => navigate(ROUTES.myApplications)}
+              >
+                Đơn của tôi {pendingCount + selectedCount > 0 ? `(${pendingCount + selectedCount})` : ''}
+              </Button>
+            )}
+          </div>
+
+          {/* 4 Số liệu nhanh dạng 1 hàng siêu gọn */}
+          <div className="mx-auto mt-5 max-w-2xl border-t border-violet-200/50 pt-4 sm:mt-6">
+            <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
+              {heroStats.map((s) => (
+                <div key={s.label} className="card-fx flex flex-col-reverse rounded-xl bg-white/85 px-2.5 py-1.5 text-center shadow-xs backdrop-blur ring-1 ring-violet-100 sm:px-3 sm:py-2">
+                  <dt className="text-[10px] text-slate-500 sm:text-[11px]">{s.label}</dt>
+                  <dd className="font-display text-base font-bold text-[#6d28d9] sm:text-lg">{s.value}</dd>
                 </div>
-                <FloatLabel icon="redeem" className="-left-3 bottom-8 shadow-sm">Mẫu 0đ tận tay</FloatLabel>
-                <FloatLabel icon="percent" className="-right-3 top-6 shadow-sm">Hoa hồng minh bạch</FloatLabel>
-                {isAdmin && (
-                  <Button variant="dark" size="sm" className="absolute right-2 bottom-2 bg-black/60 shadow" onClick={() => setHeroSheetOpen(true)}>
-                    <Icon name="photo_camera" className="text-[16px]" />
-                  </Button>
-                )}
-              </div>
-            </div>
+              ))}
+            </dl>
           </div>
         </div>
       </section>
