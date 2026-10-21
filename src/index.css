@@ -1,55 +1,25 @@
 @import "tailwindcss";
 
+/* Bảng màu & font theo CLAUDE.md mục 8.1: nền sáng sạch, điểm nhấn gradient Indigo → Violet → Pink */
 @theme {
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-container: #eef2ff;
-  --color-primary-fixed: #e0e7ff;
-  --color-primary-fixed-dim: #c7d2fe;
-  --color-on-primary: #ffffff;
-  --color-on-primary-fixed: #312e81;
-  --color-on-primary-fixed-variant: #4338ca;
+  --color-brand-indigo: #6366f1;
+  --color-brand-violet: #8b5cf6;
+  --color-brand-pink: #ec4899;
+  --color-canvas: #fafafc;
 
-  --color-secondary: #8b5cf6;
-  --color-secondary-container: #f5f3ff;
-  --color-secondary-fixed: #ede9fe;
-  --color-secondary-fixed-dim: #ddd6fe;
-  --color-on-secondary: #ffffff;
-  --color-on-secondary-fixed: #4c1d95;
-  --color-on-secondary-fixed-variant: #6d28d9;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, sans-serif;
+}
 
-  --color-background: #faf2f8;
-  --color-on-background: #0f172a;
-  --color-surface: #ffffff;
-  --color-surface-dim: #f5eaf3;
-  --color-surface-bright: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #fdf6fb;
-  --color-surface-container: #f5eaf3;
-  --color-surface-container-high: #ebdbe8;
-  --color-surface-container-highest: #dec7da;
-  --color-on-surface: #0f172a;
-  --color-on-surface-variant: #64748b;
-  --color-outline: #94a3b8;
-  --color-outline-variant: #e2e8f0;
-
-  --font-headline-lg: 'Plus Jakarta Sans', sans-serif;
-  --font-headline-md: 'Plus Jakarta Sans', sans-serif;
-  --font-headline-sm: 'Plus Jakarta Sans', sans-serif;
-  --font-headline-xl: 'Plus Jakarta Sans', sans-serif;
-  --font-display-lg: 'Plus Jakarta Sans', sans-serif;
-  --font-body-lg: 'Inter', sans-serif;
-  --font-body-md: 'Inter', sans-serif;
-  --font-body-sm: 'Inter', sans-serif;
-  --font-label-lg: 'Inter', sans-serif;
-  --font-label-md: 'Inter', sans-serif;
-  --font-label-sm: 'Inter', sans-serif;
-  --font-metric-mono: 'Inter', monospace;
+html {
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: clip;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: #faf2f8;
+  font-family: var(--font-sans);
+  background-color: var(--color-canvas);
+  overflow-x: clip;
   color: #0f172a;
 }
 
@@ -69,75 +39,97 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Eye-catching shake animation for the floating Zalo CTA button */
-@keyframes shake-wiggle {
-  0%, 100% {
-    transform: rotate(0deg) scale(1);
-  }
-  10%, 30% {
-    transform: rotate(-6deg) scale(1.05);
-  }
-  20%, 40% {
-    transform: rotate(6deg) scale(1.05);
-  }
-  50% {
-    transform: rotate(-3deg) scale(1.03);
-  }
-  60% {
-    transform: rotate(3deg) scale(1.03);
-  }
-  70% {
-    transform: rotate(0deg) scale(1);
-  }
+/* Ẩn thanh cuộn của các dải lướt ngang (chip, thư viện ảnh) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-.animate-shake-attention {
-  animation: shake-wiggle 3s ease-in-out infinite;
-  transform-origin: center;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.animate-shake-delayed {
-  animation: shake-wiggle 3s ease-in-out 1.5s infinite;
-  transform-origin: center;
+@keyframes sheetUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.95);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-}
-
-.animate-pulse-ring {
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Smooth continuous marquee animation for the Hero bottom ticker */
+/* Live Ticker chạy ngang liên tục (nội dung được nhân đôi, chạy tới -50% rồi lặp lại) */
 @keyframes marquee-horizontal {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+  from { transform: translateX(0%); }
+  to { transform: translateX(-50%); }
 }
 
 .animate-marquee-infinite {
   display: flex;
   width: max-content;
   will-change: transform;
-  animation: marquee-horizontal 28s linear infinite;
+  animation: marquee-horizontal 40s linear infinite;
 }
 
 .animate-marquee-infinite:hover {
   animation-play-state: paused;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-infinite {
+    animation: none;
+  }
+}
+
+/* ===== Hiệu ứng khi rê chuột: ô nổi lên + vệt sáng lấp lánh lướt qua ===== */
+.card-fx {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
+}
+.btn-fx {
+  position: relative;
+  overflow: hidden;
+}
+.card-fx::after,
+.btn-fx::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 48%, rgba(236, 72, 153, 0.12) 52%, transparent 70%);
+  transform: translateX(-130%);
+}
+.card-fx img {
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (hover: hover) {
+  .card-fx:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 22px 45px -18px rgba(124, 58, 237, 0.45);
+  }
+  .card-fx:hover img {
+    transform: scale(1.04);
+  }
+  .card-fx:hover::after,
+  .btn-fx:hover::after {
+    animation: shine-sweep 0.9s ease;
+  }
+  .btn-fx:hover {
+    transform: translateY(-1px);
+  }
+}
+@keyframes shine-sweep {
+  to { transform: translateX(130%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-fx,
+  .card-fx img,
+  .btn-fx { transition: none; }
+  .card-fx:hover,
+  .btn-fx:hover { transform: none; }
+  .card-fx:hover::after,
+  .btn-fx:hover::after { animation: none; }
+}

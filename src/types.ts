@@ -163,3 +163,36 @@ export interface KOCUser {
   completedVideosCount?: number;
   completedCampaignsCount?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Trạng thái hiển thị 3 lớp theo CLAUDE.md mục 3 (chỉ dùng cho giao diện).
+// Hiện được suy ra từ `KOCApplication.status` qua src/lib/applicationStatus.ts;
+// khi database có cột đồng bộ từ Google Sheet, chỉ cần đổi nguồn trong file đó.
+// ---------------------------------------------------------------------------
+
+/** Kết quả Brand chọn (cột `Brand duyệt KOC` trên Google Sheet) */
+export type SelectionStatus = 'pending' | 'selected' | 'not_selected';
+
+/** Tiến độ gửi mẫu nội bộ (cột `ADFI duyệt sample`) */
+export type SampleStage = 'none' | 'waiting' | 'approved' | 'in_transit' | 'delivered';
+
+/** Tiến độ đăng video (cột `KOC đăng video`) */
+export type VideoStage = 'not_posted' | 'pending_review' | 'needs_revision' | 'posted';
+
+export interface ApplicationProgress {
+  selection: SelectionStatus;
+  sample: SampleStage;
+  video: VideoStage;
+  /** Vị trí trên timeline 4 bước: 0 Đã gửi đơn → 1 Brand đang xem → 2 Duyệt gửi mẫu → 3 Đã lên bài */
+  timelineStep: 0 | 1 | 2 | 3;
+}
+
+/** Một dòng hoạt động trên Live Ticker (đã che tên, không chứa thông tin liên hệ) */
+export interface LiveActivityItem {
+  id: string;
+  displayName: string;
+  city: string;
+  brandName: string;
+  action: 'applied' | 'selected' | 'posted';
+  dateLabel: string;
+}
