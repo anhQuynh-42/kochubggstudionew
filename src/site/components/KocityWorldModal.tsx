@@ -56,6 +56,148 @@ interface KocityWorldModalProps {
 const MAP_W = 2800;
 const MAP_H = 1700;
 
+/**
+ * COMPONENT STORE 3D CLAY NHỎ NHẮN CHUẨN THEO ẢNH MẪU
+ * Thiết kế tỉ mỉ: Mái hiên sọc đỏ-vàng cong 3D, biển hiệu xanh da trời,
+ * chữ tên Brand vàng nổi 3D, cửa kính & bệ chân đế bo tròn.
+ */
+const Clay3DStore: React.FC<{
+  brandName: string;
+  hasJobAlert?: boolean;
+  onClick: () => void;
+}> = ({ brandName, hasJobAlert = true, onClick }) => {
+  return (
+    <div
+      onClick={onClick}
+      className="relative flex flex-col items-center cursor-pointer group clickable-element transition-transform duration-200 hover:scale-110 active:scale-95"
+      style={{ width: 110, height: 120 }}
+    >
+      {/* Huy hiệu chuông báo Job 0đ nhấp nháy trên nóc */}
+      {hasJobAlert && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 bg-rose-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-0.5 whitespace-nowrap">
+          <span>🔔</span>
+          <span>JOB 0Đ</span>
+        </div>
+      )}
+
+      {/* SVG 3D Clay Toy Store giống hệt ảnh mẫu */}
+      <svg
+        viewBox="0 0 110 120"
+        className="w-full h-full filter drop-shadow-xl"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <radialGradient id={`shadow-${brandName}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#000" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Gradient tường nhà tím phồng 3D */}
+          <linearGradient id={`wallGrad-${brandName}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#c4b5fd" />
+            <stop offset="45%" stopColor="#8b5cf6" />
+            <stop offset="100%" stopColor="#6d28d9" />
+          </linearGradient>
+
+          {/* Gradient mái hiên sọc đỏ */}
+          <linearGradient id={`awningRed-${brandName}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f87171" />
+            <stop offset="50%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#b91c1c" />
+          </linearGradient>
+
+          {/* Gradient mái hiên sọc vàng */}
+          <linearGradient id={`awningYellow-${brandName}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fef08a" />
+            <stop offset="50%" stopColor="#fde047" />
+            <stop offset="100%" stopColor="#ca8a04" />
+          </linearGradient>
+
+          {/* Gradient biển hiệu xanh da trời */}
+          <linearGradient id={`signGrad-${brandName}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7dd3fc" />
+            <stop offset="50%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#0284c7" />
+          </linearGradient>
+        </defs>
+
+        {/* 1. Bóng đổ sàn hình bầu dục */}
+        <ellipse cx="55" cy="115" rx="46" ry="5.5" fill={`url(#shadow-${brandName})`} />
+
+        {/* 2. Bệ nền bo tròn 3D màu xanh ngọc (Pedestal) */}
+        <rect x="8" y="103" width="94" height="9" rx="4.5" fill="#38bdf8" />
+        <rect x="8" y="99" width="94" height="9" rx="4.5" fill="#bae6fd" />
+        <rect x="12" y="101" width="86" height="3" rx="1.5" fill="#e0f2fe" opacity="0.7" />
+
+        {/* 3. Thân tường nhà tím phồng 3D (Body) */}
+        <rect x="19" y="44" width="72" height="56" rx="10" fill={`url(#wallGrad-${brandName})`} />
+        {/* Viền chân tường màu xanh đậm */}
+        <path d="M19 95 H91 V98 C91 99.5 89.5 100 87 100 H23 C20.5 100 19 99.5 19 98 Z" fill="#0284c7" />
+
+        {/* 4. Gờ mái bo tròn dày 3D (Roof Cornice) */}
+        <rect x="15" y="40" width="80" height="9" rx="4.5" fill="#a78bfa" />
+        <rect x="16" y="41" width="78" height="3" rx="1.5" fill="#ede9fe" opacity="0.7" />
+
+        {/* 5. Biển hiệu STORE trên nóc (Roof Signboard) */}
+        <rect x="26" y="16" width="58" height="26" rx="8" fill={`url(#signGrad-${brandName})`} stroke="#e0f2fe" strokeWidth="1.5" />
+        <rect x="29" y="18" width="52" height="3.5" rx="1.75" fill="#e0f2fe" opacity="0.6" />
+        {/* Chữ Tên Brand nổi 3D màu vàng */}
+        <text
+          x="55"
+          y="33.5"
+          textAnchor="middle"
+          fontSize="8.5"
+          fontWeight="900"
+          fontFamily="system-ui, -apple-system, sans-serif"
+          fill="#fde047"
+          stroke="#b45309"
+          strokeWidth="0.8"
+          paintOrder="stroke fill"
+          letterSpacing="0.4"
+        >
+          {brandName}
+        </text>
+
+        {/* 6. Mái hiên cong sọc đỏ - vàng (Striped Curved Awning) */}
+        <g>
+          {/* Sọc 1 (Đỏ) */}
+          <path d="M21 48 Q21 62 23 64 L29 64 Q27 52 27 48 Z" fill={`url(#awningRed-${brandName})`} />
+          {/* Sọc 2 (Vàng) */}
+          <path d="M27 48 Q27 52 29 64 L39 64 Q37 52 37 48 Z" fill={`url(#awningYellow-${brandName})`} />
+          {/* Sọc 3 (Đỏ) */}
+          <path d="M37 48 Q37 52 39 64 L49 64 Q47 52 47 48 Z" fill={`url(#awningRed-${brandName})`} />
+          {/* Sọc 4 (Vàng) */}
+          <path d="M47 48 Q47 52 49 64 L59 64 Q57 52 57 48 Z" fill={`url(#awningYellow-${brandName})`} />
+          {/* Sọc 5 (Đỏ) */}
+          <path d="M57 48 Q57 52 59 64 L69 64 Q67 52 67 48 Z" fill={`url(#awningRed-${brandName})`} />
+          {/* Sọc 6 (Vàng) */}
+          <path d="M67 48 Q67 52 69 64 L79 64 Q77 52 77 48 Z" fill={`url(#awningYellow-${brandName})`} />
+          {/* Sọc 7 (Đỏ) */}
+          <path d="M77 48 Q77 52 79 64 L87 64 Q87 62 87 48 Z" fill={`url(#awningRed-${brandName})`} />
+
+          {/* Vành gờ nhấp nhô đáy mái hiên */}
+          <path
+            d="M23 63 Q26 67 29 63 Q34 67 39 63 Q44 67 49 63 Q54 67 59 63 Q64 67 69 63 Q74 67 79 63 Q83 67 87 63"
+            stroke="#b91c1c"
+            strokeWidth="1.2"
+            fill="none"
+          />
+        </g>
+
+        {/* 7. Cửa ra vào bên trái (Door with cyan frame & handle) */}
+        <rect x="26" y="66" width="18" height="30" rx="3.5" fill="#f0f9ff" stroke="#38bdf8" strokeWidth="2.5" />
+        <rect x="39" y="78" width="2" height="6" rx="1" fill="#0284c7" />
+
+        {/* 8. Cửa sổ kính bên phải (Display Window with windowsill ledge) */}
+        <rect x="49" y="66" width="31" height="20" rx="3.5" fill="#bae6fd" stroke="#38bdf8" strokeWidth="2.5" />
+        <path d="M53 69 L74 69 L67 82 L53 82 Z" fill="#e0f2fe" opacity="0.6" />
+        <rect x="46" y="86" width="37" height="4" rx="2" fill="#38bdf8" stroke="#bae6fd" strokeWidth="0.8" />
+      </svg>
+    </div>
+  );
+};
+
 export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   open,
   onClose,
@@ -115,13 +257,13 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     return () => clearInterval(interval);
   }, [open]);
 
-  // Danh sách các Store Brand (Chỉ ghi tên trên Store, bấm vào hiện Thông báo Job)
+  // Danh sách các Store Brand
   const brandStations: BrandStation[] = [
     // --- PHỐ MỸ PHẨM & SKINCARE ---
     {
       id: 'co-mem',
       name: 'Store Cỏ Mềm Homelab',
-      brandName: 'Cỏ Mềm',
+      brandName: 'CỎ MỀM',
       streetName: 'Phố Mỹ Phẩm & Skincare',
       x: 1980,
       y: 380,
@@ -140,7 +282,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     {
       id: 'bielenda',
       name: 'Boutique Bielenda',
-      brandName: 'Bielenda',
+      brandName: 'BIELENDA',
       streetName: 'Phố Mỹ Phẩm & Skincare',
       x: 2320,
       y: 380,
@@ -161,7 +303,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     {
       id: 'visecret',
       name: 'Store ViSecret Fashion',
-      brandName: 'ViSecret',
+      brandName: 'VISECRET',
       streetName: 'Phố Thời Trang & OOTD',
       x: 2060,
       y: 840,
@@ -182,7 +324,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     {
       id: 'tranyoo',
       name: 'Store Tranyoo Audio',
-      brandName: 'Tranyoo',
+      brandName: 'TRANYOO',
       streetName: 'Phố Công Nghệ & Live Commerce',
       x: 2160,
       y: 1280,
@@ -200,7 +342,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     },
   ];
 
-  // Danh sách các cư dân KOC di chuyển giữa Khu Cư Xá và Khu Brand
+  // Danh sách các cư dân KOC
   const [citizens, setCitizens] = useState<Citizen[]>([
     {
       id: 'c1',
@@ -1022,7 +1164,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           </div>
 
           {/* ========================================================================= */}
-          {/* 5. PHÂN KHU ĐÔNG: CÁC STORE BRAND (HÌNH STORE + GHI TÊN THÔI)            */}
+          {/* 5. PHÂN KHU ĐÔNG: CÁC STORE 3D CLAY NHỎ BÉ CHUẨN THEO ẢNH MẪU            */}
           {/* ========================================================================= */}
           <div
             style={{ left: 1950, top: 120 }}
@@ -1046,81 +1188,18 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               <span>PHỐ MỸ PHẨM & SKINCARE</span>
             </div>
 
-            <div className="flex items-end gap-10 mt-3">
+            <div className="flex items-end gap-12 mt-3">
               {/* STORE 1: CỎ MỀM */}
-              <div
-                className="cursor-pointer group clickable-element flex flex-col items-center"
+              <Clay3DStore
+                brandName="CỎ MỀM"
                 onClick={() => setSelectedBrand(brandStations[0])}
-              >
-                {/* Huy hiệu chuông báo job nhấp nháy trên nóc */}
-                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
-                  <span>🔔</span>
-                  <span>JOB 0Đ MỚI</span>
-                </div>
-
-                {/* Khối nhà Store Cỏ Mềm */}
-                <div className="w-44 h-48 bg-gradient-to-b from-emerald-100 to-emerald-200 border-2 border-emerald-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
-                  {/* Mái hiên sọc cửa hàng */}
-                  <div className="h-6 w-full bg-repeating-linear-gradient from-emerald-600 to-emerald-700 rounded-lg flex items-center justify-around px-2 shadow">
-                    <span className="text-[10px] text-white font-bold">STORE</span>
-                  </div>
-
-                  {/* Biển hiệu tên Store */}
-                  <div className="bg-emerald-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
-                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
-                      <span>🌿</span>
-                      <span>CỎ MỀM</span>
-                    </div>
-                  </div>
-
-                  {/* Mặt tiền cửa kính trong suốt & chậu cây */}
-                  <div className="bg-white/80 border border-emerald-300 rounded-lg p-2 h-20 flex flex-col justify-end relative shadow-inner">
-                    <div className="absolute top-1 left-2 text-[10px] text-emerald-800 font-bold">
-                      🌾 Homelab
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <span className="text-xl">🚪</span>
-                      <div className="text-right">
-                        <span className="text-base">🪴</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              />
 
               {/* STORE 2: BIELENDA */}
-              <div
-                className="cursor-pointer group clickable-element flex flex-col items-center"
+              <Clay3DStore
+                brandName="BIELENDA"
                 onClick={() => setSelectedBrand(brandStations[1])}
-              >
-                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
-                  <span>🔔</span>
-                  <span>JOB 0Đ MỚI</span>
-                </div>
-
-                <div className="w-44 h-48 bg-gradient-to-b from-fuchsia-100 to-fuchsia-200 border-2 border-fuchsia-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
-                  <div className="h-6 w-full bg-repeating-linear-gradient from-fuchsia-600 to-fuchsia-700 rounded-lg flex items-center justify-around px-2 shadow">
-                    <span className="text-[10px] text-white font-bold">BOUTIQUE</span>
-                  </div>
-
-                  <div className="bg-fuchsia-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
-                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
-                      <span>✨</span>
-                      <span>BIELENDA</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/80 border border-fuchsia-300 rounded-lg p-2 h-20 flex flex-col justify-end relative shadow-inner">
-                    <div className="absolute top-1 left-2 text-[10px] text-fuchsia-800 font-bold">
-                      💧 Skin House
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <span className="text-xl">🚪</span>
-                      <span className="text-base">🌸</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              />
             </div>
           </div>
 
@@ -1131,49 +1210,21 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               <span>PHỐ THỜI TRANG & OOTD</span>
             </div>
 
-            <div className="flex items-end gap-10 mt-3">
+            <div className="flex items-end gap-12 mt-3">
               {/* STORE 3: VISECRET */}
-              <div
-                className="cursor-pointer group clickable-element flex flex-col items-center"
+              <Clay3DStore
+                brandName="VISECRET"
                 onClick={() => setSelectedBrand(brandStations[2])}
-              >
-                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
-                  <span>🔔</span>
-                  <span>JOB 0Đ MỚI</span>
-                </div>
-
-                <div className="w-48 h-52 bg-gradient-to-b from-purple-100 to-purple-200 border-2 border-purple-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
-                  <div className="h-6 w-full bg-repeating-linear-gradient from-purple-600 to-purple-700 rounded-lg flex items-center justify-around px-2 shadow">
-                    <span className="text-[10px] text-white font-bold">FASHION STORE</span>
-                  </div>
-
-                  <div className="bg-purple-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
-                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
-                      <span>👗</span>
-                      <span>VISECRET</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/80 border border-purple-300 rounded-lg p-2 h-24 flex flex-col justify-end relative shadow-inner">
-                    <div className="absolute top-1 left-2 text-[10px] text-purple-800 font-bold">
-                      ✨ Lookbook Studio
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <span className="text-2xl">🚪</span>
-                      <span className="text-xl">🪞</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              />
 
               {/* Shophouse Lookbook Studio kế bên */}
-              <div className="w-44 h-48 bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-3 flex flex-col justify-between text-center">
-                <div className="text-3xl">📸</div>
+              <div className="w-28 h-28 bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-2.5 flex flex-col justify-between text-center shadow-lg">
+                <div className="text-2xl">📸</div>
                 <div>
-                  <div className="text-xs font-black text-slate-200">STUDIO OOTD</div>
-                  <div className="text-[10px] text-slate-400 mt-1">Phông nền & Đèn chụp</div>
+                  <div className="text-[11px] font-black text-slate-200">STUDIO OOTD</div>
+                  <div className="text-[8px] text-slate-400">Phông chụp ảnh</div>
                 </div>
-                <div className="text-[9px] text-amber-400 font-bold">Miễn phí cho KOC</div>
+                <div className="text-[8px] text-amber-400 font-bold">Free cho KOC</div>
               </div>
             </div>
           </div>
@@ -1185,50 +1236,22 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               <span>PHỐ CÔNG NGHỆ & GAMING</span>
             </div>
 
-            <div className="flex items-end gap-10 mt-3">
+            <div className="flex items-end gap-12 mt-3">
               {/* STORE 4: TRANYOO */}
-              <div
-                className="cursor-pointer group clickable-element flex flex-col items-center"
+              <Clay3DStore
+                brandName="TRANYOO"
                 onClick={() => setSelectedBrand(brandStations[3])}
-              >
-                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
-                  <span>🔔</span>
-                  <span>JOB 0Đ MỚI</span>
-                </div>
-
-                <div className="w-48 h-52 bg-gradient-to-b from-blue-100 to-blue-200 border-2 border-blue-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
-                  <div className="h-6 w-full bg-repeating-linear-gradient from-blue-600 to-blue-700 rounded-lg flex items-center justify-around px-2 shadow">
-                    <span className="text-[10px] text-white font-bold">TECH STORE</span>
-                  </div>
-
-                  <div className="bg-blue-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
-                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
-                      <span>🎧</span>
-                      <span>TRANYOO</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/80 border border-blue-300 rounded-lg p-2 h-24 flex flex-col justify-end relative shadow-inner">
-                    <div className="absolute top-1 left-2 text-[10px] text-blue-800 font-bold">
-                      ⚡ Cyber Arena
-                    </div>
-                    <div className="flex items-end justify-between">
-                      <span className="text-2xl">🚪</span>
-                      <span className="text-xl">🎙️</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              />
 
               {/* Phố Tiêu Dùng Mở Rộng: Chờ đón các Store mới */}
-              <div className="w-44 h-48 bg-slate-900/60 border-2 border-dashed border-amber-400/40 rounded-2xl p-3 flex flex-col justify-between text-center items-center">
-                <div className="text-3xl">📦</div>
+              <div className="w-28 h-28 bg-slate-900/60 border-2 border-dashed border-amber-400/40 rounded-2xl p-2.5 flex flex-col justify-between text-center items-center">
+                <div className="text-2xl">📦</div>
                 <div>
-                  <div className="text-xs font-black text-amber-300">STORE MỞ RỘNG</div>
-                  <div className="text-[10px] text-slate-300 mt-1">Chờ đón Brand mới</div>
+                  <div className="text-[10px] font-black text-amber-300">STORE MỚI</div>
+                  <div className="text-[8px] text-slate-400">Chờ đón Brand</div>
                 </div>
-                <div className="text-[9px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">
-                  Sức chứa vô hạn
+                <div className="text-[8px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded-full font-bold">
+                  Mở rộng
                 </div>
               </div>
             </div>
@@ -1724,7 +1747,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           <span>Lăn chuột bám theo con trỏ chuẩn Google Maps 🎯</span>
         </div>
         <div className="text-[10px] text-slate-500 hidden md:block">
-          KOCity Clean Storefront Engine
+          KOCity 3D Clay Storefront Engine
         </div>
       </footer>
     </div>
