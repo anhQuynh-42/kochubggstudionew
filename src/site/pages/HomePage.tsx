@@ -171,10 +171,10 @@ export const HomePage: React.FC = () => {
       {/* ===== Hero KOCity Creator (Full màn hình, hỗ trợ Bật/Tắt đèn Bầu trời đêm) ===== */}
       <section
         className={cx(
-          'relative w-full overflow-hidden transition-all duration-700 ease-in-out border-b',
+          'relative w-full overflow-hidden transition-all duration-700 ease-in-out',
           isNight
-            ? 'border-violet-950/80 bg-[linear-gradient(135deg,#0a0618_0%,#160c33_35%,#1f114a_70%,#0f0a24_100%)] text-white'
-            : 'border-violet-100/80 bg-[linear-gradient(135deg,#fde7f3_0%,#ede9fe_35%,#dbeafe_65%,#fef3c7_100%)]'
+            ? 'bg-[linear-gradient(135deg,#0a0618_0%,#160c33_35%,#1f114a_70%,#0f0a24_100%)] text-white'
+            : 'border-b border-violet-100/80 bg-[linear-gradient(135deg,#fde7f3_0%,#ede9fe_35%,#dbeafe_65%,#fef3c7_100%)]'
         )}
       >
         {/* Nút công tắc Tắt/Bật đèn (Day/Night switch) */}

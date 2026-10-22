@@ -188,9 +188,37 @@ export const KocitySkyline: React.FC<{ className?: string; isNight?: boolean }> 
             Z
           "
           fill="url(#kc-skyline-front)"
-          stroke={isNight ? 'url(#kc-neon-roofline)' : 'none'}
-          strokeWidth={isNight ? 1.5 : 0}
         />
+
+        {/* Nét viền neon nóc toà nhà (chỉ viền nóc bên trên, tuyệt đối không viền đáy tránh vệt đen) */}
+        {isNight && (
+          <path
+            d="
+              M 0,68
+              L 45,68 L 45,56 L 85,56 L 85,74
+              L 120,74 L 120,48 L 155,48 L 155,70
+              L 190,70 L 190,40 L 240,40 L 240,66
+              L 280,66 L 280,50 L 330,50 L 330,72
+              L 370,72 L 370,36 L 420,36 L 420,62
+              L 460,62 L 460,46 L 510,46 L 510,70
+              L 555,70 L 555,34 L 605,34 L 605,64
+              L 645,64 L 645,44 L 675,44 L 675,24 L 710,24 L 710,44 L 745,44 L 745,66
+              L 785,66 L 785,42 L 835,42 L 835,68
+              L 875,68 L 875,32 L 925,32 L 925,62
+              L 965,62 L 965,48 L 1015,48 L 1015,72
+              L 1060,72 L 1060,38 L 1110,38 L 1110,66
+              L 1150,66 L 1150,52 L 1200,52 L 1200,74
+              L 1240,74 L 1240,36 L 1290,36 L 1290,64
+              L 1335,64 L 1335,48 L 1385,48 L 1385,68
+              L 1440,68
+            "
+            fill="none"
+            stroke="url(#kc-neon-roofline)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
 
         {/* ===== ĐÈN CỬA SỔ PHÁT SÁNG NHẤP NHÁY (WINDOW LIGHTS) ===== */}
         {/* Nhóm 1: Cửa sổ tòa nhà 190-240 */}
@@ -381,7 +409,7 @@ export const KocitySkyline: React.FC<{ className?: string; isNight?: boolean }> 
         </g>
 
         {/* ===== MÀN SƯƠNG ĐÁY CHUYỂN TIẾP MƯỢT VÀO NỀN TRANG (BOTTOM FOG) ===== */}
-        <rect x="0" y="65" width="1440" height="31" fill="url(#kc-skyline-fog)" />
+        <rect x="0" y="58" width="1440" height="39" fill="url(#kc-skyline-fog)" />
       </svg>
     </div>
   );
