@@ -167,6 +167,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isMonthlyReportModalOpen, setIsMonthlyReportModalOpen] = useState(false);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [dashboardSubTab, setDashboardSubTab] = useState<'pending' | 'overdue' | 'top_koc'>('pending');
 
   // Chuyển định dạng YYYY-MM-DD sang DD/MM/YYYY hiển thị tiếng Việt
@@ -875,56 +876,56 @@ export const AdminView: React.FC<AdminViewProps> = ({
     onShowToast('Đã xuất file CSV thành công!', 'File sẵn sàng để gửi cho đơn vị vận chuyển hoặc lưu trữ.', 'success');
   };
 
-  // Status badge styling helper - TONE XANH DƯƠNG VÀ CAM
+  // Status badge styling helper - Tinh gọn dạng Pill chuẩn Modern SaaS
   const getStatusBadge = (status: ApplicationStatus) => {
     switch (status) {
       case 'Chờ duyệt':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 shadow-2xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
             Chờ duyệt
           </span>
         );
       case 'Đã duyệt gửi mẫu':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 border border-blue-300/80 px-2.5 py-1 text-xs font-semibold text-blue-800">
-            <span className="material-symbols-outlined text-[14px]">local_shipping</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 shadow-2xs">
+            <span className="material-symbols-outlined text-[13px]">local_shipping</span>
             Đã duyệt gửi mẫu
           </span>
         );
       case 'Đang giao':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-2.5 py-1 text-xs font-semibold text-sky-800">
-            <span className="material-symbols-outlined text-[14px]">departure_board</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-sky-700 shadow-2xs">
+            <span className="material-symbols-outlined text-[13px]">departure_board</span>
             Đang giao
           </span>
         );
       case 'Chờ duyệt video':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-300 px-2.5 py-1 text-xs font-bold text-amber-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping"></span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700 shadow-2xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-ping"></span>
             Chờ duyệt video
           </span>
         );
       case 'Đã lên bài':
       case 'Đã hoàn thành':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs">
-            <span className="material-symbols-outlined text-[14px]">check_circle</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 shadow-2xs">
+            <span className="material-symbols-outlined text-[13px]">check_circle</span>
             Đã hoàn thành
           </span>
         );
       case 'Bị từ chối':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-300 px-2.5 py-1 text-xs font-bold text-rose-700 shadow-xs">
-            <span className="material-symbols-outlined text-[14px]">cancel</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 shadow-2xs">
+            <span className="material-symbols-outlined text-[13px]">cancel</span>
             Bị từ chối
           </span>
         );
       case 'Từ chối':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700">
-            <span className="material-symbols-outlined text-[14px]">cancel</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+            <span className="material-symbols-outlined text-[13px]">cancel</span>
             Từ chối
           </span>
         );
@@ -950,7 +951,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#faf2f8] text-slate-900 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col md:flex-row">
       {/* Mobile Top Header with Toggle (Nền trắng, viền xanh dương nhẹ) */}
       <div className="md:hidden flex items-center justify-between bg-white text-slate-900 px-4 py-3 border-b border-slate-200 shadow-xs">
         <div className="flex items-center gap-2.5">
@@ -1366,51 +1367,76 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-            {/* Nút "Báo Cáo Kỳ Này (A4)" CHỈ hiển thị tại: Tổng quan & Báo cáo */}
-            {activeAdminTab === 'dashboard' && (
+            {/* Menu Xổ Xuống Xuất Dữ Liệu (Gọn gàng & Sang trọng) */}
+            <div className="relative">
               <button
-                onClick={() => setIsMonthlyReportModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-sm transition-all cursor-pointer whitespace-nowrap"
-                title="Mở bản tóm tắt báo cáo chuẩn A4 nộp cho Ban Giám Đốc"
+                type="button"
+                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+                title="Bấm để chọn xuất Báo cáo A4 hoặc tải file Excel"
               >
-                <span className="material-symbols-outlined text-[18px]">summarize</span>
-                <span>Xuất Báo Cáo Kỳ Này (A4)</span>
+                <span className="material-symbols-outlined text-[17px] text-slate-500">file_download</span>
+                <span>Xuất dữ liệu</span>
+                <span
+                  className="material-symbols-outlined text-[16px] text-slate-400 transition-transform duration-200"
+                  style={{ transform: isExportDropdownOpen ? 'rotate(180deg)' : 'none' }}
+                >
+                  expand_more
+                </span>
               </button>
-            )}
 
-            {/* Nút "Quản Lý / Sửa Chiến Dịch" khi đang ở tab Tổng quan */}
-            {activeAdminTab === 'dashboard' && (
-              <button
-                onClick={() => {
-                  setActiveAdminTab('campaigns');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="flex items-center gap-1.5 rounded-xl border-2 border-blue-600 bg-white px-3.5 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                title="Mở danh sách các chiến dịch để Sửa thông tin, đổi ảnh hoặc cài ngày kết thúc"
-              >
-                <span className="material-symbols-outlined text-[18px]">edit_document</span>
-                <span>Quản Lý & Sửa Chiến Dịch ({metrics.totalActiveCampaigns})</span>
-              </button>
-            )}
+              {isExportDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-20"
+                    onClick={() => setIsExportDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1.5 z-30 w-56 rounded-2xl bg-white p-1.5 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExportDropdownOpen(false);
+                        setIsMonthlyReportModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer text-left"
+                    >
+                      <div className="h-7 w-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[16px]">summarize</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900">Báo cáo chuẩn A4</p>
+                        <p className="text-[10px] text-slate-400">Tóm tắt KPI nộp BGĐ</p>
+                      </div>
+                    </button>
 
-            {/* Nút "Thêm chiến dịch" CHỈ hiển thị tại: Tổng quan & Báo cáo VÀ Quản lý chiến dịch */}
-            {(activeAdminTab === 'dashboard' || activeAdminTab === 'campaigns') && (
-              <button
-                onClick={() => setIsAddCampaignModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-sm transition-all cursor-pointer whitespace-nowrap"
-              >
-                <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                <span>+ Thêm chiến dịch</span>
-              </button>
-            )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExportDropdownOpen(false);
+                        handleExportCSV();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer text-left mt-0.5"
+                    >
+                      <div className="h-7 w-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[16px]">table_chart</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900">Xuất file Excel (.CSV)</p>
+                        <p className="text-[10px] text-slate-400">Danh sách KOC & Vận đơn</p>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
 
+            {/* Nút "+ Thêm chiến dịch" Nổi bật Duy nhất */}
             <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-all cursor-pointer whitespace-nowrap"
-              title="Xuất file danh sách giao hàng cho bên vận chuyển hoặc lưu trữ"
+              onClick={() => setIsAddCampaignModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-sm shadow-blue-500/20 hover:shadow-md hover:shadow-blue-500/25 transition-all cursor-pointer whitespace-nowrap"
             >
-              <span className="material-symbols-outlined text-[18px] text-blue-600">download</span>
-              <span>Xuất Excel</span>
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>+ Thêm chiến dịch</span>
             </button>
           </div>
         </div>
@@ -1449,18 +1475,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             {/* BỘ LỌC KHOẢNG THỜI GIAN: QUẢN TRỊ VIÊN TỰ CHỌN TỪ NGÀY MẤY ĐẾN NGÀY MẤY */}
-            <div className="rounded-2xl bg-white p-4 shadow-xs border border-blue-100 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5">
+            <div className="rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border border-slate-200/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
               {/* Cụm input chọn ngày Từ ngày -> Đến ngày */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                  <span className="material-symbols-outlined text-blue-600 text-[18px]">tune</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mr-1">
+                  <span className="material-symbols-outlined text-indigo-600 text-[18px]">tune</span>
                   <span>Lọc theo ngày:</span>
                 </div>
 
                 {/* Từ ngày */}
-                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-1.5 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/70 px-2.5 py-1.5 focus-within:border-indigo-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                   <span className="material-symbols-outlined text-slate-400 text-[16px]">calendar_today</span>
-                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Từ:</span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Từ:</span>
                   <input
                     type="date"
                     value={startDate}
@@ -1468,17 +1494,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       setStartDate(e.target.value);
                       onShowToast('Thời gian', `Lọc từ ngày: ${formatVNDate(e.target.value)}`, 'info');
                     }}
-                    className="text-xs font-bold text-slate-900 bg-transparent outline-none focus:outline-none cursor-pointer"
+                    className="text-xs font-bold text-slate-800 bg-transparent outline-none focus:outline-none cursor-pointer"
                     title="Bấm để chọn ngày bắt đầu"
                   />
                 </div>
 
-                <span className="text-slate-400 font-bold hidden sm:inline">→</span>
+                <span className="text-slate-300 font-bold hidden sm:inline">→</span>
 
                 {/* Đến ngày */}
-                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-1.5 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/70 px-2.5 py-1.5 focus-within:border-indigo-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
                   <span className="material-symbols-outlined text-slate-400 text-[16px]">event</span>
-                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Đến:</span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Đến:</span>
                   <input
                     type="date"
                     value={endDate}
@@ -1486,7 +1512,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       setEndDate(e.target.value);
                       onShowToast('Thời gian', `Lọc đến ngày: ${formatVNDate(e.target.value)}`, 'info');
                     }}
-                    className="text-xs font-bold text-slate-900 bg-transparent outline-none focus:outline-none cursor-pointer"
+                    className="text-xs font-bold text-slate-800 bg-transparent outline-none focus:outline-none cursor-pointer"
                     title="Bấm để chọn ngày kết thúc"
                   />
                 </div>
@@ -1499,7 +1525,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       setEndDate('');
                       onShowToast('Thời gian', 'Đã xóa lọc ngày, hiển thị toàn bộ thời gian.', 'info');
                     }}
-                    className="flex items-center gap-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1.5 text-xs font-bold transition-all cursor-pointer"
+                    className="flex items-center gap-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer"
                     title="Bỏ lọc khoảng ngày để xem tất cả"
                   >
                     <span className="material-symbols-outlined text-[15px]">close</span>
@@ -1520,7 +1546,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     !startDate && !endDate
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -1535,7 +1561,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     setEndDate(dStr);
                     onShowToast('Thời gian', 'Đang lọc dữ liệu hôm nay', 'info');
                   }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    startDate && startDate === endDate && startDate === new Date().toISOString().split('T')[0]
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
                 >
                   Hôm nay
                 </button>
@@ -1578,47 +1608,47 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     setEndDate(`${y}-${m}-${lastDay}`);
                     onShowToast('Thời gian', `Đang lọc tháng ${m}/${y}`, 'info');
                   }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer"
                 >
                   Tháng này
                 </button>
               </div>
             </div>
 
-            {/* 4 Thẻ KPI Tăng Trưởng & Rủi Ro (MoM & Risk Indicators) */}
+            {/* 4 Thẻ KPI Tăng Trưởng & Rủi Ro (Ngữ Nghĩa Màu Sắc Chuẩn SaaS) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Card 1: KOC Đăng Ký Mới & Tăng trưởng MoM */}
+              {/* Card 1: KOC Đăng Ký Mới & Tăng trưởng MoM (TÔNG XANH DƯƠNG INDIGO LỊCH LÃM) */}
               <div
                 onClick={() => {
                   setStatusFilter('all');
                   setActiveAdminTab('applications');
                 }}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-blue-100 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">KOC Mới Đăng Ký</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-2xl">group_add</span>
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline gap-2">
                   <span className="text-3xl font-extrabold text-slate-900">{metrics.totalApps}</span>
-                  <span className="inline-flex items-center text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                  <span className="inline-flex items-center text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md">
                     <span className="material-symbols-outlined text-[14px]">arrow_upward</span> +18.4% MoM
                   </span>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2.5">
                   <span>{metrics.uniqueKOCs} Creator • Tái tham gia: {metrics.retentionRate}%</span>
-                  <span className="font-semibold text-blue-600 group-hover:underline flex items-center gap-0.5">
+                  <span className="font-semibold text-indigo-600 group-hover:underline flex items-center gap-0.5">
                     Chi tiết <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                   </span>
                 </div>
               </div>
 
-              {/* Card 2: Tỷ Lệ Hoàn Thành Nghiệm Thu (Completion & Retention Rate) */}
+              {/* Card 2: Tỷ Lệ Hoàn Thành Nghiệm Thu (TỶ LỆ HOÀN THÀNH BÀI) */}
               <div
                 onClick={() => setActiveAdminTab('content')}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-blue-100 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tỷ Lệ Hoàn Thành Bài</span>
@@ -1640,39 +1670,39 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </div>
 
-              {/* Card 3: CẢNH BÁO RỦI RO: Chậm nộp video / Cần giục bài (TONE XANH DƯƠNG) */}
+              {/* Card 3: CẢNH BÁO RỦI RO: Chậm nộp video / Cần giục bài (ĐIỂM XUYẾT CAM/HỔ PHÁCH CẢNH BÁO NHẸ) */}
               <div
                 onClick={() => setDashboardSubTab('overdue')}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-blue-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-amber-200 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Cảnh Báo Chậm Bài</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
+                  <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Cảnh Báo Chậm Bài</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-2xl">notifications_active</span>
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-blue-700">{metrics.overdueAppsList.length}</span>
-                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                  <span className="text-3xl font-extrabold text-amber-600">{metrics.overdueAppsList.length}</span>
+                  <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                     Cần giục nộp link
                   </span>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2.5">
                   <span>Đã nhận mẫu &gt; 7 ngày</span>
-                  <span className="font-semibold text-blue-600 group-hover:underline flex items-center gap-0.5">
+                  <span className="font-semibold text-amber-700 group-hover:underline flex items-center gap-0.5">
                     Xử lý ngay <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                   </span>
                 </div>
               </div>
 
-              {/* Card 4: Hiệu Quả Marketing & CPV (Nộp Sếp Ban Giám Đốc) */}
+              {/* Card 4: Hiệu Quả Marketing & CPV (TĂNG TRƯỞNG TÍCH CỰC - EMERALD GREEN) */}
               <div
                 onClick={() => setIsMonthlyReportModalOpen(true)}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-blue-100 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lượt Tiếp Cận (Reach)</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-2xl">trending_up</span>
                   </div>
                 </div>
@@ -1680,11 +1710,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <span className="text-3xl font-extrabold text-slate-900">
                     {(metrics.estimatedViews / 1000).toLocaleString('vi-VN')}K
                   </span>
-                  <span className="text-xs text-blue-600 font-semibold">views ước tính</span>
+                  <span className="text-xs text-emerald-600 font-semibold">views ước tính</span>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2.5">
                   <span>Ngân sách mẫu: {(metrics.totalSampleBudget / 1000000).toFixed(1)}Tr</span>
-                  <span className="font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[11px]">
+                  <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px]">
                     ~{metrics.costPerView}đ / view
                   </span>
                 </div>
@@ -2511,7 +2541,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         {activeAdminTab === 'applications' && (
           <div className="space-y-4">
             {/* Filter and Search Bar */}
-            <div className="rounded-2xl bg-white p-4 shadow-xs border border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border border-slate-200/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               {/* Search */}
               <div className="relative flex-1 max-w-md">
                 <span className="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-slate-400">search</span>
@@ -2520,7 +2550,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="Tìm KOC, SĐT, @tiktok, mã đơn..."
                   value={appSearch}
                   onChange={(e) => setAppSearch(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-8 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  className="w-full rounded-xl border border-slate-200/80 bg-slate-50/70 py-2 pl-9 pr-8 text-xs text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100/70 transition-all"
                 />
                 {appSearch && (
                   <button onClick={() => setAppSearch('')} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer">
@@ -2543,10 +2573,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <button
                     key={chip.id}
                     onClick={() => setStatusFilter(chip.id)}
-                    className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                       statusFilter === chip.id
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
                     }`}
                   >
                     <span>{chip.label}</span>
@@ -2565,7 +2595,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <select
                 value={campaignFilter}
                 onChange={(e) => setCampaignFilter(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 py-2 px-3 text-xs text-slate-700 focus:border-blue-600 focus:bg-white focus:outline-none cursor-pointer"
+                className="rounded-xl border border-slate-200/80 bg-slate-50/70 py-2 px-3 text-xs text-slate-700 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100/70 cursor-pointer transition-all"
               >
                 <option value="all">Tất cả chiến dịch ({campaigns.length})</option>
                 {campaigns.map((c) => (
@@ -2577,17 +2607,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             {/* Applications Table */}
-            <div className="rounded-2xl bg-white shadow-xs border border-slate-200 overflow-hidden">
+            <div className="rounded-2xl bg-white shadow-xs border border-slate-200/80 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <thead className="bg-slate-50/90 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80">
                     <tr>
-                      <th className="px-5 py-3">Mã Đơn / Ngày</th>
-                      <th className="px-5 py-3">Thông Tin KOC</th>
-                      <th className="px-5 py-3">Chiến Dịch</th>
-                      <th className="px-5 py-3">Địa Chỉ Giao Mẫu</th>
-                      <th className="px-5 py-3">Trạng Thái & Vận Đơn</th>
-                      <th className="px-5 py-3 text-right">Thao Tác</th>
+                      <th className="px-4 py-3 sm:px-5 sm:py-3.5">Mã Đơn / Ngày</th>
+                      <th className="px-4 py-3 sm:px-5 sm:py-3.5">Thông Tin KOC</th>
+                      <th className="px-4 py-3 sm:px-5 sm:py-3.5">Chiến Dịch</th>
+                      <th className="px-4 py-3 sm:px-5 sm:py-3.5">Địa Chỉ Giao Mẫu</th>
+                      <th className="px-4 py-3 sm:px-5 sm:py-3.5">Trạng Thái & Vận Đơn</th>
+                      <th className="px-4 py-3 sm:px-5 sm:py-3.5 text-right">Thao Tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2601,9 +2631,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </tr>
                     ) : (
                       filteredApplications.map((app) => (
-                        <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-5 py-4 whitespace-nowrap">
-                            <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+                        <tr key={app.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="px-4 py-3 sm:px-5 sm:py-3.5 whitespace-nowrap">
+                            <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded">
                               {app.code}
                             </span>
                             <div className="text-[11px] text-slate-400 mt-1">
@@ -2612,15 +2642,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             </div>
                           </td>
 
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3 sm:px-5 sm:py-3.5">
                             <div className="flex items-center gap-3">
                               <img
                                 src={app.avatar}
                                 alt={app.kocName}
-                                className="h-10 w-10 rounded-full object-cover border border-slate-200 shrink-0"
+                                className="h-9 w-9 rounded-full object-cover border border-slate-200 shrink-0"
                               />
                               <div>
-                                <div className="font-bold text-slate-900 flex items-center gap-1">
+                                <div className="font-bold text-slate-900 flex items-center gap-1 text-xs sm:text-sm">
                                   {app.kocName}
                                   {renderKocLoyaltyStar(app.tiktokHandle, app.kocName)}
                                   {app.verified && (
@@ -2645,16 +2675,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             </div>
                           </td>
 
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3 sm:px-5 sm:py-3.5">
                             <p className="font-medium text-slate-900 text-xs line-clamp-2 max-w-[200px]">
                               {app.campaignName}
                             </p>
-                            <span className="inline-block mt-1 text-[11px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                            <span className="inline-block mt-1 text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded">
                               {app.followers} • {app.avgViews}
                             </span>
                           </td>
 
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3 sm:px-5 sm:py-3.5">
                             <p className="text-xs text-slate-700 line-clamp-2 max-w-[220px]" title={app.address}>
                               📍 {app.address}
                             </p>
@@ -2665,11 +2695,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             )}
                           </td>
 
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3 sm:px-5 sm:py-3.5">
                             <div className="space-y-1.5">
                               <div>{getStatusBadge(app.status)}</div>
                               {app.shippingCode ? (
-                                <p className="font-mono text-[11px] text-blue-700 font-semibold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded inline-block">
+                                <p className="font-mono text-[11px] text-slate-800 font-semibold bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded inline-block">
                                   📦 {app.shippingCode}
                                 </p>
                               ) : (
@@ -2689,19 +2719,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             </div>
                           </td>
 
-                          <td className="px-5 py-4 text-right whitespace-nowrap">
+                          <td className="px-4 py-3 sm:px-5 sm:py-3.5 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               {app.status === 'Chờ duyệt' && (
                                 <>
                                   <button
                                     onClick={() => handleQuickApprove(app)}
-                                    className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700 shadow-xs transition-all cursor-pointer"
+                                    className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 shadow-2xs transition-all cursor-pointer"
                                   >
                                     Duyệt
                                   </button>
                                   <button
                                     onClick={() => handleQuickReject(app)}
-                                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer"
+                                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all cursor-pointer"
                                   >
                                     Từ chối
                                   </button>
@@ -2711,7 +2741,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                               {app.status === 'Đã duyệt gửi mẫu' && (
                                 <button
                                   onClick={() => handleUpdateStatus(app.id, 'Đang giao')}
-                                  className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700 transition-all cursor-pointer flex items-center gap-1"
+                                  className="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700 shadow-2xs transition-all cursor-pointer flex items-center gap-1"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">local_shipping</span>
                                   Đang giao
