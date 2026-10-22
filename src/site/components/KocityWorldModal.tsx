@@ -1101,68 +1101,38 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* ========================================================================= */}
           {/* 3. TÒA THÁP KOCITY HQ TOẠ LẠC NGAY TRUNG TÂM CÂY CẦU & BỐT BẢO VỆ          */}
           {/* ========================================================================= */}
-          {/* TÒA NHÀ TRỤ SỞ KOCITY HQ (CHIẾC CẦU BẢO CHỨNG HOA HỒNG CAO) */}
+          {/* TÒA NHÀ TRỤ SỞ KOCITY HQ (TÒA NHÀ 3D ISOMETRIC CLAY THEO ẢNH MẪU) */}
           <div
-            style={{ left: 1300, top: 580 }}
-            className="absolute z-25 cursor-pointer group clickable-element"
+            style={{ left: 1240, top: 480, width: 340, height: 350 }}
+            className="absolute z-25 cursor-pointer group clickable-element flex flex-col items-center"
             onClick={() => setShowHqModal(true)}
           >
-            <div className="relative flex flex-col items-center">
-              {/* Huy hiệu đỉnh tháp hào quang */}
-              <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 px-4 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-4 ring-amber-300 whitespace-nowrap flex items-center gap-1.5 border border-white animate-bounce">
-                <span>👑</span>
-                <span>TRỤ SỞ KOCITY · CHIẾC CẦU ĐỘC QUYỀN</span>
-                <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black">
-                  HOA HỒNG CAO HƠN ✨
-                </span>
-              </div>
+            {/* Huy hiệu đỉnh tháp hào quang */}
+            <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 px-4 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-4 ring-amber-300 whitespace-nowrap flex items-center gap-1.5 border border-white animate-bounce z-20 mb-[-14px]">
+              <span>👑</span>
+              <span>TRỤ SỞ KOCITY · CHIẾC CẦU ĐỘC QUYỀN</span>
+              <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black">
+                HOA HỒNG CAO HƠN ✨
+              </span>
+            </div>
 
-              {/* Khối tòa tháp Landmark đồ sộ vươn lên từ thân cầu */}
-              <div
-                className={cx(
-                  'w-64 h-72 mt-2 rounded-3xl border-4 p-4 shadow-2xl transition-all duration-500 group-hover:scale-105 flex flex-col justify-between ring-4 ring-purple-500/40',
-                  isNight
-                    ? 'bg-gradient-to-b from-purple-950 via-slate-900 to-black border-amber-400 shadow-purple-500/50'
-                    : 'bg-gradient-to-b from-white via-indigo-50 to-purple-100 border-purple-600 shadow-indigo-400/50'
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded-full bg-rose-500 animate-ping" />
-                    <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">
-                      TRUNG TÂM BẢO CHỨNG
-                    </span>
-                  </div>
-                  <span className="text-3xl">👑</span>
-                </div>
+            {/* Khối tòa nhà 3D Isometric Clay theo đúng ảnh mẫu */}
+            <div className="relative w-full h-[290px] flex items-center justify-center transition-transform duration-300 group-hover:scale-105 active:scale-95">
+              {/* Vòng hào quang phát sáng nhẹ phía sau tòa nhà */}
+              <div className="absolute inset-4 bg-gradient-to-tr from-amber-400/25 via-purple-500/20 to-sky-400/25 rounded-full blur-2xl pointer-events-none group-hover:opacity-100 opacity-60 transition-opacity" />
 
-                {/* Các ô cửa kính phát sáng của tòa tháp */}
-                <div className="grid grid-cols-4 gap-2 my-2">
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={cx(
-                        'h-8 rounded-lg transition-colors border',
-                        isNight
-                          ? i % 2 === 0
-                            ? 'bg-amber-300/90 border-amber-200 shadow-md shadow-amber-300/80'
-                            : 'bg-purple-600/60 border-purple-400'
-                          : 'bg-indigo-200 border-indigo-300'
-                      )}
-                    />
-                  ))}
-                </div>
+              {/* Ảnh 3D Tòa nhà Clay Isometric đã xử lý trong suốt chuẩn đẹp */}
+              <img
+                src="/assets/kocity_landmark_tower_3d.png"
+                alt="Trụ Sở KOCity Landmark 3D"
+                className="w-full h-full object-contain filter drop-shadow-[0_20px_30px_rgba(0,0,0,0.65)] select-none pointer-events-none"
+              />
 
-                {/* Lời dẫn dắt bấm vào xem vì sao hoa hồng cao hơn */}
-                <div className="bg-slate-900/90 rounded-2xl p-2.5 text-center border border-amber-400/60 shadow-lg">
-                  <div className="text-[11px] font-black text-amber-300 flex items-center justify-center gap-1">
-                    <span>🚀</span>
-                    <span>BẤM ĐỂ XEM ĐẶC QUYỀN HOA HỒNG</span>
-                  </div>
-                  <div className="text-[9px] text-slate-300 mt-0.5 font-medium">
-                    Bảo hộ quyền lợi 100% · Cấp xe lượn phố 🚲 🛵
-                  </div>
-                </div>
+              {/* Tag nổi bật dưới chân tòa nhà */}
+              <div className="absolute bottom-2 bg-slate-950/90 border-2 border-amber-400 px-4 py-1 rounded-full text-amber-300 font-black text-[11px] shadow-2xl tracking-wide flex items-center gap-1.5 ring-2 ring-black">
+                <span>🚀</span>
+                <span>BẤM VÀO XEM ĐẶC QUYỀN HOA HỒNG</span>
+                <span>✨</span>
               </div>
             </div>
           </div>
@@ -1653,8 +1623,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
             {/* Header Modal */}
             <div className="flex items-center gap-3.5 mb-4 border-b border-white/10 pb-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-600 text-3xl shadow-xl ring-2 ring-amber-300">
-                👑
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 border-2 border-amber-400 p-1 shadow-xl ring-2 ring-amber-300/40">
+                <img
+                  src="/assets/kocity_landmark_tower_3d.png"
+                  alt="Trụ Sở KOCity 3D"
+                  className="w-full h-full object-contain filter drop-shadow"
+                />
               </div>
               <div>
                 <div className="flex items-center gap-2">
