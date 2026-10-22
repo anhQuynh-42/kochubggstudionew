@@ -774,7 +774,7 @@ const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaig
         icon: '🚀',
         prefix: 'Chiến dịch hot',
         highlight: topCamp.brandName,
-        suffix: `đang mở ${topCamp.sampleQuantity || 20} suất mẫu 0đ`,
+        suffix: `đang mở ${(topCamp as any).sampleQuantity || 20} suất mẫu 0đ`,
       });
     }
 

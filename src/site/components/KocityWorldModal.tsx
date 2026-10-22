@@ -703,6 +703,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     isAdmin || currentUser?.role === 'admin' || (typeof window !== 'undefined' && localStorage.getItem('kocity_admin_mode') === 'true')
   );
 
+  // Tính số job đã hoàn thành của user (nếu có tài khoản)
+  const userJobsCount = currentUser?.completedApplications?.length || 0;
+  const userVehicle: VehicleType = userJobsCount >= 3 ? 'motorbike' : userJobsCount >= 1 ? 'bicycle' : 'walk';
+
   const [isNight, setIsNight] = useState(isNightDefault);
   const [zoom, setZoom] = useState<number>(0.75);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: -450, y: -250 });
@@ -2524,7 +2528,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </Button>
 
               <Button
-                variant="secondary"
+                variant="outline"
                 onClick={() => {
                   setShowHqModal(false);
                   flyTo(650, 450, 0.95);
