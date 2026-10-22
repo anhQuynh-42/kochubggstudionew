@@ -23,7 +23,7 @@ interface Citizen {
   bubble?: string;
 }
 
-interface BrandStation {
+export interface BrandStation {
   id: string;
   name: string;
   brandName: string;
@@ -37,11 +37,22 @@ interface BrandStation {
   tagline: string;
   desc: string;
   badgeEmoji: string;
-  // Thông tin Job hiển thị khi bấm vào Store
   jobTitle: string;
   jobReward: string;
   jobRequirements: string;
   jobQuota: string;
+  hasJobAlert?: boolean;
+}
+
+export interface DynamicRoad {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  orientation: 'horizontal' | 'vertical';
+  type: 'asphalt' | 'bridge' | 'paved';
 }
 
 interface KocityWorldModalProps {
@@ -49,9 +60,124 @@ interface KocityWorldModalProps {
   onClose: () => void;
   campaigns: Campaign[];
   currentUser: any;
+  isAdmin?: boolean;
   isNightDefault?: boolean;
   onSelectCampaign?: (campaignId: string) => void;
 }
+
+export const DEFAULT_BRAND_STATIONS: BrandStation[] = [
+  {
+    id: 'store-comem',
+    name: 'Store Cỏ Mềm Homelab',
+    brandName: 'CỎ MỀM',
+    streetName: 'Khu Phố Thương Mại Brand',
+    x: 1760,
+    y: 190,
+    category: 'Mỹ phẩm thiên nhiên thuần khiết',
+    sampleCount: 35,
+    icon: 'spa',
+    badgeBg: 'bg-emerald-600',
+    badgeEmoji: '🌿',
+    tagline: 'Lành sạch thuần Việt · Kho tổng xuất mẫu từ Hà Nội',
+    desc: 'Kho Cỏ Mềm gửi son dưỡng gạo, bọt rửa mặt trà xanh, serum rau má 0đ tận nhà cho KOC.',
+    jobTitle: 'Review Bọt Rửa Mặt & Son Gạo Thuần Khiết Cỏ Mềm',
+    jobReward: 'Tài trợ 100% mẫu dùng thử 0đ + Hoa hồng affiliate 18% - 20%',
+    jobRequirements: '1 Video ngắn TikTok/Reels/Shorts trải nghiệm chất bọt mịn và độ dưỡng ẩm lành sạch.',
+    jobQuota: 'Còn 35 suất nhận mẫu miễn phí đợt này',
+    hasJobAlert: true,
+  },
+  {
+    id: 'store-bielenda',
+    name: 'Boutique Bielenda',
+    brandName: 'BIELENDA',
+    streetName: 'Khu Phố Thương Mại Brand',
+    x: 1950,
+    y: 190,
+    category: 'Dược mỹ phẩm Châu Âu',
+    sampleCount: 42,
+    icon: 'water_drop',
+    badgeBg: 'bg-fuchsia-600',
+    badgeEmoji: '✨',
+    tagline: 'Kho nhập khẩu Sài Gòn · Trị mụn & Phục hồi chuyên sâu',
+    desc: 'Dòng sản phẩm toner acid, serum peel da được hàng triệu beauty blogger tin dùng.',
+    jobTitle: 'Chiến Dịch Routine Skincare Treatment Cùng Bielenda Skin House',
+    jobReward: 'Tài trợ bộ kit skincare Châu Âu 0đ + Hoa hồng bán hàng 18%',
+    jobRequirements: '1 Video review quy trình dưỡng da treatment an toàn, phục hồi căng bóng.',
+    jobQuota: 'Còn 42 suất nhận mẫu miễn phí đợt này',
+    hasJobAlert: true,
+  },
+  {
+    id: 'store-visecret',
+    name: 'Store ViSecret Fashion',
+    brandName: 'VISECRET',
+    streetName: 'Khu Phố Thương Mại Brand',
+    x: 2140,
+    y: 190,
+    category: 'Thời trang & Nội y thiết kế',
+    sampleCount: 25,
+    icon: 'checkroom',
+    badgeBg: 'bg-purple-600',
+    badgeEmoji: '👗',
+    tagline: 'Kho may mặc Hà Nội · Tôn dáng chuẩn KOC',
+    desc: 'Xuất mẫu áo bra tàng hình, đầm thiết kế miễn phí tận nhà cho KOC lên video biến hình OOTD.',
+    jobTitle: 'Biến Hình OOTD Đầm Thiết Kế & Áo Bra Tàng Hình Tôn Dáng',
+    jobReward: 'Tặng 02 set đầm/áo thiết kế 0đ + Hoa hồng bán hàng 22%',
+    jobRequirements: '1 Video biến hình OOTD chuyển cảnh cuốn hút theo nhạc trend, tôn dáng trang phục.',
+    jobQuota: 'Còn 25 suất nhận mẫu miễn phí đợt này',
+    hasJobAlert: true,
+  },
+  {
+    id: 'store-tranyoo',
+    name: 'Store Tranyoo Audio',
+    brandName: 'TRANYOO',
+    streetName: 'Khu Phố Thương Mại Brand',
+    x: 2330,
+    y: 190,
+    category: 'Tai nghe & Phụ kiện Cyberpunk',
+    sampleCount: 30,
+    icon: 'headphones',
+    badgeBg: 'bg-blue-600',
+    badgeEmoji: '🎧',
+    tagline: 'Kho công nghệ Sài Gòn · Giao tai nghe 0đ trong 24h',
+    desc: 'Trụ sở phân phối tai nghe Bluetooth TWS, củ sạc nhanh chuẩn Gen Z cho creator livestream.',
+    jobTitle: 'Trải Nghiệm Tai Nghe TWS Chống Ồn & Củ Sạc Siêu Tốc Cyber',
+    jobReward: 'Tài trợ 01 tai nghe Bluetooth TWS 0đ + Thưởng view & Hoa hồng 15%',
+    jobRequirements: '1 Video unbox, test chất âm bass cực đã hoặc livestream giới thiệu sản phẩm.',
+    jobQuota: 'Còn 30 suất nhận mẫu miễn phí đợt này',
+    hasJobAlert: true,
+  },
+  {
+    id: 'store-ootd',
+    name: 'Studio OOTD KOCity',
+    brandName: 'STUDIO OOTD',
+    streetName: 'Khu Phố Thương Mại Brand',
+    x: 2520,
+    y: 190,
+    category: 'Phông chụp ảnh & Livestream Creator',
+    sampleCount: 100,
+    icon: 'photo_camera',
+    badgeBg: 'bg-slate-700',
+    badgeEmoji: '📸',
+    tagline: 'Studio miễn phí 100% cho mọi cư dân KOCity',
+    desc: 'Đầy đủ đèn livestream, phông xanh, gương toàn thân cho KOC quay video review.',
+    jobTitle: 'Đặc Quyền Sử Dụng Phòng Live & Studio OOTD Miễn Phí',
+    jobReward: 'Free 100% giờ quay chụp',
+    jobRequirements: 'Dành riêng cho KOC thành viên đã hoàn thành từ 1 job trở lên.',
+    jobQuota: 'Mở cửa 24/7',
+    hasJobAlert: false,
+  },
+];
+
+export const DEFAULT_LANDMARK_POS = { x: 1240, y: 480 };
+export const DEFAULT_GUARD_POS = { x: 1190, y: 960 };
+export const DEFAULT_BIDDING_LOT = {
+  x: 1720,
+  y: 1000,
+  width: 960,
+  height: 580,
+  title: 'KHU ĐẤT TRỐNG ĐANG ĐẤU THẦU',
+  area: '10.000 m²',
+};
 
 const MAP_W = 2800;
 const MAP_H = 1700;
@@ -189,14 +315,394 @@ const Clay3DStore: React.FC<{
   );
 };
 
+interface StoreEditorModalProps {
+  initialStore?: BrandStation | null;
+  onSave: (store: BrandStation) => void;
+  onClose: () => void;
+}
+
+const StoreEditorModal: React.FC<StoreEditorModalProps> = ({ initialStore, onSave, onClose }) => {
+  const [brandName, setBrandName] = useState(initialStore?.brandName || '');
+  const [name, setName] = useState(initialStore?.name || '');
+  const [category, setCategory] = useState(initialStore?.category || 'Mỹ phẩm & Chăm sóc sắc đẹp');
+  const [x, setX] = useState<number>(initialStore?.x ?? 1850);
+  const [y, setY] = useState<number>(initialStore?.y ?? 200);
+  const [sampleCount, setSampleCount] = useState<number>(initialStore?.sampleCount ?? 50);
+  const [jobTitle, setJobTitle] = useState(initialStore?.jobTitle || 'Chiến dịch Trải Nghiệm & Review Sản Phẩm Mới');
+  const [jobReward, setJobReward] = useState(initialStore?.jobReward || 'Nhận sản phẩm 0đ + Hoa hồng 25%');
+  const [jobQuota, setJobQuota] = useState(initialStore?.jobQuota || 'Còn 30 suất đăng ký');
+  const [jobRequirements, setJobRequirements] = useState(
+    initialStore?.jobRequirements || 'KOC từ 3.000 followers, có clip review tối thiểu 1.000 view.'
+  );
+  const [streetName, setStreetName] = useState(initialStore?.streetName || 'Khu Phố Thương Mại Brand');
+  const [hasJobAlert, setHasJobAlert] = useState<boolean>(initialStore?.hasJobAlert ?? true);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!brandName.trim()) {
+      alert('Vui lòng nhập tên thương hiệu (Brand)!');
+      return;
+    }
+    const storeToSave: BrandStation = {
+      id: initialStore?.id || `store-${Date.now()}`,
+      name: name.trim() || `Store ${brandName} KOCity`,
+      brandName: brandName.trim().toUpperCase(),
+      streetName,
+      x: Number(x) || 1850,
+      y: Number(y) || 200,
+      category,
+      sampleCount: Number(sampleCount) || 50,
+      icon: 'storefront',
+      badgeBg: 'bg-indigo-600',
+      badgeEmoji: '🏪',
+      tagline: 'Cửa hàng chính hãng tại KOCity',
+      desc: 'Chi nhánh chính thức của nhãn hàng tại KOCity.',
+      jobTitle,
+      jobReward,
+      jobRequirements,
+      jobQuota,
+      hasJobAlert,
+    };
+    onSave(storeToSave);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+      <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border-2 border-amber-400 p-6 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-300 cursor-pointer"
+        >
+          ✕
+        </button>
+
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 text-2xl font-black shadow-lg">
+            🏪
+          </div>
+          <div>
+            <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+              QUY HOẠCH STORE BRAND
+            </span>
+            <h3 className="text-lg font-black text-white mt-0.5">
+              {initialStore ? `Chỉnh Sửa Store: ${initialStore.brandName}` : 'Thêm Cửa Hàng Brand Mới'}
+            </h3>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Tên Brand (Hiển thị 3D) *</label>
+              <input
+                type="text"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="Ví dụ: DIOR, SAMSUNG..."
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white font-bold focus:border-amber-400 outline-hidden"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Tên Store Đầy Đủ</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ví dụ: Flagship Store Dior"
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-bold mb-1">Ngành Hàng / Danh Mục</label>
+            <input
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Mỹ phẩm, Thời trang, Đồ gia dụng..."
+              className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-hidden"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 bg-amber-400/10 border border-amber-400/30 p-3 rounded-2xl">
+            <div>
+              <label className="block text-amber-300 font-bold mb-1">Tọa độ X (Ngang: 0 - 2800)</label>
+              <input
+                type="number"
+                value={x}
+                onChange={(e) => setX(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-amber-400/50 rounded-xl px-3 py-2 text-amber-200 font-mono font-bold focus:border-amber-400 outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block text-amber-300 font-bold mb-1">Tọa độ Y (Dọc: 0 - 1700)</label>
+              <input
+                type="number"
+                value={y}
+                onChange={(e) => setY(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-amber-400/50 rounded-xl px-3 py-2 text-amber-200 font-mono font-bold focus:border-amber-400 outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-bold mb-1">Tiêu Đề Chiến Dịch / Job Tuyển KOC</label>
+            <input
+              type="text"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-hidden"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Thù Lao & Quyền Lợi KOC</label>
+              <input
+                type="text"
+                value={jobReward}
+                onChange={(e) => setJobReward(e.target.value)}
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Số Lượng Suất / Mẫu 0đ</label>
+              <input
+                type="text"
+                value={jobQuota}
+                onChange={(e) => setJobQuota(e.target.value)}
+                placeholder="Còn 20 suất"
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-bold mb-1">Yêu Cầu Nội Dung Đối Với KOC</label>
+            <textarea
+              rows={2}
+              value={jobRequirements}
+              onChange={(e) => setJobRequirements(e.target.value)}
+              className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-amber-400 outline-hidden resize-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="chk-job-alert"
+              checked={hasJobAlert}
+              onChange={(e) => setHasJobAlert(e.target.checked)}
+              className="h-4 w-4 rounded accent-rose-500 cursor-pointer"
+            />
+            <label htmlFor="chk-job-alert" className="text-slate-200 cursor-pointer font-bold">
+              Hiển thị chuông báo "JOB 0Đ" nhấp nháy trên nóc nhà Store
+            </label>
+          </div>
+
+          <div className="flex gap-2 pt-3 border-t border-white/10">
+            <Button
+              type="submit"
+              variant="primary"
+              className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black cursor-pointer"
+            >
+              💾 Lưu Cửa Hàng Lên Bản Đồ
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="border-white/20 text-white cursor-pointer"
+            >
+              Hủy
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+interface RoadEditorModalProps {
+  onAdd: (road: DynamicRoad) => void;
+  onClose: () => void;
+}
+
+const RoadEditorModal: React.FC<RoadEditorModalProps> = ({ onAdd, onClose }) => {
+  const [name, setName] = useState('Đại Lộ Ánh Sáng');
+  const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+  const [type, setType] = useState<'asphalt' | 'bridge' | 'paved'>('asphalt');
+  const [x, setX] = useState<number>(1700);
+  const [y, setY] = useState<number>(450);
+  const [width, setWidth] = useState<number>(900);
+  const [height, setHeight] = useState<number>(100);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newRoad: DynamicRoad = {
+      id: `road-${Date.now()}`,
+      name: name.trim() || 'Tuyến Đường Mới',
+      orientation,
+      type,
+      x: Number(x) || 1700,
+      y: Number(y) || 450,
+      width: Number(width) || (orientation === 'horizontal' ? 800 : 100),
+      height: Number(height) || (orientation === 'horizontal' ? 100 : 600),
+    };
+    onAdd(newRoad);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+      <div className="relative w-full max-w-md rounded-3xl bg-slate-900 border-2 border-emerald-400 p-6 text-white shadow-2xl">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-300 cursor-pointer"
+        >
+          ✕
+        </button>
+
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-2xl font-black shadow-lg">
+            🛣️
+          </div>
+          <div>
+            <span className="bg-emerald-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+              QUY HOẠCH GIAO THÔNG
+            </span>
+            <h3 className="text-lg font-black text-white mt-0.5">Mở Tuyến Đường Mới</h3>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          <div>
+            <label className="block text-slate-300 font-bold mb-1">Tên Tuyến Đường *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ví dụ: Đại Lộ Ngôi Sao, Phố Đi Bộ..."
+              className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white font-bold focus:border-emerald-400 outline-hidden"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Hướng Tuyến</label>
+              <select
+                value={orientation}
+                onChange={(e) => {
+                  const val = e.target.value as 'horizontal' | 'vertical';
+                  setOrientation(val);
+                  if (val === 'horizontal') {
+                    setWidth(800);
+                    setHeight(100);
+                  } else {
+                    setWidth(100);
+                    setHeight(600);
+                  }
+                }}
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-emerald-400 outline-hidden font-bold"
+              >
+                <option value="horizontal">Ngang (Horizontal)</option>
+                <option value="vertical">Dọc (Vertical)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Mặt Đường</label>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as any)}
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white focus:border-emerald-400 outline-hidden font-bold"
+              >
+                <option value="asphalt">Đường Nhựa Đô Thị</option>
+                <option value="bridge">Cầu / Tuyến Vàng</option>
+                <option value="paved">Phố Đi Bộ Lát Gạch</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 bg-emerald-950/40 border border-emerald-400/30 p-3 rounded-2xl">
+            <div>
+              <label className="block text-emerald-300 font-bold mb-1">Tọa độ X</label>
+              <input
+                type="number"
+                value={x}
+                onChange={(e) => setX(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-emerald-400/50 rounded-xl px-3 py-2 text-emerald-200 font-mono font-bold focus:border-emerald-400 outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block text-emerald-300 font-bold mb-1">Tọa độ Y</label>
+              <input
+                type="number"
+                value={y}
+                onChange={(e) => setY(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-emerald-400/50 rounded-xl px-3 py-2 text-emerald-200 font-mono font-bold focus:border-emerald-400 outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Chiều rộng (W)</label>
+              <input
+                type="number"
+                value={width}
+                onChange={(e) => setWidth(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white font-mono focus:border-emerald-400 outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Chiều cao (H)</label>
+              <input
+                type="number"
+                value={height}
+                onChange={(e) => setHeight(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-white/20 rounded-xl px-3 py-2 text-white font-mono focus:border-emerald-400 outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-3 border-t border-white/10">
+            <Button
+              type="submit"
+              variant="primary"
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black cursor-pointer"
+            >
+              🛣️ Đặt Tuyến Đường
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="border-white/20 text-white cursor-pointer"
+            >
+              Hủy
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   open,
   onClose,
   campaigns,
   currentUser,
+  isAdmin = false,
   isNightDefault = false,
   onSelectCampaign,
 }) => {
+  const isEffectiveAdmin = Boolean(
+    isAdmin || currentUser?.role === 'admin' || (typeof window !== 'undefined' && localStorage.getItem('kocity_admin_mode') === 'true')
+  );
+
   const [isNight, setIsNight] = useState(isNightDefault);
   const [zoom, setZoom] = useState<number>(0.75);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: -450, y: -250 });
@@ -221,113 +727,166 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   const [showGuardModal, setShowGuardModal] = useState<boolean>(false);
   const [showBiddingModal, setShowBiddingModal] = useState<boolean>(false);
 
-  // Tiến độ của tài khoản người dùng
-  const userJobsCount = currentUser?.completedApplications?.length || 0;
-  const userVehicle: VehicleType = userJobsCount >= 3 ? 'motorbike' : userJobsCount >= 1 ? 'bicycle' : 'walk';
+  // ==================== CẤU HÌNH QUY HOẠCH ĐÔ THỊ ĐỘNG (ADMIN BUILDER) ====================
+  const [stores, setStores] = useState<BrandStation[]>(() => {
+    try {
+      const saved = localStorage.getItem('kocity_city_layout_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.stores) && parsed.stores.length > 0) {
+          return parsed.stores;
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading city layout', e);
+    }
+    return DEFAULT_BRAND_STATIONS;
+  });
 
-  // Chu kỳ đèn giao thông ngã tư thông minh
-  useEffect(() => {
-    if (!open) return;
-    const interval = setInterval(() => {
-      setTrafficTimer((prev) => {
-        if (prev > 1) return prev - 1;
-        setTrafficLight((current) => {
-          if (current === 'green') {
-            setTrafficTimer(2);
-            return 'yellow';
-          }
-          if (current === 'yellow') {
-            setTrafficTimer(6);
-            return 'red';
-          }
-          setTrafficTimer(8);
-          return 'green';
-        });
-        return 8;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [open]);
+  const [landmarkPos, setLandmarkPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('kocity_city_layout_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.landmarkPos) return parsed.landmarkPos;
+      }
+    } catch {}
+    return DEFAULT_LANDMARK_POS;
+  });
 
-  // Danh sách các Store Brand tập trung toàn bộ ở ô TRÊN CÙNG BÊN PHẢI
-  const brandStations: BrandStation[] = [
-    {
-      id: 'co-mem',
-      name: 'Store Cỏ Mềm Homelab',
-      brandName: 'CỎ MỀM',
-      streetName: 'Khu Phố Thương Mại Brand',
-      x: 1800,
-      y: 350,
-      category: 'Mỹ phẩm thiên nhiên thuần khiết',
-      sampleCount: 35,
-      icon: 'spa',
-      badgeBg: 'bg-emerald-600',
-      badgeEmoji: '🌿',
-      tagline: 'Lành sạch thuần Việt · Kho tổng xuất mẫu từ Hà Nội',
-      desc: 'Kho Cỏ Mềm gửi son dưỡng gạo, bọt rửa mặt trà xanh, serum rau má 0đ tận nhà cho KOC.',
-      jobTitle: 'Review Bọt Rửa Mặt & Son Gạo Thuần Khiết Cỏ Mềm',
-      jobReward: 'Tài trợ 100% mẫu dùng thử 0đ + Hoa hồng affiliate 18% - 20%',
-      jobRequirements: '1 Video ngắn TikTok/Reels/Shorts trải nghiệm chất bọt mịn và độ dưỡng ẩm lành sạch.',
-      jobQuota: 'Còn 35 suất nhận mẫu miễn phí đợt này',
-    },
-    {
-      id: 'bielenda',
-      name: 'Boutique Bielenda',
-      brandName: 'BIELENDA',
-      streetName: 'Khu Phố Thương Mại Brand',
-      x: 1980,
-      y: 350,
-      category: 'Dược mỹ phẩm Châu Âu',
-      sampleCount: 42,
-      icon: 'water_drop',
-      badgeBg: 'bg-fuchsia-600',
-      badgeEmoji: '✨',
-      tagline: 'Kho nhập khẩu Sài Gòn · Trị mụn & Phục hồi chuyên sâu',
-      desc: 'Dòng sản phẩm toner acid, serum peel da được hàng triệu beauty blogger tin dùng.',
-      jobTitle: 'Chiến Dịch Routine Skincare Treatment Cùng Bielenda Skin House',
-      jobReward: 'Tài trợ bộ kit skincare Châu Âu 0đ + Hoa hồng bán hàng 18%',
-      jobRequirements: '1 Video review quy trình dưỡng da treatment an toàn, phục hồi căng bóng.',
-      jobQuota: 'Còn 42 suất nhận mẫu miễn phí đợt này',
-    },
-    {
-      id: 'visecret',
-      name: 'Store ViSecret Fashion',
-      brandName: 'VISECRET',
-      streetName: 'Khu Phố Thương Mại Brand',
-      x: 2160,
-      y: 350,
-      category: 'Thời trang & Nội y thiết kế',
-      sampleCount: 25,
-      icon: 'checkroom',
-      badgeBg: 'bg-purple-600',
-      badgeEmoji: '👗',
-      tagline: 'Kho may mặc Hà Nội · Tôn dáng chuẩn KOC',
-      desc: 'Xuất mẫu áo bra tàng hình, đầm thiết kế miễn phí tận nhà cho KOC lên video biến hình OOTD.',
-      jobTitle: 'Biến Hình OOTD Đầm Thiết Kế & Áo Bra Tàng Hình Tôn Dáng',
-      jobReward: 'Tặng 02 set đầm/áo thiết kế 0đ + Hoa hồng bán hàng 22%',
-      jobRequirements: '1 Video biến hình OOTD chuyển cảnh cuốn hút theo nhạc trend, tôn dáng trang phục.',
-      jobQuota: 'Còn 25 suất nhận mẫu miễn phí đợt này',
-    },
-    {
-      id: 'tranyoo',
-      name: 'Store Tranyoo Audio',
-      brandName: 'TRANYOO',
-      streetName: 'Khu Phố Thương Mại Brand',
-      x: 2340,
-      y: 350,
-      category: 'Tai nghe & Phụ kiện Cyberpunk',
-      sampleCount: 30,
-      icon: 'headphones',
-      badgeBg: 'bg-blue-600',
-      badgeEmoji: '🎧',
-      tagline: 'Kho công nghệ Sài Gòn · Giao tai nghe 0đ trong 24h',
-      desc: 'Trụ sở phân phối tai nghe Bluetooth TWS, củ sạc nhanh chuẩn Gen Z cho creator livestream.',
-      jobTitle: 'Trải Nghiệm Tai Nghe TWS Chống Ồn & Củ Sạc Siêu Tốc Cyber',
-      jobReward: 'Tài trợ 01 tai nghe Bluetooth TWS 0đ + Thưởng view & Hoa hồng 15%',
-      jobRequirements: '1 Video unbox, test chất âm bass cực đã hoặc livestream giới thiệu sản phẩm.',
-      jobQuota: 'Còn 30 suất nhận mẫu miễn phí đợt này',
-    },
-  ];
+  const [guardPos, setGuardPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('kocity_city_layout_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.guardPos) return parsed.guardPos;
+      }
+    } catch {}
+    return DEFAULT_GUARD_POS;
+  });
+
+  const [biddingLot, setBiddingLot] = useState(() => {
+    try {
+      const saved = localStorage.getItem('kocity_city_layout_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.biddingLot) return parsed.biddingLot;
+      }
+    } catch {}
+    return DEFAULT_BIDDING_LOT;
+  });
+
+  const [extraRoads, setExtraRoads] = useState<DynamicRoad[]>(() => {
+    try {
+      const saved = localStorage.getItem('kocity_city_layout_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.extraRoads)) return parsed.extraRoads;
+      }
+    } catch {}
+    return [];
+  });
+
+  // Chế độ Quy hoạch Admin & Kéo thả
+  const [isBuilderMode, setIsBuilderMode] = useState<boolean>(false);
+  const [draggingItem, setDraggingItem] = useState<{
+    type: 'store' | 'landmark' | 'guard' | 'bidding' | 'road';
+    id: string;
+    startClientX: number;
+    startClientY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+
+  // Form Thêm / Sửa Store
+  const [editingStore, setEditingStore] = useState<BrandStation | null>(null);
+  const [isAddingStore, setIsAddingStore] = useState<boolean>(false);
+  const [showAddRoadModal, setShowAddRoadModal] = useState<boolean>(false);
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
+
+  const showToastNotice = (msg: string) => {
+    setToastNotice(msg);
+    setTimeout(() => setToastNotice(null), 3500);
+  };
+
+  const handleSaveCityLayout = () => {
+    const config = {
+      stores,
+      landmarkPos,
+      guardPos,
+      biddingLot,
+      extraRoads,
+    };
+    localStorage.setItem('kocity_city_layout_v2', JSON.stringify(config));
+    showToastNotice('🎉 Đã lưu quy hoạch thành phố KOCity thành công!');
+  };
+
+  const handleResetToDefaults = () => {
+    if (window.confirm('Bạn có chắc chắn muốn khôi phục lại toàn bộ quy hoạch thành phố về mặc định ban đầu?')) {
+      localStorage.removeItem('kocity_city_layout_v2');
+      setStores(DEFAULT_BRAND_STATIONS);
+      setLandmarkPos(DEFAULT_LANDMARK_POS);
+      setGuardPos(DEFAULT_GUARD_POS);
+      setBiddingLot(DEFAULT_BIDDING_LOT);
+      setExtraRoads([]);
+      showToastNotice('↺ Đã khôi phục quy hoạch thành phố về mặc định ban đầu!');
+    }
+  };
+
+  const handleDeleteStore = (storeId: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa cửa hàng này khỏi thành phố?')) {
+      setStores((prev) => prev.filter((s) => s.id !== storeId));
+      showToastNotice('🗑️ Đã xóa cửa hàng khỏi bản đồ!');
+    }
+  };
+
+  const handleSaveStoreData = (storeData: BrandStation) => {
+    setStores((prev) => {
+      const idx = prev.findIndex((s) => s.id === storeData.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = storeData;
+        return next;
+      }
+      return [...prev, storeData];
+    });
+    setEditingStore(null);
+    setIsAddingStore(false);
+    showToastNotice(`✅ Đã lưu cửa hàng "${storeData.brandName}" thành công!`);
+  };
+
+  const handleAddRoad = (road: DynamicRoad) => {
+    setExtraRoads((prev) => [...prev, road]);
+    setShowAddRoadModal(false);
+    showToastNotice(`🛣️ Đã mở tuyến đường mới: "${road.name}"!`);
+  };
+
+  const handleDeleteRoad = (roadId: string) => {
+    if (window.confirm('Bạn có chắc muốn xóa tuyến đường này?')) {
+      setExtraRoads((prev) => prev.filter((r) => r.id !== roadId));
+      showToastNotice('🗑️ Đã xóa tuyến đường!');
+    }
+  };
+
+  const startDrag = (
+    e: React.MouseEvent,
+    type: 'store' | 'landmark' | 'guard' | 'bidding' | 'road',
+    id: string,
+    originX: number,
+    originY: number
+  ) => {
+    if (!isBuilderMode) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setDraggingItem({
+      type,
+      id,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      originX,
+      originY,
+    });
+  };
 
   // Danh sách các cư dân KOC
   const [citizens, setCitizens] = useState<Citizen[]>([
@@ -561,13 +1120,40 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   };
 
   // Kéo thả chuột (Pan)
+  // Kéo thả chuột (Pan hoặc Drag Element trong Builder Mode)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, .clickable-element')) return;
+    if ((e.target as HTMLElement).closest('button, .clickable-element, input, select')) return;
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    // 1. Kéo thả phần tử trong chế độ Quy hoạch Admin
+    if (draggingItem) {
+      const deltaX = (e.clientX - draggingItem.startClientX) / zoom;
+      const deltaY = (e.clientY - draggingItem.startClientY) / zoom;
+      const newX = Math.round((draggingItem.originX + deltaX) / 10) * 10;
+      const newY = Math.round((draggingItem.originY + deltaY) / 10) * 10;
+
+      if (draggingItem.type === 'store') {
+        setStores((prev) =>
+          prev.map((s) => (s.id === draggingItem.id ? { ...s, x: newX, y: newY } : s))
+        );
+      } else if (draggingItem.type === 'landmark') {
+        setLandmarkPos({ x: newX, y: newY });
+      } else if (draggingItem.type === 'guard') {
+        setGuardPos({ x: newX, y: newY });
+      } else if (draggingItem.type === 'bidding') {
+        setBiddingLot((prev) => ({ ...prev, x: newX, y: newY }));
+      } else if (draggingItem.type === 'road') {
+        setExtraRoads((prev) =>
+          prev.map((r) => (r.id === draggingItem.id ? { ...r, x: newX, y: newY } : r))
+        );
+      }
+      return;
+    }
+
+    // 2. Kéo thả di chuyển bản đồ (Pan)
     if (!isDragging) return;
     setPan({
       x: e.clientX - dragStartRef.current.x,
@@ -575,7 +1161,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     });
   };
 
-  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseUp = () => {
+    if (draggingItem) {
+      setDraggingItem(null);
+    }
+    setIsDragging(false);
+  };
 
   // Multi-touch pinch-to-zoom trên mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -765,6 +1356,32 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               +
             </button>
           </div>
+
+          {/* Nút Chế Độ Quy Hoạch Admin */}
+          {isEffectiveAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                const nextState = !isBuilderMode;
+                setIsBuilderMode(nextState);
+                if (nextState) {
+                  showToastNotice('🛠️ Chế độ Quy Hoạch bật: Kéo thả các Store / Toà tháp / Bốt gác / Đường xá thoải mái!');
+                } else {
+                  showToastNotice('Đã tắt chế độ Quy Hoạch.');
+                }
+              }}
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ring-2 shadow-lg',
+                isBuilderMode
+                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white ring-amber-300 animate-pulse'
+                  : 'bg-emerald-600/90 text-white ring-emerald-400 hover:bg-emerald-500'
+              )}
+              title="Chế độ Quản trị viên: Kéo thả các vị trí, thêm Store, mở đường mới"
+            >
+              <Icon name="architecture" className="text-[14px]" />
+              <span>{isBuilderMode ? '🛠️ ĐANG QUY HOẠCH' : '🛠️ QUY HOẠCH (ADMIN)'}</span>
+            </button>
+          )}
 
           {/* Nút Đóng */}
           <button
@@ -1005,6 +1622,70 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
+          {/* CÁC TUYẾN ĐƯỜNG MỞ RỘNG DO ADMIN QUY HOẠCH */}
+          {extraRoads.map((road) => (
+            <div
+              key={road.id}
+              style={{
+                left: road.x,
+                top: road.y,
+                width: road.width,
+                height: road.height,
+              }}
+              className={cx(
+                'absolute z-5 shadow-lg select-none flex items-center justify-center transition-colors',
+                road.type === 'bridge'
+                  ? 'bg-slate-900 border-2 border-amber-400'
+                  : road.type === 'paved'
+                  ? 'bg-amber-900/80 border-2 border-amber-600'
+                  : isNight
+                  ? 'bg-[#1e293b] border border-slate-700'
+                  : 'bg-[#334155] border border-slate-600',
+                isBuilderMode && 'ring-2 ring-emerald-400/80 cursor-move'
+              )}
+              onMouseDown={(e) => {
+                if (isBuilderMode) {
+                  startDrag(e, 'road', road.id, road.x, road.y);
+                }
+              }}
+            >
+              {road.orientation === 'horizontal' ? (
+                <div className="w-full flex items-center justify-around px-4">
+                  {Array.from({ length: Math.max(2, Math.floor(road.width / 80)) }).map((_, i) => (
+                    <div key={i} className="w-8 h-2 bg-amber-300/80 rounded-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-around py-4">
+                  {Array.from({ length: Math.max(2, Math.floor(road.height / 80)) }).map((_, i) => (
+                    <div key={i} className="h-8 w-2 bg-amber-300/80 rounded-full" />
+                  ))}
+                </div>
+              )}
+
+              {/* Nhãn tên đường & nút xoá của admin */}
+              <div className="absolute top-1 left-2 flex items-center gap-1.5 bg-black/80 px-2 py-0.5 rounded-full text-[10px] text-white pointer-events-auto">
+                <span>🛣️ {road.name}</span>
+                {isBuilderMode && (
+                  <>
+                    <span className="text-amber-300 font-mono">({road.x}, {road.y})</span>
+                    <button
+                      type="button"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        handleDeleteRoad(road.id);
+                      }}
+                      className="text-rose-400 hover:text-rose-300 font-bold ml-1 cursor-pointer"
+                      title="Xóa đường"
+                    >
+                      🗑️
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+
           {/* CÂY CẦU KOCITY ĐỘC QUYỀN (BẮC NGANG SÔNG TỪ BỜ TÂY SANG BỜ ĐÔNG) */}
           <div
             style={{ left: 1080, top: 730, width: 640, height: 240 }}
@@ -1103,10 +1784,29 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* ========================================================================= */}
           {/* TÒA NHÀ TRỤ SỞ KOCITY HQ (TÒA NHÀ 3D ISOMETRIC CLAY THEO ẢNH MẪU) */}
           <div
-            style={{ left: 1240, top: 480, width: 340, height: 350 }}
-            className="absolute z-25 cursor-pointer group clickable-element flex flex-col items-center"
-            onClick={() => setShowHqModal(true)}
+            style={{ left: landmarkPos.x, top: landmarkPos.y, width: 340, height: 350 }}
+            className={cx(
+              'absolute z-25 flex flex-col items-center group select-none',
+              isBuilderMode
+                ? 'cursor-move ring-2 ring-amber-400/80 rounded-3xl bg-amber-500/10 p-1'
+                : 'cursor-pointer clickable-element'
+            )}
+            onMouseDown={(e) => {
+              if (isBuilderMode) {
+                startDrag(e, 'landmark', 'kocity-landmark', landmarkPos.x, landmarkPos.y);
+              }
+            }}
+            onClick={() => {
+              if (!isBuilderMode) setShowHqModal(true);
+            }}
           >
+            {/* Builder indicator */}
+            {isBuilderMode && (
+              <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 border border-amber-400 px-2.5 py-0.5 rounded-full text-[10px] font-mono text-amber-300 font-bold shadow-xl whitespace-nowrap z-30">
+                ✥ Trụ Sở ({landmarkPos.x}, {landmarkPos.y})
+              </div>
+            )}
+
             {/* Huy hiệu đỉnh tháp hào quang */}
             <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 px-4 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-4 ring-amber-300 whitespace-nowrap flex items-center gap-1.5 border border-white animate-bounce z-20 mb-[-14px]">
               <span>👑</span>
@@ -1139,10 +1839,27 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
           {/* BỐT GÁC AN NINH & CHÚ BẢO VỆ TẠI CỔNG LÊN CẦU */}
           <div
-            style={{ left: 1190, top: 960 }}
-            className="absolute z-25 cursor-pointer group clickable-element"
-            onClick={() => setShowGuardModal(true)}
+            style={{ left: guardPos.x, top: guardPos.y }}
+            className={cx(
+              'absolute z-25 group select-none',
+              isBuilderMode
+                ? 'cursor-move ring-2 ring-amber-400/80 rounded-2xl bg-amber-500/10 p-1'
+                : 'cursor-pointer clickable-element'
+            )}
+            onMouseDown={(e) => {
+              if (isBuilderMode) {
+                startDrag(e, 'guard', 'guard-booth', guardPos.x, guardPos.y);
+              }
+            }}
+            onClick={() => {
+              if (!isBuilderMode) setShowGuardModal(true);
+            }}
           >
+            {isBuilderMode && (
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-amber-400 px-2 py-0.5 rounded-full text-[10px] font-mono text-amber-300 font-bold shadow-xl whitespace-nowrap z-30">
+                ✥ Bốt Gác ({guardPos.x}, {guardPos.y})
+              </div>
+            )}
             <div className="flex flex-col items-center">
               <div className="bg-amber-300 text-slate-950 px-3 py-1 rounded-2xl text-[11px] font-black shadow-2xl ring-2 ring-white whitespace-nowrap mb-1 animate-bounce">
                 👮 "Chào cháu! Qua Cầu KOCity sang Brand hái job hoa hồng cao nhé!"
@@ -1269,70 +1986,135 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* ========================================================================= */}
           {/* 5. Ô TRÊN CÙNG BÊN PHẢI: QUY TỤ TOÀN BỘ CÁC BRAND (STORE 3D CLAY)         */}
           {/* ========================================================================= */}
+          {/* Khung nền & Biển hiệu Phố Thương Mại Brand */}
           <div
-            style={{ left: 1720, top: 110, width: 960 }}
-            className="absolute z-10 flex flex-col gap-4"
+            style={{ left: 1720, top: 110, width: 960, height: 260 }}
+            className="absolute z-10 flex flex-col justify-between p-4 bg-white/5 backdrop-blur-xs rounded-3xl border border-white/10 shadow-xl pointer-events-none"
           >
             {/* Biển hiệu phân khu */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pointer-events-auto">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-5 py-2 rounded-2xl text-white font-black text-xs shadow-xl ring-2 ring-white/50 border border-white/30">
                 <span className="text-base">🏪</span>
                 <span>PHỐ CÁC CỬA HÀNG BRAND (STORE 3D)</span>
                 <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black">
-                  4 THƯƠNG HIỆU
+                  {stores.length} THƯƠNG HIỆU
                 </span>
               </div>
               <div className="text-[11px] text-amber-300 bg-slate-900/90 px-3 py-1 rounded-full border border-white/20 font-bold hidden sm:inline-block">
                 💡 Bấm Store mở Thông Báo Job & Đăng ký nhận mẫu 0đ!
               </div>
             </div>
-
-            {/* DÃY TOÀN BỘ CÁC STORE BRAND XẾP NGANG RỘNG RÃI & GỌN GÀNG */}
-            <div className="flex items-end justify-between bg-white/5 backdrop-blur-xs p-5 rounded-3xl border border-white/10 shadow-xl">
-              {/* STORE 1: CỎ MỀM */}
-              <Clay3DStore
-                brandName="CỎ MỀM"
-                onClick={() => setSelectedBrand(brandStations[0])}
-              />
-
-              {/* STORE 2: BIELENDA */}
-              <Clay3DStore
-                brandName="BIELENDA"
-                onClick={() => setSelectedBrand(brandStations[1])}
-              />
-
-              {/* STORE 3: VISECRET */}
-              <Clay3DStore
-                brandName="VISECRET"
-                onClick={() => setSelectedBrand(brandStations[2])}
-              />
-
-              {/* STORE 4: TRANYOO */}
-              <Clay3DStore
-                brandName="TRANYOO"
-                onClick={() => setSelectedBrand(brandStations[3])}
-              />
-
-              {/* Shophouse Studio Chụp OOTD */}
-              <div className="w-28 h-28 bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-2.5 flex flex-col justify-between text-center shadow-lg hover:scale-105 transition-transform">
-                <div className="text-2xl">📸</div>
-                <div>
-                  <div className="text-[11px] font-black text-slate-200">STUDIO OOTD</div>
-                  <div className="text-[8px] text-slate-400">Phông chụp ảnh</div>
-                </div>
-                <div className="text-[8px] text-amber-400 font-bold">Free cho KOC</div>
-              </div>
+            <div className="text-right text-[10px] text-slate-400 font-mono pointer-events-none">
+              KOCity Brand Boulevard · Eastern Realm
             </div>
           </div>
+
+          {/* DÃY CÁC STORE ĐƯỢC RENDER ĐỘNG THEO TỌA ĐỘ VÀ KÉO THẢ (BUILDER MODE) */}
+          {stores.map((store) => (
+            <div
+              key={store.id}
+              style={{ left: store.x, top: store.y }}
+              className={cx(
+                'absolute z-20 select-none transition-transform duration-100',
+                isBuilderMode ? 'cursor-move ring-2 ring-amber-400 rounded-3xl bg-amber-500/10 p-1 shadow-2xl' : ''
+              )}
+              onMouseDown={(e) => {
+                if (isBuilderMode) {
+                  startDrag(e, 'store', store.id, store.x, store.y);
+                }
+              }}
+            >
+              {/* Overlay điều khiển của Admin Builder */}
+              {isBuilderMode && (
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-900/95 border border-amber-400 px-2 py-0.5 rounded-full shadow-2xl z-30 whitespace-nowrap text-[10px]">
+                  <span className="text-amber-300 font-mono font-bold">✥ ({store.x}, {store.y})</span>
+                  <button
+                    type="button"
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      setEditingStore(store);
+                    }}
+                    className="text-blue-400 hover:text-blue-300 px-1 py-0.5 rounded cursor-pointer font-bold"
+                    title="Sửa thông tin Store"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      handleDeleteStore(store.id);
+                    }}
+                    className="text-rose-400 hover:text-rose-300 px-1 py-0.5 rounded cursor-pointer font-bold"
+                    title="Xoá Store"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              )}
+
+              {store.id === 'store-ootd' ? (
+                <div
+                  onClick={() => {
+                    if (!isBuilderMode) setSelectedBrand(store);
+                  }}
+                  className="w-28 h-28 bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-2.5 flex flex-col justify-between text-center shadow-lg hover:scale-105 transition-transform cursor-pointer"
+                >
+                  <div className="text-2xl">📸</div>
+                  <div>
+                    <div className="text-[11px] font-black text-slate-200">{store.brandName}</div>
+                    <div className="text-[8px] text-slate-400">{store.category}</div>
+                  </div>
+                  <div className="text-[8px] text-amber-400 font-bold">Free cho KOC</div>
+                </div>
+              ) : (
+                <Clay3DStore
+                  brandName={store.brandName}
+                  hasJobAlert={store.hasJobAlert}
+                  onClick={() => {
+                    if (!isBuilderMode) setSelectedBrand(store);
+                  }}
+                />
+              )}
+            </div>
+          ))}
 
           {/* ========================================================================= */}
           {/* 6. Ô DƯỚI CÙNG BÊN PHẢI: KHU ĐẤT TRỐNG ĐANG ĐẤU THẦU                      */}
           {/* ========================================================================= */}
           <div
-            style={{ left: 1720, top: 1000, width: 960, height: 580 }}
-            className="absolute z-10 flex flex-col justify-between p-6 cursor-pointer clickable-element group"
-            onClick={() => setShowBiddingModal(true)}
+            style={{ left: biddingLot.x, top: biddingLot.y, width: biddingLot.width, height: biddingLot.height }}
+            className={cx(
+              'absolute z-10 flex flex-col justify-between p-6 select-none group',
+              isBuilderMode ? 'cursor-move ring-2 ring-amber-400/80 rounded-3xl bg-amber-500/10' : 'cursor-pointer clickable-element'
+            )}
+            onMouseDown={(e) => {
+              if (isBuilderMode) {
+                startDrag(e, 'bidding', 'bidding-lot', biddingLot.x, biddingLot.y);
+              }
+            }}
+            onClick={() => {
+              if (!isBuilderMode) setShowBiddingModal(true);
+            }}
           >
+            {/* Builder indicator */}
+            {isBuilderMode && (
+              <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 border border-amber-400 px-3 py-0.5 rounded-full text-[10px] font-mono text-amber-300 font-bold shadow-xl whitespace-nowrap z-30 flex items-center gap-2">
+                <span>✥ Khu Đất ({biddingLot.x}, {biddingLot.y})</span>
+                <button
+                  type="button"
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setIsAddingStore(true);
+                  }}
+                  className="text-emerald-400 hover:text-emerald-300 font-bold ml-1 cursor-pointer"
+                  title="Duyệt mở Store tại khu đất này"
+                >
+                  ➕ Cấp đất mở Store
+                </button>
+              </div>
+            )}
+
             {/* Tiêu đề & Rào chắn công trình */}
             <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 px-5 py-2 rounded-2xl text-white font-black text-xs shadow-2xl ring-2 ring-white border border-white/40 animate-pulse">
@@ -1960,15 +2742,125 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </p>
             </div>
 
-            <Button
-              variant="primary"
-              block
-              onClick={() => setShowBiddingModal(false)}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black"
-            >
-              Đã Rõ! Tiếp Tục Khám Phá
-            </Button>
+            {isEffectiveAdmin ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black cursor-pointer"
+                  onClick={() => {
+                    setShowBiddingModal(false);
+                    setEditingStore(null);
+                    setIsAddingStore(true);
+                  }}
+                >
+                  🏗️ Cấp Đất & Mở Store Tại Đây
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBiddingModal(false)}
+                  className="border-white/20 text-white cursor-pointer"
+                >
+                  Đóng
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="primary"
+                block
+                onClick={() => setShowBiddingModal(false)}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black cursor-pointer"
+              >
+                Đã Rõ! Tiếp Tục Khám Phá
+              </Button>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* MODAL 6: THÊM / SỬA STORE BRAND (ADMIN BUILDER) */}
+      {(isAddingStore || editingStore) && (
+        <StoreEditorModal
+          initialStore={editingStore}
+          onSave={handleSaveStoreData}
+          onClose={() => {
+            setEditingStore(null);
+            setIsAddingStore(false);
+          }}
+        />
+      )}
+
+      {/* MODAL 7: MỞ ĐƯỜNG MỚI (ADMIN BUILDER) */}
+      {showAddRoadModal && (
+        <RoadEditorModal
+          onAdd={handleAddRoad}
+          onClose={() => setShowAddRoadModal(false)}
+        />
+      )}
+
+      {/* FLOATING ADMIN TOOLBAR QUY HOẠCH */}
+      {isBuilderMode && (
+        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 flex flex-wrap items-center gap-2 bg-slate-900/95 border-2 border-amber-400/90 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md ring-4 ring-amber-400/20 animate-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-1.5 text-amber-300 font-black text-xs pr-2 border-r border-white/20">
+            <span>🛠️</span>
+            <span>BỘ CÔNG CỤ QUY HOẠCH</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditingStore(null);
+              setIsAddingStore(true);
+            }}
+            className="inline-flex items-center gap-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white text-xs font-black px-3 py-1.5 rounded-xl shadow cursor-pointer transition hover:scale-105"
+          >
+            <span>➕</span>
+            <span>Thêm Store Brand</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddRoadModal(true)}
+            className="inline-flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black px-3 py-1.5 rounded-xl shadow cursor-pointer transition hover:scale-105"
+          >
+            <span>🛣️</span>
+            <span>Mở Đường Mới</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveCityLayout}
+            className="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-xl shadow cursor-pointer transition hover:scale-105 ring-2 ring-white/60"
+          >
+            <span>💾</span>
+            <span>Lưu Quy Hoạch</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetToDefaults}
+            className="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-xl shadow cursor-pointer transition"
+            title="Khôi phục quy hoạch gốc ban đầu"
+          >
+            <span>↺</span>
+            <span>Khôi phục gốc</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsBuilderMode(false)}
+            className="inline-flex items-center justify-center h-7 w-7 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer ml-1"
+            title="Thoát chế độ quy hoạch"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* TOAST THÔNG BÁO QUY HOẠCH */}
+      {toastNotice && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border-2 border-amber-400 text-amber-300 font-black px-5 py-2.5 rounded-2xl shadow-2xl text-xs backdrop-blur-md flex items-center gap-2 animate-bounce">
+          <span>📢</span>
+          <span>{toastNotice}</span>
         </div>
       )}
 

@@ -666,6 +666,7 @@ export const HomePage: React.FC = () => {
           onClose={() => setCityOpen(false)}
           campaigns={campaigns}
           currentUser={currentUser}
+          isAdmin={isAdmin}
           isNightDefault={isNight}
           onSelectCampaign={(campId) => navigate(ROUTES.campaign(campId))}
         />
