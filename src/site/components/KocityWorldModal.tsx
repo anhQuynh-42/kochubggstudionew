@@ -1,22 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Campaign } from '../../types';
 import { Icon, Button, cx } from '../ui';
 
 export type VehicleType = 'walk' | 'bicycle' | 'motorbike';
-export type MapLayerType = 'satellite' | 'street' | 'night';
+export type TrafficLightState = 'green' | 'yellow' | 'red';
 
 interface Citizen {
   id: string;
   name: string;
-  city: 'Hà Nội' | 'TP. Hồ Chí Minh';
   number: string;
   role: string;
   jobsDone: number;
   vehicle: VehicleType;
-  lat: number;
-  lng: number;
+  x: number;
+  y: number;
   direction: 'left' | 'right';
   speed: number;
   minX: number;
@@ -30,16 +27,16 @@ interface BrandStation {
   id: string;
   name: string;
   brandName: string;
-  city: 'Hà Nội' | 'TP. Hồ Chí Minh';
-  lat: number;
-  lng: number;
+  streetName: string;
+  x: number;
+  y: number;
   category: string;
   sampleCount: number;
   icon: string;
   badgeBg: string;
   tagline: string;
   desc: string;
-  address: string;
+  badgeEmoji: string;
 }
 
 interface KocityWorldModalProps {
@@ -51,34 +48,8 @@ interface KocityWorldModalProps {
   onSelectCampaign?: (campaignId: string) => void;
 }
 
-// Toạ độ thực tế các địa danh
-const COORDS = {
-  vietnamCenter: [16.0544, 106.5] as [number, number],
-  hanoiCenter: [21.0285, 105.8542] as [number, number], // Hồ Gươm
-  saigonCenter: [10.7745, 106.703] as [number, number], // Phố Đi Bộ Nguyễn Huệ
-  kocityHQ: [21.0245, 105.8525] as [number, number], // Trụ sở KOCity
-};
-
-// Các nguồn Tile bản đồ
-const TILE_PROVIDERS: Record<MapLayerType, { url: string; attribution: string; subdomains?: string }> = {
-  // 🛰️ Ảnh vệ tinh chụp thật độ nét cao từ trên cao (Esri World Imagery)
-  satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-  },
-  // 🗺️ Bản đồ đường phố sáng đẹp (CartoDB Voyager)
-  street: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    subdomains: 'abcd',
-  },
-  // 🌆 Bản đồ đêm Neon Cyber (CartoDB Dark Matter)
-  night: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    subdomains: 'abcd',
-  },
-};
+const MAP_W = 2800;
+const MAP_H = 1700;
 
 export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   open,
@@ -88,230 +59,250 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   isNightDefault = false,
   onSelectCampaign,
 }) => {
-  const [mapLayer, setMapLayer] = useState<MapLayerType>('satellite'); // Mặc định mở ngay Ảnh Vệ Tinh Chụp Thật
-  const [activeRegion, setActiveRegion] = useState<'hanoi' | 'saigon' | 'vietnam'>('hanoi');
+  const [isNight, setIsNight] = useState(isNightDefault);
+  const [zoom, setZoom] = useState<number>(0.75);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: -450, y: -250 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Trạng thái đèn giao thông ngã tư (Xanh 8s -> Vàng 2s -> Đỏ 6s)
+  const [trafficLight, setTrafficLight] = useState<TrafficLightState>('green');
+  const [trafficTimer, setTrafficTimer] = useState<number>(8);
+
+  // Các Modal tương tác
   const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<BrandStation | null>(null);
   const [showHqModal, setShowHqModal] = useState<boolean>(false);
+  const [showGuardModal, setShowGuardModal] = useState<boolean>(false);
 
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const labelLayerRef = useRef<L.TileLayer | null>(null);
-  const markersLayerRef = useRef<L.LayerGroup | null>(null);
-
-  // Tiến độ nhận xe của tài khoản
+  // Tiến độ của tài khoản người dùng
   const userJobsCount = currentUser?.completedApplications?.length || 0;
   const userVehicle: VehicleType = userJobsCount >= 3 ? 'motorbike' : userJobsCount >= 1 ? 'bicycle' : 'walk';
 
-  // Danh sách các Trạm Brand cắm tại toạ độ thật ngoài đời
+  // Chu kỳ đèn giao thông ngã tư thông minh
+  useEffect(() => {
+    if (!open) return;
+    const interval = setInterval(() => {
+      setTrafficTimer((prev) => {
+        if (prev > 1) return prev - 1;
+        // Chuyển trạng thái khi đếm về 1
+        setTrafficLight((current) => {
+          if (current === 'green') {
+            setTrafficTimer(2);
+            return 'yellow';
+          }
+          if (current === 'yellow') {
+            setTrafficTimer(6);
+            return 'red';
+          }
+          setTrafficTimer(8);
+          return 'green';
+        });
+        return 8;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [open]);
+
+  // Danh sách các Brand chia theo từng phố ngành hàng
   const brandStations: BrandStation[] = [
-    // --- KHU VỰC HÀ NỘI ---
+    // --- PHỐ MỸ PHẨM & SKINCARE ---
     {
-      id: 'co-mem-hn',
-      name: 'Trạm Cỏ Mềm Homelab Hà Nội',
+      id: 'co-mem',
+      name: 'Trạm Cỏ Mềm Greenlab',
       brandName: 'Cỏ Mềm',
-      city: 'Hà Nội',
-      lat: 21.0225,
-      lng: 105.8485,
+      streetName: 'Phố Mỹ Phẩm & Skincare',
+      x: 1980,
+      y: 380,
       category: 'Mỹ phẩm thiên nhiên thuần khiết',
       sampleCount: 35,
       icon: 'spa',
       badgeBg: 'bg-emerald-600',
+      badgeEmoji: '🌿',
       tagline: 'Lành sạch thuần Việt · Kho tổng xuất mẫu từ Hà Nội',
-      desc: 'Kho Cỏ Mềm tại Hà Nội gửi son dưỡng, bọt rửa mặt, serum rau má 0đ tận nhà cho KOC.',
-      address: 'Phố Bà Triệu, Q. Hoàn Kiếm, Hà Nội',
+      desc: 'Kho Cỏ Mềm gửi son dưỡng, bọt rửa mặt, serum rau má 0đ tận nhà cho KOC lên video trải nghiệm.',
     },
     {
-      id: 'visecret-hn',
+      id: 'bielenda',
+      name: 'Boutique Bielenda Skin House',
+      brandName: 'Bielenda',
+      streetName: 'Phố Mỹ Phẩm & Skincare',
+      x: 2360,
+      y: 380,
+      category: 'Dược mỹ phẩm Châu Âu',
+      sampleCount: 42,
+      icon: 'water_drop',
+      badgeBg: 'bg-fuchsia-600',
+      badgeEmoji: '✨',
+      tagline: 'Kho nhập khẩu Sài Gòn · Trị mụn & Phục hồi chuyên sâu',
+      desc: 'Dòng sản phẩm toner acid, serum peel da được hàng triệu beauty blogger tin dùng.',
+    },
+
+    // --- PHỐ THỜI TRANG & OOTD ---
+    {
+      id: 'visecret',
       name: 'Showroom Thời Trang ViSecret',
       brandName: 'ViSecret',
-      city: 'Hà Nội',
-      lat: 21.018,
-      lng: 105.854,
-      category: 'Thời trang & May mặc cao cấp',
+      streetName: 'Phố Thời Trang & OOTD',
+      x: 2080,
+      y: 840,
+      category: 'Thời trang & Nội y thiết kế',
       sampleCount: 25,
       icon: 'checkroom',
       badgeBg: 'bg-purple-600',
+      badgeEmoji: '👗',
       tagline: 'Kho may mặc Hà Nội · Tôn dáng chuẩn KOC',
-      desc: 'Xuất mẫu áo bra tàng hình, đầm thiết kế miễn phí tận nhà cho KOC lên video OOTD.',
-      address: 'Phố Huế, Q. Hai Bà Trưng, Hà Nội',
+      desc: 'Xuất mẫu áo bra tàng hình, đầm thiết kế miễn phí tận nhà cho KOC lên video biến hình OOTD.',
     },
 
-    // --- KHU VỰC SÀI GÒN ---
+    // --- PHỐ CÔNG NGHỆ & GAMING ---
     {
-      id: 'tranyoo-sg',
-      name: 'Showroom Công Nghệ Tranyoo',
+      id: 'tranyoo',
+      name: 'Flagship Tranyoo Cyber Arena',
       brandName: 'Tranyoo',
-      city: 'TP. Hồ Chí Minh',
-      lat: 10.7715,
-      lng: 106.6965,
+      streetName: 'Phố Công Nghệ & Live Commerce',
+      x: 2180,
+      y: 1280,
       category: 'Tai nghe & Phụ kiện Cyberpunk',
       sampleCount: 30,
       icon: 'headphones',
       badgeBg: 'bg-blue-600',
+      badgeEmoji: '🎧',
       tagline: 'Kho công nghệ Sài Gòn · Giao tai nghe 0đ trong 24h',
-      desc: 'Trụ sở phân phối tai nghe Bluetooth TWS, củ sạc nhanh chuẩn Gen Z.',
-      address: 'Đường Nguyễn Thị Minh Khai, Quận 1, TP.HCM',
-    },
-    {
-      id: 'bielenda-sg',
-      name: 'Boutique Dược Mỹ Phẩm Bielenda',
-      brandName: 'Bielenda',
-      city: 'TP. Hồ Chí Minh',
-      lat: 10.7765,
-      lng: 106.7025,
-      category: 'Dược mỹ phẩm phục hồi da Châu Âu',
-      sampleCount: 42,
-      icon: 'water_drop',
-      badgeBg: 'bg-fuchsia-600',
-      tagline: 'Kho nhập khẩu Sài Gòn · Trị mụn & Phục hồi chuyên sâu',
-      desc: 'Dòng sản phẩm toner acid, serum peel da được hàng triệu beauty blogger tin dùng.',
-      address: 'Đường Đồng Khởi, Quận 1, TP.HCM',
+      desc: 'Trụ sở phân phối tai nghe Bluetooth TWS, củ sạc nhanh chuẩn Gen Z cho creator livestream.',
     },
   ];
 
-  // Danh sách các Cư dân mẫu đi lại trên các tuyến đường thật
+  // Danh sách các cư dân KOC di chuyển giữa Khu Cư Xá và Khu Brand
   const [citizens, setCitizens] = useState<Citizen[]>([
     {
       id: 'c1',
       name: 'Thu Trang (QA***)',
-      city: 'Hà Nội',
       number: '#0089',
-      role: 'Cư dân Năng Động',
+      role: 'KOC Năng Động',
       jobsDone: 1,
       vehicle: 'bicycle',
-      lat: 21.029,
-      lng: 105.853,
+      x: 520,
+      y: 830,
       direction: 'right',
-      speed: 0.0001,
-      minX: 105.851,
-      maxX: 105.856,
+      speed: 3.2,
+      minX: 250,
+      maxX: 2450,
       avatarColor: '#ec4899',
-      bubble: 'Đạp xe quanh Hồ Gươm chụp ảnh nhận son Cỏ Mềm! 🚲',
+      bubble: 'Đạp xe từ Cư Xá qua Phố Mỹ Phẩm nhận son Cỏ Mềm! 🚲',
     },
     {
       id: 'c2',
       name: 'Tuấn Anh (AnhTuan.Tech)',
-      city: 'Hà Nội',
       number: '#0042',
       role: 'KOC Thâm Niên',
       jobsDone: 4,
       vehicle: 'motorbike',
-      lat: 21.026,
-      lng: 105.855,
-      direction: 'left',
-      speed: 0.0002,
-      minX: 105.852,
-      maxX: 105.858,
+      x: 880,
+      y: 890,
+      direction: 'right',
+      speed: 5.5,
+      minX: 300,
+      maxX: 2480,
       avatarColor: '#f59e0b',
-      bubble: 'Lái xe máy qua Trụ sở KOCity đối soát hoa hồng! 🛵',
+      bubble: 'Vít ga xe máy qua ngã tư ghé chào Chú Bảo Vệ! 🛵💨',
     },
     {
       id: 'c3',
       name: 'Linh Chi (ChiChi.Review)',
-      city: 'Hà Nội',
       number: '#0156',
       role: 'Tân Cư Dân',
       jobsDone: 0,
       vehicle: 'walk',
-      lat: 21.0315,
-      lng: 105.852,
+      x: 380,
+      y: 770,
       direction: 'right',
-      speed: 0.00006,
-      minX: 105.8505,
-      maxX: 105.8545,
+      speed: 1.8,
+      minX: 200,
+      maxX: 1600,
       avatarColor: '#10b981',
-      bubble: 'Đi bộ phố Hàng Mẫu, cố gắng xong 1 job để nhận xe đạp 🌸',
+      bubble: 'Đi bộ ra quán cafe Cư Xá, ráng xong 1 job để nhận xe đạp 🌸',
     },
     {
       id: 'c4',
       name: 'Minh Thư (Thư N.)',
-      city: 'TP. Hồ Chí Minh',
       number: '#0125',
       role: 'Creator Triệu View',
-      jobsDone: 7,
+      jobsDone: 8,
       vehicle: 'motorbike',
-      lat: 10.774,
-      lng: 106.7035,
-      direction: 'right',
-      speed: 0.00022,
-      minX: 106.701,
-      maxX: 106.706,
+      x: 2150,
+      y: 880,
+      direction: 'left',
+      speed: 5.2,
+      minX: 350,
+      maxX: 2500,
       avatarColor: '#6366f1',
-      bubble: 'Lượn xe máy dọc phố đi bộ Nguyễn Huệ cực đã! 🛵',
+      bubble: 'Vừa ghé ViSecret lấy váy OOTD, giờ chạy về Cư Xá dựng clip 👗',
     },
     {
       id: 'c5',
       name: 'Huy Hoàng (HoangAudio)',
-      city: 'TP. Hồ Chí Minh',
       number: '#0204',
       role: 'KOC Năng Động',
       jobsDone: 2,
       vehicle: 'bicycle',
-      lat: 10.7725,
-      lng: 106.699,
+      x: 1850,
+      y: 840,
       direction: 'left',
-      speed: 0.00012,
-      minX: 106.697,
-      maxX: 106.702,
+      speed: 3.0,
+      minX: 400,
+      maxX: 2400,
       avatarColor: '#06b6d4',
-      bubble: 'Đạp xe ghé Trạm Tranyoo lấy tai nghe mới test bass 🎧',
+      bubble: 'Đạp xe qua Trạm Tranyoo test thử tai nghe chống ồn 🎧',
     },
     {
       id: 'c6',
       name: 'Bảo Ngọc (NgocBao.OOTD)',
-      city: 'TP. Hồ Chí Minh',
       number: '#0312',
       role: 'Tân Cư Dân',
       jobsDone: 0,
       vehicle: 'walk',
-      lat: 10.773,
-      lng: 106.701,
+      x: 680,
+      y: 780,
       direction: 'right',
-      speed: 0.00007,
-      minX: 106.6995,
-      maxX: 106.703,
+      speed: 1.9,
+      minX: 260,
+      maxX: 1500,
       avatarColor: '#d946ef',
-      bubble: 'Đang đi bộ qua chợ Bến Thành ngắm đồ OOTD ✨',
+      bubble: 'Đi dạo công viên Cư Xá ngắm hoa bằng lăng nở rộ ✨',
     },
   ]);
 
-  // Thêm nhân vật của currentUser nếu có tài khoản
+  // Thêm nhân vật của currentUser vào thành phố
   useEffect(() => {
     if (currentUser?.name) {
       setCitizens((prev) => {
         if (prev.some((c) => c.isCurrentUser)) return prev;
-        const isHN =
-          currentUser?.address?.toLowerCase().includes('hà nội') || currentUser?.address?.toLowerCase().includes('ha noi');
-        const userCity: 'Hà Nội' | 'TP. Hồ Chí Minh' = isHN ? 'Hà Nội' : 'TP. Hồ Chí Minh';
-        const startLat = isHN ? 21.0275 : 10.7738;
-        const startLng = isHN ? 105.8535 : 106.7025;
-        const speed = userVehicle === 'motorbike' ? 0.0002 : userVehicle === 'bicycle' ? 0.00012 : 0.00006;
+        const speed = userVehicle === 'motorbike' ? 5.8 : userVehicle === 'bicycle' ? 3.4 : 2.0;
 
         return [
           {
             id: 'user-self',
             name: `${currentUser.name} (BẠN)`,
-            city: userCity,
             number: '#001',
             role: userJobsCount >= 3 ? 'KOC Thâm Niên' : userJobsCount >= 1 ? 'KOC Năng Động' : 'Tân Cư Dân',
             jobsDone: userJobsCount,
             vehicle: userVehicle,
-            lat: startLat,
-            lng: startLng,
+            x: 480,
+            y: userVehicle === 'motorbike' ? 890 : userVehicle === 'bicycle' ? 840 : 775,
             direction: 'right',
             speed,
-            minX: startLng - 0.003,
-            maxX: startLng + 0.003,
+            minX: 250,
+            maxX: 2480,
             avatarColor: '#f59e0b',
             isCurrentUser: true,
             bubble:
               userVehicle === 'motorbike'
-                ? 'Đã mở khóa Xe Máy KOCity lướt siêu êm trên phố thật! 🛵💨'
+                ? 'Đã nhận Xe Máy KOCity từ Chú Bảo Vệ, vi vu khắp các phố brand! 🛵💨'
                 : userVehicle === 'bicycle'
                 ? 'Đang đạp Xe Đạp KOCity đi nhận job 🚲'
-                : 'Đang đi bộ, hoàn thành 1 job để nhận xe đạp tại Trụ sở KOCity! 🚶',
+                : 'Đang đi bộ, xong 1 job ghé Chú Bảo Vệ nhận xe đạp ngay! 🚶',
           },
           ...prev,
         ];
@@ -319,643 +310,1254 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     }
   }, [currentUser, userJobsCount, userVehicle]);
 
-  // Vòng lặp chuyển động của các cư dân trên đường phố
+  // Vòng lặp chuyển động của cư dân & XỬ LÝ DỪNG ĐÈN ĐỎ TẠI NGÃ TƯ
   useEffect(() => {
     if (!open) return;
     const interval = setInterval(() => {
       setCitizens((prev) =>
         prev.map((c) => {
-          let nextLng = c.lng + (c.direction === 'right' ? c.speed : -c.speed);
+          // Vùng ngã tư có đèn giao thông (X từ 1240 đến 1440)
+          const isAtIntersection = c.x >= 1220 && c.x <= 1460;
+          const isApproachingRed =
+            trafficLight === 'red' &&
+            ((c.direction === 'right' && c.x >= 1200 && c.x <= 1260) ||
+              (c.direction === 'left' && c.x >= 1420 && c.x <= 1480));
+
+          // Dừng lại trước vạch ngựa vằn khi đèn đỏ
+          if (isApproachingRed) {
+            return {
+              ...c,
+              bubble: 'Dừng đèn đỏ ngã tư chờ sang đường an toàn! 🚦🔴',
+            };
+          }
+
+          let nextX = c.x + (c.direction === 'right' ? c.speed : -c.speed);
           let nextDir = c.direction;
-          if (nextLng >= c.maxX) {
-            nextLng = c.maxX;
+          if (nextX >= c.maxX) {
+            nextX = c.maxX;
             nextDir = 'left';
-          } else if (nextLng <= c.minX) {
-            nextLng = c.minX;
+          } else if (nextX <= c.minX) {
+            nextX = c.minX;
             nextDir = 'right';
           }
-          return { ...c, lng: nextLng, direction: nextDir };
+          return { ...c, x: nextX, direction: nextDir };
         })
       );
-    }, 50);
+    }, 45);
     return () => clearInterval(interval);
-  }, [open]);
+  }, [open, trafficLight]);
 
-  // Khởi tạo bản đồ Leaflet & SỬA TRIỆT ĐỂ LỖI KÍCH THƯỚC QUA INVALIDATESIZE()
-  useEffect(() => {
-    if (!open || !mapContainerRef.current) return;
+  // Xử lý kéo thả (Pan) trên canvas
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, .clickable-element')) return;
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
 
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        center: COORDS.hanoiCenter,
-        zoom: 16, // Zoom sát Hồ Gươm ngắm ảnh vệ tinh tuyệt đẹp
-        minZoom: 5,
-        maxZoom: 18,
-        zoomControl: false,
-      });
-
-      // Lớp Tile ảnh vệ tinh Esri World Imagery
-      const config = TILE_PROVIDERS[mapLayer];
-      const tileLayer = L.tileLayer(config.url, {
-        attribution: config.attribution,
-        subdomains: config.subdomains || 'abc',
-        maxZoom: 19,
-      }).addTo(map);
-
-      tileLayerRef.current = tileLayer;
-
-      // Lớp nhãn đường phố để đọc tên đường trên nền vệ tinh
-      const labelLayer = L.tileLayer(
-        'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-        { maxZoom: 19, opacity: 0.85 }
-      ).addTo(map);
-      labelLayerRef.current = labelLayer;
-
-      // Layer group chứa các markers
-      const markersLayer = L.layerGroup().addTo(map);
-      markersLayerRef.current = markersLayer;
-
-      mapInstanceRef.current = map;
-
-      // SỬA TRIỆT ĐỂ LỖI KHÔNG NẠP ĐƯỢC ẢNH BẢN ĐỒ KHI MỞ MODAL:
-      // Gọi invalidateSize liên tiếp để Leaflet tải full 100% mảnh ảnh vệ tinh
-      setTimeout(() => map.invalidateSize(), 150);
-      setTimeout(() => map.invalidateSize(), 400);
-      setTimeout(() => map.invalidateSize(), 800);
-    }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [open]);
-
-  // Cập nhật lớp Tile khi đổi chế độ Vệ tinh / Đường phố / Đêm
-  useEffect(() => {
-    if (!tileLayerRef.current || !mapInstanceRef.current) return;
-    const config = TILE_PROVIDERS[mapLayer];
-    tileLayerRef.current.setUrl(config.url);
-
-    // Nếu là chế độ vệ tinh thì bật nhãn đường phố, ngược lại thì ẩn nhãn để tránh đè chữ
-    if (labelLayerRef.current) {
-      if (mapLayer === 'satellite') {
-        if (!mapInstanceRef.current.hasLayer(labelLayerRef.current)) {
-          labelLayerRef.current.addTo(mapInstanceRef.current);
-        }
-      } else {
-        if (mapInstanceRef.current.hasLayer(labelLayerRef.current)) {
-          labelLayerRef.current.remove();
-        }
-      }
-    }
-  }, [mapLayer]);
-
-  // Render các Marker 3D Sáng Tạo (Cư dân, Brand, Trụ sở KOCity) nổi bật trên nền vệ tinh
-  useEffect(() => {
-    if (!mapInstanceRef.current || !markersLayerRef.current) return;
-    const layer = markersLayerRef.current;
-    layer.clearLayers();
-
-    // 1. CẮM GHIM TRỤ SỞ KOCITY (VƯƠNG MIỆN PHÁT SÁNG HÀO QUANG 3D)
-    const hqIcon = L.divIcon({
-      className: 'custom-hq-marker',
-      html: `
-        <div style="transform: translate(-50%, -100%); cursor: pointer;" class="flex flex-col items-center group">
-          <div style="background: linear-gradient(135deg, #ec4899, #8b5cf6);" class="px-3.5 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-2 ring-amber-300 animate-pulse whitespace-nowrap flex items-center gap-1.5 border border-white">
-            <span class="text-[14px]">👑</span>
-            <span>TRỤ SỞ KOCITY HQ</span>
-            <span class="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.2 rounded-full font-bold">ĐỔI XE</span>
-          </div>
-          <div class="h-3 w-3 bg-fuchsia-600 rotate-45 -mt-1.5 shadow-xl border-r border-b border-white/50"></div>
-          <div class="h-2 w-7 rounded-full bg-black/60 blur-xs mt-1"></div>
-        </div>
-      `,
-      iconSize: [0, 0],
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStartRef.current.x,
+      y: e.clientY - dragStartRef.current.y,
     });
+  };
 
-    const hqMarker = L.marker(COORDS.kocityHQ, { icon: hqIcon }).addTo(layer);
-    hqMarker.on('click', () => setShowHqModal(true));
+  const handleMouseUp = () => setIsDragging(false);
 
-    // 2. CẮM GHIM CÁC TRẠM BRAND 3D NỔI BẬT TRÊN NỀN VỆ TINH
-    brandStations.forEach((station) => {
-      const isCoMem = station.brandName.includes('Cỏ Mềm');
-      const isTranyoo = station.brandName.includes('Tranyoo');
-      const isBielenda = station.brandName.includes('Bielenda');
-
-      const brandIcon = L.divIcon({
-        className: 'custom-brand-marker',
-        html: `
-          <div style="transform: translate(-50%, -100%); cursor: pointer;" class="flex flex-col items-center group">
-            <div class="${station.badgeBg} text-white px-3 py-1 rounded-full text-xs font-black shadow-2xl ring-2 ring-white whitespace-nowrap flex items-center gap-1.5 transition-transform group-hover:scale-110 border border-white/30">
-              <span class="text-[14px]">${isCoMem ? '🌿' : isTranyoo ? '🎧' : isBielenda ? '✨' : '👗'}</span>
-              <span>${station.brandName}</span>
-              <span class="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full">${station.sampleCount} Mẫu 0đ</span>
-            </div>
-            <div class="h-2.5 w-2.5 ${station.badgeBg} rotate-45 -mt-1 shadow-md border-r border-b border-white/40"></div>
-            <div class="h-2 w-6 rounded-full bg-black/50 blur-xs mt-0.5"></div>
-          </div>
-        `,
-        iconSize: [0, 0],
-      });
-
-      const marker = L.marker([station.lat, station.lng], { icon: brandIcon }).addTo(layer);
-      marker.on('click', () => setSelectedBrand(station));
-    });
-
-    // 3. CẮM CÁC CƯ DÂN KOC CHIBI LƯỚT XE TRÊN ĐƯỜNG PHỐ THẬT
-    citizens.forEach((c) => {
-      const citizenIcon = L.divIcon({
-        className: 'custom-citizen-marker',
-        html: `
-          <div style="transform: translate(-50%, -100%); cursor: pointer;" class="flex flex-col items-center group">
-            ${
-              c.bubble
-                ? `<div class="bg-white text-slate-900 px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-2xl ring-2 ring-pink-500 max-w-[170px] text-center mb-1 leading-snug whitespace-normal animate-bounce">
-                    ${c.bubble}
-                  </div>`
-                : ''
-            }
-            <div class="${c.isCurrentUser ? 'bg-amber-400 text-slate-950 ring-2 ring-white animate-pulse' : 'bg-slate-900/95 text-white ring-1 ring-violet-300'} px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xl whitespace-nowrap flex items-center gap-1">
-              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span>${c.name}</span>
-              <span class="text-pink-400 font-extrabold">${c.number}</span>
-              <span>${c.vehicle === 'motorbike' ? '🛵' : c.vehicle === 'bicycle' ? '🚲' : '🚶'}</span>
-            </div>
-            <div class="mt-0.5 flex flex-col items-center">
-              <div style="background-color: ${c.avatarColor};" class="h-8 w-8 rounded-full text-white text-[14px] flex items-center justify-center font-bold shadow-xl ring-2 ring-white">
-                ${c.isCurrentUser ? '👑' : c.city === 'Hà Nội' ? '🌸' : '☕'}
-              </div>
-              <div class="text-[18px] -mt-1.5 filter drop-shadow-md">
-                ${c.vehicle === 'motorbike' ? '🛵' : c.vehicle === 'bicycle' ? '🚲' : '👟'}
-              </div>
-            </div>
-          </div>
-        `,
-        iconSize: [0, 0],
-      });
-
-      const marker = L.marker([c.lat, c.lng], { icon: citizenIcon }).addTo(layer);
-      marker.on('click', () => setSelectedCitizen(c));
-    });
-  }, [citizens, mapLayer]);
-
-  // Chuyển vùng camera mượt mà (Fly-to)
-  const flyToRegion = (region: 'hanoi' | 'saigon' | 'vietnam') => {
-    setActiveRegion(region);
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    if (region === 'hanoi') {
-      map.flyTo(COORDS.hanoiCenter, 16, { duration: 1.8 });
-    } else if (region === 'saigon') {
-      map.flyTo(COORDS.saigonCenter, 16, { duration: 2.0 });
-    } else {
-      map.flyTo(COORDS.vietnamCenter, 6, { duration: 1.6 });
+  // Xử lý Touch cho Mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      dragStartRef.current = {
+        x: e.touches[0].clientX - pan.x,
+        y: e.touches[0].clientY - pan.y,
+      };
     }
   };
 
-  const flyToHQ = () => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    map.flyTo(COORDS.kocityHQ, 17, { duration: 1.5 });
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    setPan({
+      x: e.touches[0].clientX - dragStartRef.current.x,
+      y: e.touches[0].clientY - dragStartRef.current.y,
+    });
+  };
+
+  // Lăn chuột để Zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.08 : -0.08;
+    setZoom((prev) => Math.min(1.4, Math.max(0.38, Number((prev + delta).toFixed(2)))));
+  };
+
+  // Bay camera (Fly-to) đến các vị trí trọng điểm
+  const flyTo = (targetX: number, targetY: number, targetZoom = 0.88) => {
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const newPanX = rect.width / 2 - targetX * targetZoom;
+    const newPanY = rect.height / 2 - targetY * targetZoom;
+    setZoom(targetZoom);
+    setPan({ x: newPanX, y: newPanY });
   };
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none animate-fade-in">
-      {/* ===== HEADER ĐIỀU KHIỂN BẢN ĐỒ VỆ TINH KOCITY ===== */}
-      <header className="relative z-30 flex flex-wrap items-center justify-between border-b border-white/15 bg-slate-950/90 px-4 py-2.5 backdrop-blur-md sm:px-6">
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none overflow-hidden font-sans">
+      {/* ===== HEADER ĐIỀU KHIỂN & ĐỊNH VỊ NHANH ===== */}
+      <header className="flex flex-wrap items-center justify-between border-b border-white/10 bg-slate-900/90 px-4 py-2.5 backdrop-blur-md z-30 shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-500 via-fuchsia-500 to-violet-600 text-[20px] shadow-lg shadow-pink-500/25">
-            🛰️
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-600 shadow-lg shadow-purple-500/30 ring-2 ring-white/20">
+            <span className="text-xl">🏙️</span>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="font-display text-sm font-black tracking-tight text-white sm:text-base">
-                KOCITY REAL SATELLITE METAVERSE
-              </h2>
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-400/40">
-                ● Ảnh Vệ Tinh Chụp Thật
-              </span>
+              <h1 className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                <span>Thành Phố KOCity</span>
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-400/30">
+                  Đại Lộ Đông - Tây v6.0
+                </span>
+              </h1>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Ngắm nhìn nóc nhà, mặt nước Hồ Gươm, sông Sài Gòn & đường phố thật từ trên cao
+            <p className="text-xs text-slate-400 flex items-center gap-1.5 hidden sm:flex">
+              <span>🏠 Khu Cư Xá</span>
+              <span>↔️</span>
+              <span>🚦 Ngã Tư & Chú Bảo Vệ</span>
+              <span>↔️</span>
+              <span>🏢 Các Phố Brand</span>
             </p>
           </div>
         </div>
 
-        {/* Cụm nút chuyển vùng & Chế độ Vệ tinh & Nút đóng */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
-          {/* Chọn Thành Phố Bay Lướt */}
-          <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15 text-xs">
+        {/* Cụm Nút Di Chuyển Camera Nhanh */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <div className="hidden lg:flex items-center gap-1 bg-white/10 p-1 rounded-full ring-1 ring-white/15">
             <button
               type="button"
-              onClick={() => flyToRegion('hanoi')}
-              className={cx(
-                'rounded-full px-3 py-1 font-semibold transition cursor-pointer',
-                activeRegion === 'hanoi' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-200 hover:bg-white/20'
-              )}
+              onClick={() => flyTo(650, 850, 0.95)}
+              className="rounded-full px-3 py-1 font-semibold text-slate-200 hover:bg-white/20 transition cursor-pointer"
             >
-              ⛩️ Hà Nội
+              🏠 Khu Cư Xá
             </button>
             <button
               type="button"
-              onClick={flyToHQ}
-              className="rounded-full bg-gradient-to-r from-pink-500 to-violet-600 px-3 py-1 font-black text-white shadow-md transition hover:opacity-95 ring-1 ring-amber-300/40 cursor-pointer"
+              onClick={() => flyTo(1350, 850, 1.05)}
+              className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 font-bold text-slate-950 shadow transition hover:opacity-95 cursor-pointer"
             >
-              👑 Trụ sở KOCity
+              👮 Chú Bảo Vệ & Ngã Tư
             </button>
             <button
               type="button"
-              onClick={() => flyToRegion('saigon')}
-              className={cx(
-                'rounded-full px-3 py-1 font-semibold transition cursor-pointer',
-                activeRegion === 'saigon' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-200 hover:bg-white/20'
-              )}
+              onClick={() => flyTo(1400, 1000, 1.0)}
+              className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-3 py-1 font-black text-white shadow transition hover:opacity-95 ring-1 ring-amber-300/40 cursor-pointer"
             >
-              🌆 Sài Gòn
+              👑 Trụ Sở KOCity
             </button>
             <button
               type="button"
-              onClick={() => flyToRegion('vietnam')}
-              className={cx(
-                'rounded-full px-3 py-1 font-semibold transition cursor-pointer hidden md:inline-block',
-                activeRegion === 'vietnam' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-200 hover:bg-white/20'
-              )}
+              onClick={() => flyTo(2150, 420, 0.95)}
+              className="rounded-full px-2.5 py-1 font-semibold text-emerald-300 hover:bg-emerald-500/20 transition cursor-pointer"
             >
-              🇻🇳 Toàn Cảnh VN
+              🌿 Phố Mỹ Phẩm
+            </button>
+            <button
+              type="button"
+              onClick={() => flyTo(2100, 850, 0.95)}
+              className="rounded-full px-2.5 py-1 font-semibold text-purple-300 hover:bg-purple-500/20 transition cursor-pointer"
+            >
+              👗 Phố Thời Trang
+            </button>
+            <button
+              type="button"
+              onClick={() => flyTo(2200, 1300, 0.95)}
+              className="rounded-full px-2.5 py-1 font-semibold text-blue-300 hover:bg-blue-500/20 transition cursor-pointer"
+            >
+              🎧 Phố Công Nghệ
+            </button>
+            <button
+              type="button"
+              onClick={() => flyTo(1400, 850, 0.45)}
+              className="rounded-full px-3 py-1 font-bold text-amber-300 hover:bg-white/20 transition cursor-pointer"
+            >
+              🗺️ Toàn Cảnh
             </button>
           </div>
 
-          {/* Chọn Chế Độ Bản Đồ: Vệ Tinh / Đường Phố / Đêm */}
-          <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15 text-xs">
-            <button
-              type="button"
-              onClick={() => setMapLayer('satellite')}
-              title="Ảnh Vệ Tinh chụp thật độ nét cao"
-              className={cx(
-                'rounded-full px-2.5 py-1 font-bold transition cursor-pointer flex items-center gap-1',
-                mapLayer === 'satellite' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:bg-white/20'
-              )}
-            >
-              <span>🛰️</span>
-              <span className="hidden sm:inline">Vệ Tinh</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMapLayer('street')}
-              title="Bản đồ đường phố sáng đẹp"
-              className={cx(
-                'rounded-full px-2.5 py-1 font-bold transition cursor-pointer flex items-center gap-1',
-                mapLayer === 'street' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/20'
-              )}
-            >
-              <span>🗺️</span>
-              <span className="hidden sm:inline">Đường Phố</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMapLayer('night')}
-              title="Bản đồ đêm Neon Cyber"
-              className={cx(
-                'rounded-full px-2.5 py-1 font-bold transition cursor-pointer flex items-center gap-1',
-                mapLayer === 'night' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-white/20'
-              )}
-            >
-              <span>🌙</span>
-              <span className="hidden sm:inline">Đêm Neon</span>
-            </button>
-          </div>
+          {/* Công tắc Ngày / Đêm */}
+          <button
+            type="button"
+            onClick={() => setIsNight(!isNight)}
+            title={isNight ? 'Chuyển sang Ban ngày rực rỡ' : 'Chuyển sang Ban đêm lung linh'}
+            className={cx(
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ring-1',
+              isNight
+                ? 'bg-amber-400/20 text-amber-200 ring-amber-300/40 hover:bg-amber-400/30'
+                : 'bg-white/15 text-white ring-white/20 hover:bg-white/25'
+            )}
+          >
+            <Icon name={isNight ? 'light_mode' : 'dark_mode'} className="text-[14px]" />
+            <span className="hidden sm:inline">{isNight ? '☀️ Ban Ngày' : '🌙 Ban Đêm'}</span>
+          </button>
 
           {/* Cụm Zoom Button */}
           <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15">
             <button
               type="button"
-              onClick={() => mapInstanceRef.current?.zoomOut()}
-              title="Thu nhỏ bản đồ"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-slate-200 hover:bg-white/20 hover:text-white cursor-pointer"
+              onClick={() => setZoom((z) => Math.max(0.38, Number((z - 0.1).toFixed(2))))}
+              className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 font-black cursor-pointer text-sm"
+              title="Thu nhỏ"
             >
-              <Icon name="remove" className="text-[16px]" />
+              -
             </button>
+            <span className="w-11 text-center font-mono text-[11px] font-bold text-slate-300">
+              {Math.round(zoom * 100)}%
+            </span>
             <button
               type="button"
-              onClick={() => mapInstanceRef.current?.zoomIn()}
-              title="Phóng to bản đồ"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-slate-200 hover:bg-white/20 hover:text-white cursor-pointer"
+              onClick={() => setZoom((z) => Math.min(1.4, Number((z + 0.1).toFixed(2))))}
+              className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 font-black cursor-pointer text-sm"
+              title="Phóng to"
             >
-              <Icon name="add" className="text-[16px]" />
+              +
             </button>
           </div>
 
-          {/* Nút đóng */}
+          {/* Nút Đóng */}
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng bản đồ"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/20 transition hover:bg-white/25 hover:scale-105 cursor-pointer ml-1"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-rose-600 text-white transition ring-1 ring-white/20 cursor-pointer"
+            title="Đóng thành phố"
           >
-            <Icon name="close" className="text-[20px]" />
+            <Icon name="close" className="text-lg" />
           </button>
         </div>
       </header>
 
-      {/* ===== KHUNG BẢN ĐỒ VỆ TINH TOÀN MÀN HÌNH ===== */}
-      <div className="relative flex-1 w-full h-full bg-[#0a0518]">
-        {/* Bản đồ Leaflet Container */}
-        <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
+      {/* ===== KHU VỰC THÀNH PHỐ CANVAS 2800x1700 (PAN & ZOOM) ===== */}
+      <div
+        ref={wrapperRef}
+        className={cx(
+          'relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing select-none transition-colors duration-700',
+          isNight ? 'bg-[#090b16]' : 'bg-[#e9f2ea]'
+        )}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => setIsDragging(false)}
+        onWheel={handleWheel}
+      >
+        {/* LỚP NỀN TRỜI & HIỆU ỨNG ÁNH SÁNG */}
+        <div
+          className={cx(
+            'absolute inset-0 pointer-events-none transition-opacity duration-1000',
+            isNight ? 'opacity-80 bg-radial from-violet-900/20 via-transparent to-black' : 'opacity-30 bg-radial from-amber-200/40 to-transparent'
+          )}
+        />
 
-        {/* Thanh trạng thái định vị */}
-        <div className="absolute top-4 left-4 z-20 pointer-events-none hidden sm:flex flex-col gap-1.5">
-          <div className="bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-2xl max-w-xs">
-            📍 <strong>Khu vực:</strong>{' '}
-            {activeRegion === 'hanoi'
-              ? 'Hồ Gươm & Phố Cổ Hà Nội'
-              : activeRegion === 'saigon'
-              ? 'Phố Đi Bộ Nguyễn Huệ & Quận 1 Sài Gòn'
-              : 'Tuyến Kết Nối Sáng Tạo Bắc - Nam'}
+        {/* CONTAINER THÀNH PHỐ CHÍNH (ĐƯỢC SCALE & TRANSLATE) */}
+        <div
+          style={{
+            width: `${MAP_W}px`,
+            height: `${MAP_H}px`,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+          }}
+          className="relative transition-transform duration-75 ease-out"
+        >
+          {/* ========================================================================= */}
+          {/* 1. MẶT CỎ, VỈA HÈ & KHU VỰC ĐÔ THỊ NỀN                                   */}
+          {/* ========================================================================= */}
+          <div
+            className={cx(
+              'absolute inset-0 rounded-3xl border-4 transition-colors duration-700',
+              isNight ? 'bg-[#0f172a] border-slate-800' : 'bg-[#e2e8f0] border-slate-300'
+            )}
+          >
+            {/* Phân khu Tây: Đất Khu Cư Xá (Nền cỏ xanh mát) */}
+            <div
+              style={{ left: 80, top: 80, width: 1040, height: 1540 }}
+              className={cx(
+                'absolute rounded-3xl transition-colors duration-700 border-2',
+                isNight ? 'bg-[#142323] border-emerald-950/50' : 'bg-[#dcfce7] border-emerald-200'
+              )}
+            />
+
+            {/* Phân khu Đông: Đất Khu Phố Brand (Nền thương mại hiện đại) */}
+            <div
+              style={{ left: 1680, top: 80, width: 1040, height: 1540 }}
+              className={cx(
+                'absolute rounded-3xl transition-colors duration-700 border-2',
+                isNight ? 'bg-[#1e1b4b] border-indigo-950/50' : 'bg-[#e0e7ff] border-indigo-200'
+              )}
+            />
           </div>
-          <div className="bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-xl ring-1 ring-white/10 text-[11px] text-amber-300">
-            🚲 Cư dân xong 1 job có xe đạp · 🛵 xong 3 job có xe máy
+
+          {/* ========================================================================= */}
+          {/* 2. HỆ THỐNG ĐƯỜNG XÁ, ĐẠI LỘ HUYẾT MẠCH & NGÃ TƯ TRUNG TÂM               */}
+          {/* ========================================================================= */}
+          {/* ĐẠI LỘ ĐÔNG - TÂY (Nối Khu Cư Xá <-> Ngã Tư <-> Khu Brand) */}
+          <div
+            style={{ left: 0, top: 760, width: MAP_W, height: 180 }}
+            className={cx(
+              'absolute transition-colors duration-700 shadow-2xl flex flex-col justify-between',
+              isNight ? 'bg-[#1e293b]' : 'bg-[#334155]'
+            )}
+          >
+            {/* Vỉa hè trên */}
+            <div className="h-6 w-full bg-[#cbd5e1] border-b-2 border-dashed border-slate-400 flex items-center justify-around px-8">
+              {Array.from({ length: 40 }).map((_, i) => (
+                <div key={i} className="h-3 w-1.5 bg-slate-400/50 rounded-xs" />
+              ))}
+            </div>
+
+            {/* Dải phân cách giữa có hoa cúc vàng & hoa đỏ */}
+            <div className="h-5 w-full bg-emerald-800/90 border-y border-amber-300/40 flex items-center justify-around px-4">
+              {Array.from({ length: 35 }).map((_, i) => (
+                <span key={i} className="text-[10px] select-none">
+                  {i % 2 === 0 ? '🌼' : '🌺'}
+                </span>
+              ))}
+            </div>
+
+            {/* Vỉa hè dưới */}
+            <div className="h-6 w-full bg-[#cbd5e1] border-t-2 border-dashed border-slate-400 flex items-center justify-around px-8">
+              {Array.from({ length: 40 }).map((_, i) => (
+                <div key={i} className="h-3 w-1.5 bg-slate-400/50 rounded-xs" />
+              ))}
+            </div>
+          </div>
+
+          {/* ĐẠI LỘ BẮC - NAM (Nối Trụ sở KOCity & Công viên Trung tâm qua Ngã Tư) */}
+          <div
+            style={{ left: 1260, top: 0, width: 180, height: MAP_H }}
+            className={cx(
+              'absolute transition-colors duration-700 shadow-2xl flex justify-between',
+              isNight ? 'bg-[#1e293b]' : 'bg-[#334155]'
+            )}
+          >
+            {/* Vỉa hè trái */}
+            <div className="w-6 h-full bg-[#cbd5e1] border-r-2 border-dashed border-slate-400" />
+            {/* Vạch kẻ đường giữa */}
+            <div className="w-2 h-full flex flex-col justify-around py-4">
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div key={i} className="w-2 h-8 bg-amber-400/80 rounded-full" />
+              ))}
+            </div>
+            {/* Vỉa hè phải */}
+            <div className="w-6 h-full bg-[#cbd5e1] border-l-2 border-dashed border-slate-400" />
+          </div>
+
+          {/* GIAO LỘ NGÃ TƯ TRUNG TÂM & 4 VẠCH NGỰA VẰN SANG ĐƯỜNG */}
+          <div
+            style={{ left: 1230, top: 730, width: 240, height: 240 }}
+            className="absolute pointer-events-none"
+          >
+            {/* Vạch ngựa vằn phía Tây */}
+            <div className="absolute left-0 top-12 bottom-12 w-8 flex flex-col justify-around">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-2 w-full bg-white shadow-md rounded-xs" />
+              ))}
+            </div>
+            {/* Vạch ngựa vằn phía Đông */}
+            <div className="absolute right-0 top-12 bottom-12 w-8 flex flex-col justify-around">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-2 w-full bg-white shadow-md rounded-xs" />
+              ))}
+            </div>
+            {/* Vạch ngựa vằn phía Bắc */}
+            <div className="absolute top-0 left-12 right-12 h-8 flex justify-around">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="w-2 h-full bg-white shadow-md rounded-xs" />
+              ))}
+            </div>
+            {/* Vạch ngựa vằn phía Nam */}
+            <div className="absolute bottom-0 left-12 right-12 h-8 flex justify-around">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="w-2 h-full bg-white shadow-md rounded-xs" />
+              ))}
+            </div>
+          </div>
+
+          {/* CỘT ĐÈN GIAO THÔNG THÔNG MINH (4 HƯỚNG TỰ ĐỔI MÀU XANH/VÀNG/ĐỎ) */}
+          <div
+            style={{ left: 1200, top: 700 }}
+            className="absolute z-20 flex flex-col items-center drop-shadow-2xl"
+          >
+            <div className="bg-slate-900 border-2 border-amber-400/70 rounded-2xl p-2 flex flex-col items-center gap-1.5 shadow-2xl ring-2 ring-black">
+              <div className="text-[9px] font-black tracking-widest text-amber-300">NGÃ TƯ</div>
+              {/* Đèn Đỏ */}
+              <div
+                className={cx(
+                  'h-5 w-5 rounded-full border-2 transition-all duration-300',
+                  trafficLight === 'red'
+                    ? 'bg-rose-500 border-white shadow-lg shadow-rose-500/80 animate-pulse'
+                    : 'bg-rose-950/60 border-rose-900'
+                )}
+              />
+              {/* Đèn Vàng */}
+              <div
+                className={cx(
+                  'h-5 w-5 rounded-full border-2 transition-all duration-300',
+                  trafficLight === 'yellow'
+                    ? 'bg-amber-400 border-white shadow-lg shadow-amber-400/80 animate-pulse'
+                    : 'bg-amber-950/60 border-amber-900'
+                )}
+              />
+              {/* Đèn Xanh */}
+              <div
+                className={cx(
+                  'h-5 w-5 rounded-full border-2 transition-all duration-300',
+                  trafficLight === 'green'
+                    ? 'bg-emerald-500 border-white shadow-lg shadow-emerald-500/80 animate-pulse'
+                    : 'bg-emerald-950/60 border-emerald-900'
+                )}
+              />
+              {/* Bộ đếm giây */}
+              <div className="bg-black/90 px-1.5 py-0.5 rounded text-[11px] font-mono font-black text-amber-300">
+                0{trafficTimer}s
+              </div>
+            </div>
+            {/* Cột sắt giữ đèn */}
+            <div className="w-2.5 h-12 bg-slate-600 border-x border-slate-700 shadow-md" />
+            <div className="w-6 h-2 bg-slate-700 rounded-full" />
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 3. TÂM ĐIỂM TRUNG TÂM: TRỤ SỞ KOCITY HQ & BỐT GÁC CHÚ BẢO VỆ            */}
+          {/* ========================================================================= */}
+          {/* TÒA THÁP TRỤ SỞ KOCITY HQ */}
+          <div
+            style={{ left: 1470, top: 970 }}
+            className="absolute z-20 cursor-pointer group clickable-element"
+            onClick={() => setShowHqModal(true)}
+          >
+            <div className="relative flex flex-col items-center">
+              {/* Biển hiệu trên nóc */}
+              <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 px-4 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-2 ring-amber-300 whitespace-nowrap flex items-center gap-1.5 border border-white animate-pulse">
+                <span>👑</span>
+                <span>TRỤ SỞ KOCITY HQ</span>
+                <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                  ĐỔI XE
+                </span>
+              </div>
+
+              {/* Tòa Tháp Kính Cao Tầng */}
+              <div
+                className={cx(
+                  'w-56 h-64 mt-2 rounded-3xl border-4 p-4 shadow-2xl transition-all duration-500 group-hover:scale-105 flex flex-col justify-between',
+                  isNight
+                    ? 'bg-gradient-to-b from-purple-900 via-slate-900 to-black border-amber-400/80 shadow-purple-500/30'
+                    : 'bg-gradient-to-b from-white via-indigo-50 to-purple-100 border-purple-500 shadow-indigo-300/50'
+                )}
+              >
+                {/* Vương miện trên đỉnh */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-ping" />
+                    <span className="text-[10px] font-bold text-amber-400">TRUNG TÂM ĐIỀU HÀNH</span>
+                  </div>
+                  <span className="text-2xl">👑</span>
+                </div>
+
+                {/* Các ô cửa sổ kính sáng đèn */}
+                <div className="grid grid-cols-4 gap-2 my-2">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={cx(
+                        'h-7 rounded-md transition-colors',
+                        isNight
+                          ? i % 3 === 0
+                            ? 'bg-amber-300/90 shadow-sm shadow-amber-300'
+                            : 'bg-purple-400/50'
+                          : 'bg-indigo-200 border border-indigo-300'
+                      )}
+                    />
+                  ))}
+                </div>
+
+                {/* Sảnh chính đón KOC */}
+                <div className="bg-white/10 rounded-xl p-2 text-center border border-white/20">
+                  <div className="text-[11px] font-extrabold text-amber-300">
+                    SẢNH VINH DANH & CẤP XE
+                  </div>
+                  <div className="text-[9px] text-slate-300 mt-0.5">
+                    🚲 Xong 1 job: Xe Đạp · 🛵 Xong 3 job: Xe Máy
+                  </div>
+                </div>
+              </div>
+
+              {/* Bãi đỗ xe mẫu trước cửa trụ sở */}
+              <div className="flex items-center gap-2 mt-2 bg-slate-900/80 px-3 py-1 rounded-full ring-1 ring-white/20 text-[12px]">
+                <span title="Xe đạp KOCity">🚲 🚲</span>
+                <span className="text-slate-400">|</span>
+                <span title="Xe máy KOCity">🛵 🛵</span>
+              </div>
+            </div>
+          </div>
+
+          {/* BỐT GÁC AN NINH & CHÚ BẢO VỆ THÂN THIỆN */}
+          <div
+            style={{ left: 1330, top: 980 }}
+            className="absolute z-20 cursor-pointer group clickable-element"
+            onClick={() => setShowGuardModal(true)}
+          >
+            <div className="flex flex-col items-center">
+              {/* Bong bóng thoại vẫy chào của Chú Bảo Vệ */}
+              <div className="bg-amber-300 text-slate-950 px-3 py-1 rounded-2xl text-[11px] font-black shadow-2xl ring-2 ring-white whitespace-nowrap mb-1 animate-bounce">
+                👮 "Chào cháu! Ghé chú đổi xe nha!"
+              </div>
+
+              {/* Bốt gác an ninh */}
+              <div className="relative flex items-center gap-2 bg-slate-900/95 border-2 border-amber-400 px-3 py-2 rounded-2xl shadow-2xl group-hover:scale-110 transition-transform">
+                {/* Chú bảo vệ */}
+                <div className="flex flex-col items-center">
+                  <div className="h-10 w-10 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-xl shadow-lg">
+                    👮
+                  </div>
+                  <div className="text-[9px] font-bold text-amber-300 mt-0.5">BẢO VỆ</div>
+                </div>
+
+                {/* Bốt gác & Barie */}
+                <div className="flex flex-col text-left">
+                  <div className="text-[11px] font-black text-white">BỐT AN NINH KOCITY</div>
+                  <div className="text-[9px] text-slate-300">Kiểm tra thẻ & Hướng dẫn</div>
+                  <div className="mt-1 flex items-center gap-1">
+                    <span className="h-2 w-10 bg-repeating-linear-gradient from-red-500 to-white rounded-full border border-white" />
+                    <span className="text-[8px] text-emerald-400 font-bold">MỞ CỔNG</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 4. PHÂN KHU TÂY: KHU ĐÔ THỊ CƯ XÁ KOC (NƠI Ở CỦA CÁC CREATOR)            */}
+          {/* ========================================================================= */}
+          {/* CỔNG CHÀO CƯ XÁ KOCITY */}
+          <div
+            style={{ left: 450, top: 120 }}
+            className="absolute z-10 flex flex-col items-center cursor-pointer clickable-element"
+            onClick={() => flyTo(650, 450, 1.0)}
+          >
+            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-6 py-2 rounded-2xl text-white font-black text-sm shadow-2xl ring-2 ring-white flex items-center gap-2 border border-white/40">
+              <span>🏠</span>
+              <span>CƯ XÁ KOCITY · NƠI Ở CỦA CÁC CREATOR</span>
+              <span>🌳</span>
+            </div>
+            <div className="text-[11px] text-slate-300 bg-slate-900/80 px-3 py-0.5 rounded-full mt-1 border border-white/20">
+              Dãy nhà phố liền kề, ban công ngập hoa & quán cafe cóc vỉa hè
+            </div>
+          </div>
+
+          {/* DÃY NHÀ PHỐ CƯ DÂN LIỀN KỀ (DÃY TRÊN) */}
+          <div style={{ left: 120, top: 220 }} className="absolute z-10 flex items-end gap-5">
+            {/* Căn 1: Nhà của Thu Trang */}
+            <div className="w-48 h-56 bg-gradient-to-b from-rose-100 to-rose-200 border-2 border-rose-300 rounded-3xl p-3 shadow-xl relative flex flex-col justify-between">
+              <div className="bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full self-start">
+                #0089 · Thu Trang
+              </div>
+              <div className="text-3xl text-center">🏡</div>
+              {/* Ban công ngập hoa */}
+              <div className="bg-white/80 border border-rose-300 rounded-xl p-1.5 text-center text-[10px] font-bold text-rose-700">
+                🌸 Ban công hoa hồng
+              </div>
+            </div>
+
+            {/* Căn 2: Nhà của Tuấn Anh */}
+            <div className="w-52 h-64 bg-gradient-to-b from-amber-100 to-amber-200 border-2 border-amber-300 rounded-3xl p-3 shadow-xl relative flex flex-col justify-between">
+              <div className="bg-amber-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full self-start">
+                #0042 · Tuấn Anh (Tech)
+              </div>
+              <div className="text-3xl text-center">🏢</div>
+              <div className="bg-white/80 border border-amber-300 rounded-xl p-1.5 text-center text-[10px] font-bold text-amber-800">
+                🖥️ Studio dựng video 4K
+              </div>
+            </div>
+
+            {/* Căn 3: CĂN NHÀ CỦA BẠN (CURRENT USER) */}
+            <div className="w-56 h-72 bg-gradient-to-b from-violet-100 via-pink-100 to-amber-100 border-3 border-amber-400 rounded-3xl p-3.5 shadow-2xl relative flex flex-col justify-between ring-4 ring-amber-300/50 animate-pulse">
+              <div className="bg-gradient-to-r from-pink-500 to-violet-600 text-white text-[11px] font-black px-2.5 py-1 rounded-full self-start shadow flex items-center gap-1">
+                <span>👑</span>
+                <span>NHÀ CỦA BẠN</span>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl">🏰</div>
+                <div className="text-xs font-black text-slate-800 mt-1">
+                  {currentUser?.name || 'KOC Thành Viên'}
+                </div>
+                <div className="text-[10px] text-pink-600 font-bold">
+                  {userVehicle === 'motorbike'
+                    ? 'Đã có Xe Máy 🛵'
+                    : userVehicle === 'bicycle'
+                    ? 'Đã có Xe Đạp 🚲'
+                    : 'Đang đi bộ 🚶'}
+                </div>
+              </div>
+              <div className="bg-white/90 border border-violet-300 rounded-xl p-2 text-center text-[10px] font-bold text-violet-800 shadow">
+                🎁 {userJobsCount} Job đã hoàn thành
+              </div>
+            </div>
+
+            {/* Căn 4: Nhà của Linh Chi */}
+            <div className="w-48 h-56 bg-gradient-to-b from-emerald-100 to-emerald-200 border-2 border-emerald-300 rounded-3xl p-3 shadow-xl relative flex flex-col justify-between">
+              <div className="bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full self-start">
+                #0156 · Linh Chi
+              </div>
+              <div className="text-3xl text-center">🏡</div>
+              <div className="bg-white/80 border border-emerald-300 rounded-xl p-1.5 text-center text-[10px] font-bold text-emerald-800">
+                🌿 Giàn hoa giấy ban công
+              </div>
+            </div>
+          </div>
+
+          {/* QUÁN CAFE CÓC VỈA HÈ & CÔNG VIÊN CƯ XÁ (DÃY DƯỚI) */}
+          <div style={{ left: 140, top: 1040 }} className="absolute z-10 flex items-center gap-8">
+            {/* Quán Cafe Muối & Trà Chanh Cư Xá */}
+            <div className="bg-amber-900/90 border-2 border-amber-300 rounded-3xl p-4 text-white shadow-2xl flex items-center gap-4">
+              <div className="text-4xl">☕</div>
+              <div>
+                <div className="text-xs font-black text-amber-300">QUÁN CAFE CÓC KOCITY</div>
+                <div className="text-[10px] text-slate-200">Điểm tụ tập review kịch bản & uống cafe muối</div>
+                <div className="flex items-center gap-2 mt-1 text-[11px]">
+                  <span>🪑 Bàn ghế con</span>
+                  <span>⛱️ Dù che nắng</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Công viên cây xanh cư xá */}
+            <div className="flex items-center gap-4 bg-emerald-950/80 border border-emerald-400/40 p-4 rounded-3xl text-white">
+              <span className="text-3xl">🌳</span>
+              <div>
+                <div className="text-xs font-black text-emerald-300">CÔNG VIÊN CÂY XANH CƯ XÁ</div>
+                <div className="text-[10px] text-slate-300">Ghế đá nghỉ chân, hít thở không khí trong lành</div>
+              </div>
+              <span className="text-3xl">🌺</span>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 5. PHÂN KHU ĐÔNG: KHU PHỐ THƯƠNG MẠI BRAND (CHIA THEO PHỐ NGÀNH HÀNG)   */}
+          {/* ========================================================================= */}
+          {/* BIỂN CHỈ DẪN KHU PHỐ BRAND */}
+          <div
+            style={{ left: 1950, top: 120 }}
+            className="absolute z-10 flex flex-col items-center cursor-pointer clickable-element"
+            onClick={() => flyTo(2150, 850, 0.85)}
+          >
+            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 py-2 rounded-2xl text-white font-black text-sm shadow-2xl ring-2 ring-white flex items-center gap-2 border border-white/40">
+              <span>🏢</span>
+              <span>ĐẠI LỘ CÁC THƯƠNG HIỆU CHIẾN LƯỢC</span>
+              <span>🛍️</span>
+            </div>
+            <div className="text-[11px] text-slate-300 bg-slate-900/80 px-3 py-0.5 rounded-full mt-1 border border-white/20">
+              Chia thành các tuyến phố chuyên ngành: Mỹ Phẩm · Thời Trang · Công Nghệ
+            </div>
+          </div>
+
+          {/* TUYẾN 1: PHỐ MỸ PHẨM & SKINCARE (X: 1850 - 2550, Y: 240) */}
+          <div
+            style={{ left: 1750, top: 220 }}
+            className="absolute z-10 flex flex-col gap-2"
+          >
+            {/* Biển tên phố */}
+            <div className="inline-flex items-center gap-1.5 bg-emerald-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
+              <span>📍</span>
+              <span>PHỐ MỸ PHẨM & SKINCARE</span>
+              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Kho xuất mẫu HN & SG</span>
+            </div>
+
+            {/* Các Showroom trên phố */}
+            <div className="flex items-center gap-6 mt-2">
+              {/* Trạm Cỏ Mềm */}
+              <div
+                className="w-72 h-64 bg-gradient-to-b from-emerald-900 via-slate-900 to-black border-3 border-emerald-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                onClick={() => setSelectedBrand(brandStations[0])}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">🌿</span>
+                  <span className="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                    35 Mẫu 0đ
+                  </span>
+                </div>
+                <div>
+                  <div className="text-sm font-black text-white group-hover:text-emerald-300 transition">
+                    Cỏ Mềm Greenlab
+                  </div>
+                  <div className="text-[11px] text-emerald-300 mt-0.5">Mỹ phẩm thuần khiết</div>
+                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
+                    Son dưỡng, bọt rửa mặt, serum rau má xuất mẫu miễn phí.
+                  </div>
+                </div>
+                <div className="bg-emerald-500/20 border border-emerald-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white transition">
+                  Bấm xem kho mẫu 0đ ➡️
+                </div>
+              </div>
+
+              {/* Boutique Bielenda */}
+              <div
+                className="w-72 h-64 bg-gradient-to-b from-fuchsia-900 via-slate-900 to-black border-3 border-fuchsia-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                onClick={() => setSelectedBrand(brandStations[1])}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">✨</span>
+                  <span className="bg-fuchsia-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                    42 Mẫu 0đ
+                  </span>
+                </div>
+                <div>
+                  <div className="text-sm font-black text-white group-hover:text-fuchsia-300 transition">
+                    Bielenda Skin House
+                  </div>
+                  <div className="text-[11px] text-fuchsia-300 mt-0.5">Dược mỹ phẩm Châu Âu</div>
+                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
+                    Toner acid, serum phục hồi da chuyên sâu cho beauty creator.
+                  </div>
+                </div>
+                <div className="bg-fuchsia-500/20 border border-fuchsia-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-fuchsia-300 group-hover:bg-fuchsia-500 group-hover:text-white transition">
+                  Bấm xem kho mẫu 0đ ➡️
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* TUYẾN 2: PHỐ THỜI TRANG & OOTD (X: 1750 - 2550, Y: 680) */}
+          <div
+            style={{ left: 1750, top: 680 }}
+            className="absolute z-10 flex flex-col gap-2"
+          >
+            <div className="inline-flex items-center gap-1.5 bg-purple-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
+              <span>📍</span>
+              <span>PHỐ THỜI TRANG & OOTD</span>
+              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">May mặc & Phụ kiện</span>
+            </div>
+
+            <div className="flex items-center gap-6 mt-2">
+              {/* Showroom ViSecret */}
+              <div
+                className="w-80 h-60 bg-gradient-to-b from-purple-900 via-slate-900 to-black border-3 border-purple-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                onClick={() => setSelectedBrand(brandStations[2])}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">👗</span>
+                  <span className="bg-purple-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                    25 Mẫu 0đ
+                  </span>
+                </div>
+                <div>
+                  <div className="text-sm font-black text-white group-hover:text-purple-300 transition">
+                    ViSecret Showroom
+                  </div>
+                  <div className="text-[11px] text-purple-300 mt-0.5">Thời trang & Nội y thiết kế</div>
+                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
+                    Mẫu bra tàng hình, váy đầm thiết kế tôn dáng cực chuẩn.
+                  </div>
+                </div>
+                <div className="bg-purple-500/20 border border-purple-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-purple-300 group-hover:bg-purple-500 group-hover:text-white transition">
+                  Bấm xem kho mẫu 0đ ➡️
+                </div>
+              </div>
+
+              {/* Shophouse Lookbook Studio kế bên */}
+              <div className="w-64 h-60 bg-slate-900/90 border-2 border-slate-700 rounded-3xl p-4 flex flex-col justify-between">
+                <div className="text-2xl">📸</div>
+                <div>
+                  <div className="text-xs font-black text-slate-200">STUDIO CHỤP OOTD</div>
+                  <div className="text-[10px] text-slate-400 mt-1">
+                    Góc chụp phông trắng & ánh sáng vàng ấm cho KOC lên đồ.
+                  </div>
+                </div>
+                <div className="text-[9px] text-amber-400 font-bold">✨ Miễn phí cho cư dân KOCity</div>
+              </div>
+            </div>
+          </div>
+
+          {/* TUYẾN 3: PHỐ CÔNG NGHỆ & GAMING (X: 1750 - 2550, Y: 1120) */}
+          <div
+            style={{ left: 1750, top: 1120 }}
+            className="absolute z-10 flex flex-col gap-2"
+          >
+            <div className="inline-flex items-center gap-1.5 bg-blue-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
+              <span>📍</span>
+              <span>PHỐ CÔNG NGHỆ & GAMING</span>
+              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Phụ kiện & Âm thanh</span>
+            </div>
+
+            <div className="flex items-center gap-6 mt-2">
+              {/* Flagship Tranyoo */}
+              <div
+                className="w-80 h-60 bg-gradient-to-b from-blue-900 via-slate-900 to-black border-3 border-blue-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                onClick={() => setSelectedBrand(brandStations[3])}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">🎧</span>
+                  <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                    30 Mẫu 0đ
+                  </span>
+                </div>
+                <div>
+                  <div className="text-sm font-black text-white group-hover:text-blue-300 transition">
+                    Tranyoo Cyber Arena
+                  </div>
+                  <div className="text-[11px] text-blue-300 mt-0.5">Tai nghe Bluetooth & Sạc nhanh</div>
+                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
+                    Kho công nghệ Sài Gòn giao tai nghe 0đ trong 24h cho KOC test âm thanh.
+                  </div>
+                </div>
+                <div className="bg-blue-500/20 border border-blue-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-blue-300 group-hover:bg-blue-500 group-hover:text-white transition">
+                  Bấm xem kho mẫu 0đ ➡️
+                </div>
+              </div>
+
+              {/* Phố Tiêu Dùng Mở Rộng: Chờ đón các Brand mới */}
+              <div className="w-64 h-60 bg-slate-900/60 border-2 border-dashed border-amber-400/40 rounded-3xl p-4 flex flex-col justify-between text-center items-center">
+                <div className="text-3xl">📦</div>
+                <div>
+                  <div className="text-xs font-black text-amber-300">PHỐ TIÊU DÙNG MỞ RỘNG</div>
+                  <div className="text-[10px] text-slate-300 mt-1">
+                    Sẵn sàng chào đón các Brand FMCG, Mẹ & Bé, Gia dụng mới gia nhập KOCity!
+                  </div>
+                </div>
+                <div className="text-[9px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">
+                  Sức chứa mở rộng vô hạn
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 6. HỆ THỐNG CÂY XANH RỢP BÓNG & CỘT ĐÈN ĐƯỜNG CHIẾU SÁNG TOÀN THÀNH PHỐ  */}
+          {/* ========================================================================= */}
+          {/* Hàng cây bóng mát dọc đại lộ */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Cây ven đường trên đại lộ */}
+            {[200, 450, 750, 1050, 1550, 1850, 2150, 2450].map((treeX) => (
+              <React.Fragment key={treeX}>
+                <div
+                  style={{ left: treeX, top: 710 }}
+                  className="absolute text-3xl filter drop-shadow-lg"
+                >
+                  🌳
+                </div>
+                <div
+                  style={{ left: treeX + 60, top: 940 }}
+                  className="absolute text-3xl filter drop-shadow-lg"
+                >
+                  🌺
+                </div>
+              </React.Fragment>
+            ))}
+
+            {/* Cột đèn đường cao áp chiếu sáng trong đêm */}
+            {[350, 800, 1150, 1600, 2050, 2500].map((lampX) => (
+              <div key={lampX} style={{ left: lampX, top: 720 }} className="absolute">
+                <div className="text-2xl">🏮</div>
+                {isNight && (
+                  <div className="w-20 h-28 bg-amber-300/15 rounded-full blur-md -ml-8 -mt-2 pointer-events-none" />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 7. CƯ DÂN KOC DI CHUYỂN TRÊN ĐƯỜNG & CHUYỂN ĐỘNG THEO TÍN HIỆU ĐÈN ĐỎ     */}
+          {/* ========================================================================= */}
+          {citizens.map((c) => (
+            <div
+              key={c.id}
+              style={{
+                left: c.x,
+                top: c.y,
+                transform: 'translate(-50%, -100%)',
+                zIndex: c.isCurrentUser ? 35 : 25,
+              }}
+              className="absolute cursor-pointer group clickable-element transition-all duration-75"
+              onClick={() => setSelectedCitizen(c)}
+            >
+              {/* Bong bóng thoại vui vẻ của cư dân */}
+              {c.bubble && (
+                <div className="bg-white text-slate-900 px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-2xl ring-2 ring-pink-500 max-w-[170px] text-center mb-1 leading-snug whitespace-normal animate-bounce">
+                  {c.bubble}
+                </div>
+              )}
+
+              {/* Huy hiệu tên & phương tiện */}
+              <div
+                className={cx(
+                  'px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xl whitespace-nowrap flex items-center gap-1 border',
+                  c.isCurrentUser
+                    ? 'bg-amber-400 text-slate-950 border-white ring-2 ring-amber-300 animate-pulse'
+                    : 'bg-slate-900/95 text-white border-white/20'
+                )}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>{c.name}</span>
+                <span className="text-pink-400 font-extrabold">{c.number}</span>
+                <span>
+                  {c.vehicle === 'motorbike' ? '🛵' : c.vehicle === 'bicycle' ? '🚲' : '🚶'}
+                </span>
+              </div>
+
+              {/* Avatar chibi và hình ảnh phương tiện xe */}
+              <div className="mt-0.5 flex flex-col items-center">
+                <div
+                  style={{ backgroundColor: c.avatarColor }}
+                  className="h-8 w-8 rounded-full text-white text-[14px] flex items-center justify-center font-bold shadow-xl ring-2 ring-white"
+                >
+                  {c.isCurrentUser ? '👑' : '🌸'}
+                </div>
+                {/* Phương tiện xe lăn bánh */}
+                <div
+                  className={cx(
+                    'text-[20px] -mt-1.5 filter drop-shadow-md transition-transform',
+                    c.direction === 'left' ? 'scale-x-[-1]' : 'scale-x-1'
+                  )}
+                >
+                  {c.vehicle === 'motorbike' ? '🛵' : c.vehicle === 'bicycle' ? '🚲' : '👟'}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* BẢNG CHÚ THÍCH HỆ THỐNG GIAO THÔNG Ở GÓC BẢN ĐỒ */}
+        <div className="absolute top-4 left-4 z-20 pointer-events-none hidden sm:flex flex-col gap-1.5">
+          <div className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-2xl max-w-sm">
+            <div className="font-extrabold text-amber-300 flex items-center gap-1.5">
+              <span>🚦</span>
+              <span>ĐẠI LỘ ĐÔNG - TÂY KOCITY</span>
+            </div>
+            <div className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+              • 🏠 <strong>Tây:</strong> Khu Cư Xá KOC (Nơi ở, ban công, cafe cóc)<br />
+              • 🚦 <strong>Trung tâm:</strong> Ngã Tư Đèn Giao Thông & Chú Bảo Vệ Trụ Sở<br />
+              • 🏢 <strong>Đông:</strong> Phố Mỹ Phẩm · Phố Thời Trang · Phố Công Nghệ
+            </div>
+          </div>
+          <div className="bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-xl ring-1 ring-white/10 text-[11px] text-emerald-300">
+            🚲 Xong 1 job nhận Xe Đạp · 🛵 Xong 3 job nhận Xe Máy từ Chú Bảo Vệ
           </div>
         </div>
       </div>
 
-      {/* ===== POPUP CHI TIẾT TRỤ SỞ KOCITY (TRẠM ĐỔI XE ĐẠP / XE MÁY) ===== */}
-      {showHqModal && (
-        <div
-          onClick={() => setShowHqModal(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg rounded-3xl bg-gradient-to-b from-slate-900 via-slate-900 to-violet-950 p-6 text-white shadow-2xl ring-2 ring-amber-400"
-          >
+      {/* ========================================================================= */}
+      {/* 8. CÁC MODAL CHI TIẾT TƯƠNG TÁC (CHÚ BẢO VỆ / TRỤ SỞ / BRAND / CƯ DÂN)    */}
+      {/* ========================================================================= */}
+
+      {/* MODAL 1: CHÚ BẢO VỆ KOCITY THÂN THIỆN */}
+      {showGuardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="relative w-full max-w-md rounded-3xl bg-slate-900 border-2 border-amber-400 p-6 text-white shadow-2xl ring-4 ring-amber-400/20">
             <button
               type="button"
-              onClick={() => setShowHqModal(false)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white cursor-pointer"
+              onClick={() => setShowGuardModal(false)}
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-300"
             >
-              <Icon name="close" className="text-[20px]" />
+              ✕
             </button>
 
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-400 to-pink-500 text-[28px] shadow-lg">
-                🏢
+            <div className="flex items-center gap-3.5 mb-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 border-2 border-white text-3xl shadow-lg">
+                👮
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
-                  Trung Tâm Điều Hành Toàn Thành Phố
-                </span>
-                <h3 className="font-display text-lg font-black text-white">TRỤ SỞ CHÍNH KOCITY</h3>
-                <p className="text-xs text-slate-300">Trạm Đổi Phương Tiện & Vinh Danh KOC</p>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-black text-white">Chú Bảo Vệ KOCity</h3>
+                  <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                    TRỰC CỔNG 24/7
+                  </span>
+                </div>
+                <p className="text-xs text-amber-300">Bốt An Ninh & Trạm Bàn Giao Phương Tiện</p>
               </div>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Tại KOCity, mỗi chiến dịch video review bạn hoàn thành sẽ giúp bạn nâng cấp phương tiện di chuyển khắp các tuyến đường thật:
+            <div className="bg-slate-800/90 rounded-2xl p-4 border border-white/10 text-xs text-slate-200 leading-relaxed mb-4">
+              <p className="italic text-amber-200">
+                "Chào cháu! Chú trực ở ngã tư này ngày đêm để phân luồng xe và giữ an ninh cho cả Cư Xá lẫn Phố Brand.
+                Cháu cứ yên tâm sáng tạo, làm được 1 job là ghé chú ký nhận <strong>Xe Đạp 🚲</strong>, làm được 3 job là chú trao ngay chìa khóa <strong>Xe Máy 🛵</strong> để lượn phố nhé! Qua ngã tư nhớ chú ý đèn đỏ đấy!"
               </p>
-
-              {/* 3 Cấp bậc phương tiện */}
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                {/* 1. Đi bộ */}
-                <div
-                  className={cx(
-                    'rounded-2xl p-3 ring-1 transition-all',
-                    userVehicle === 'walk'
-                      ? 'bg-emerald-950/60 ring-emerald-400 text-emerald-200'
-                      : 'bg-white/5 ring-white/10 text-slate-400'
-                  )}
-                >
-                  <span className="text-[24px]">🚶</span>
-                  <div className="mt-1 font-bold">Đi bộ</div>
-                  <div className="text-[10px]">Tân cư dân (0 job)</div>
-                  {userVehicle === 'walk' && <div className="mt-1 text-[9px] text-emerald-400 font-bold">Hiện tại của bạn</div>}
-                </div>
-
-                {/* 2. Xe đạp */}
-                <div
-                  className={cx(
-                    'rounded-2xl p-3 ring-1 transition-all',
-                    userVehicle === 'bicycle'
-                      ? 'bg-amber-950/60 ring-amber-400 text-amber-200'
-                      : 'bg-white/5 ring-white/10 text-slate-400'
-                  )}
-                >
-                  <span className="text-[24px]">🚲</span>
-                  <div className="mt-1 font-bold">Xe Đạp KOC</div>
-                  <div className="text-[10px]">Xong 1 job video</div>
-                  {userVehicle === 'bicycle' && <div className="mt-1 text-[9px] text-amber-400 font-bold">Hiện tại của bạn</div>}
-                </div>
-
-                {/* 3. Xe máy */}
-                <div
-                  className={cx(
-                    'rounded-2xl p-3 ring-1 transition-all',
-                    userVehicle === 'motorbike'
-                      ? 'bg-fuchsia-950/60 ring-fuchsia-400 text-fuchsia-200'
-                      : 'bg-white/5 ring-white/10 text-slate-400'
-                  )}
-                >
-                  <span className="text-[24px]">🛵</span>
-                  <div className="mt-1 font-bold">Xe Máy KOC</div>
-                  <div className="text-[10px]">Xong từ 3 job</div>
-                  {userVehicle === 'motorbike' && <div className="mt-1 text-[9px] text-fuchsia-400 font-bold">Hiện tại của bạn</div>}
-                </div>
-              </div>
-
-              {/* Thông tin tiến độ tài khoản */}
-              <div className="rounded-2xl bg-white/5 p-3.5 ring-1 ring-white/10 text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Tài khoản:</span>
-                  <span className="font-bold text-white">{currentUser?.name || 'Khách vãng lai (Chưa đăng nhập)'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Số video job đã hoàn thành:</span>
-                  <span className="font-bold text-amber-300">{userJobsCount} Job</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Phương tiện hiện tại:</span>
-                  <span className="font-bold text-emerald-400">
-                    {userVehicle === 'motorbike' ? '🛵 Xe Máy Tốc Hành' : userVehicle === 'bicycle' ? '🚲 Xe Đạp Sáng Tạo' : '🚶 Đi Bộ Thong Thả'}
-                  </span>
-                </div>
-              </div>
             </div>
 
-            <Button
-              variant="primary"
-              size="md"
-              block
-              className="mt-5 rounded-2xl bg-gradient-to-r from-pink-500 to-violet-600 font-bold cursor-pointer"
-              onClick={() => setShowHqModal(false)}
-            >
-              Đã hiểu, quay lại bản đồ ✨
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ===== POPUP CHI TIẾT CƯ DÂN (KOCITY CITIZEN CARD) ===== */}
-      {selectedCitizen && (
-        <div
-          onClick={() => setSelectedCitizen(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm rounded-3xl bg-slate-900 p-6 text-white shadow-2xl ring-2 ring-violet-500/50"
-          >
-            <button
-              type="button"
-              onClick={() => setSelectedCitizen(null)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white cursor-pointer"
-            >
-              <Icon name="close" className="text-[20px]" />
-            </button>
-
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div
-                style={{ backgroundColor: selectedCitizen.avatarColor }}
-                className="flex h-14 w-14 items-center justify-center rounded-2xl text-[26px] shadow-lg text-white font-bold"
-              >
-                {selectedCitizen.isCurrentUser ? '👑' : selectedCitizen.city === 'Hà Nội' ? '🌸' : '☕'}
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="font-display text-base font-bold text-white">{selectedCitizen.name}</h3>
-                  <span className="rounded bg-pink-500/30 px-1.5 py-0.5 text-[10px] font-bold text-pink-300">
-                    {selectedCitizen.number}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  📍 Cư dân {selectedCitizen.city} · {selectedCitizen.role}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs">
-              <div className="flex justify-between rounded-xl bg-white/5 p-2.5">
-                <span className="text-slate-400">Phương tiện:</span>
-                <span className="font-bold text-amber-300">
-                  {selectedCitizen.vehicle === 'motorbike' ? '🛵 Xe Máy (Hoàn thành ≥3 job)' : selectedCitizen.vehicle === 'bicycle' ? '🚲 Xe Đạp (Hoàn thành 1 job)' : '🚶 Đi Bộ (Cư dân mới)'}
+            <div className="space-y-2 mb-5">
+              <div className="flex items-center justify-between text-xs bg-white/5 p-2.5 rounded-xl border border-white/5">
+                <span className="text-slate-300">Tiến độ của cháu:</span>
+                <span className="font-bold text-amber-400">
+                  {userJobsCount} Job hoàn thành
                 </span>
               </div>
-              <div className="flex justify-between rounded-xl bg-white/5 p-2.5">
-                <span className="text-slate-400">Trạng thái:</span>
-                <span className="font-bold text-emerald-400">🟢 Đang online tại KOCity</span>
+              <div className="flex items-center justify-between text-xs bg-white/5 p-2.5 rounded-xl border border-white/5">
+                <span className="text-slate-300">Phương tiện hiện tại:</span>
+                <span className="font-bold text-emerald-400 flex items-center gap-1">
+                  {userVehicle === 'motorbike'
+                    ? '🛵 Xe Máy KOCity'
+                    : userVehicle === 'bicycle'
+                    ? '🚲 Xe Đạp KOCity'
+                    : '🚶 Đi Bộ (Chưa nhận xe)'}
+                </span>
               </div>
-              <div className="flex justify-between rounded-xl bg-white/5 p-2.5">
-                <span className="text-slate-400">Video review đã lên:</span>
-                <span className="font-bold text-fuchsia-300">{selectedCitizen.jobsDone} Clip Hoàn Thành</span>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                block
+                onClick={() => {
+                  setShowGuardModal(false);
+                  setShowHqModal(true);
+                }}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black hover:opacity-95"
+              >
+                Ghé Trụ Sở Đổi Xe Ngay 🚲 🛵
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: TRỤ SỞ KOCITY HQ & ĐỔI XE */}
+      {showHqModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border-2 border-purple-500 p-6 text-white shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setShowHqModal(false)}
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-300"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-500 to-violet-600 text-2xl shadow-lg ring-2 ring-amber-300">
+                👑
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Trụ Sở KOCity HQ</h3>
+                <p className="text-xs text-purple-300">Tòa Thị Chính & Trung Tâm Nâng Cấp Phương Tiện</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              {/* Cấp độ Xe Đạp */}
+              <div
+                className={cx(
+                  'p-3.5 rounded-2xl border flex items-center justify-between',
+                  userJobsCount >= 1
+                    ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">🚲</span>
+                  <div>
+                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Xe Đạp KOCity</span>
+                      {userJobsCount >= 1 && (
+                        <span className="text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.2 rounded-full font-black">
+                          ĐÃ MỞ KHÓA
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-400">Yêu cầu hoàn thành: ≥ 1 Job</div>
+                  </div>
+                </div>
+                <div className="text-right font-mono text-xs">
+                  {userJobsCount >= 1 ? '✅ Đủ điều kiện' : `${userJobsCount}/1 Job`}
+                </div>
+              </div>
+
+              {/* Cấp độ Xe Máy */}
+              <div
+                className={cx(
+                  'p-3.5 rounded-2xl border flex items-center justify-between',
+                  userJobsCount >= 3
+                    ? 'bg-amber-950/40 border-amber-500/50 text-amber-200'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">🛵</span>
+                  <div>
+                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Xe Máy KOCity</span>
+                      {userJobsCount >= 3 && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.2 rounded-full font-black">
+                          ĐÃ MỞ KHÓA
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-400">Yêu cầu hoàn thành: ≥ 3 Job</div>
+                  </div>
+                </div>
+                <div className="text-right font-mono text-xs">
+                  {userJobsCount >= 3 ? '✅ Đủ điều kiện' : `${userJobsCount}/3 Job`}
+                </div>
               </div>
             </div>
 
             <Button
               variant="primary"
-              size="md"
               block
-              className="mt-5 rounded-2xl bg-gradient-to-r from-pink-500 to-violet-600 font-bold cursor-pointer"
-              onClick={() => setSelectedCitizen(null)}
+              onClick={() => setShowHqModal(false)}
+              className="bg-gradient-to-r from-pink-500 to-violet-600 text-white font-black"
             >
-              Vẫy tay chào Cư dân 👋
+              Đã Rõ! Tiếp Tục Khám Phá Thành Phố
             </Button>
           </div>
         </div>
       )}
 
-      {/* ===== POPUP CHI TIẾT TRẠM NHÃN HÀNG (BRAND STATION CARD) ===== */}
+      {/* MODAL 3: CHI TIẾT TRẠM BRAND THEO PHỐ */}
       {selectedBrand && (
-        <div
-          onClick={() => setSelectedBrand(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-3xl bg-slate-900 p-6 text-white shadow-2xl ring-2 ring-violet-500/50"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="relative w-full max-w-md rounded-3xl bg-slate-900 border-2 border-white/20 p-6 text-white shadow-2xl">
             <button
               type="button"
               onClick={() => setSelectedBrand(null)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white cursor-pointer"
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-300"
             >
-              <Icon name="close" className="text-[20px]" />
+              ✕
             </button>
 
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className={cx('flex h-14 w-14 items-center justify-center rounded-2xl text-[26px] text-white shadow-lg', selectedBrand.badgeBg)}>
-                <Icon name={selectedBrand.icon} className="text-[28px]" />
+            <div className="flex items-center gap-3.5 mb-4">
+              <div
+                className={cx(
+                  'flex h-14 w-14 items-center justify-center rounded-2xl text-3xl shadow-lg ring-2 ring-white/30',
+                  selectedBrand.badgeBg
+                )}
+              >
+                {selectedBrand.badgeEmoji}
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                  Trạm Gửi Mẫu Tại {selectedBrand.city}
+                <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">
+                  {selectedBrand.streetName}
                 </span>
-                <h3 className="font-display text-base font-black text-white">{selectedBrand.name}</h3>
-                <p className="text-xs text-slate-400">{selectedBrand.address}</p>
+                <h3 className="text-lg font-black text-white">{selectedBrand.name}</h3>
+                <p className="text-xs text-slate-400">{selectedBrand.category}</p>
               </div>
             </div>
 
-            <p className="mt-3 text-xs italic text-slate-300">
-              "{selectedBrand.tagline}"
-            </p>
-
-            <div className="mt-3 rounded-2xl bg-violet-950/40 p-3 ring-1 ring-violet-500/30 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300">Suất mẫu 0đ đang mở tuyển:</span>
-                <span className="font-display text-sm font-bold text-emerald-400">
-                  {selectedBrand.sampleCount} Suất Mẫu
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2 mb-4">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Kho mẫu 0đ sẵn có:</span>
+                <span className="font-extrabold text-amber-300 text-sm">
+                  {selectedBrand.sampleCount} Sản phẩm
                 </span>
               </div>
-              <p className="mt-1 text-[11px] text-slate-400">
+              <div className="text-xs text-slate-300 leading-relaxed border-t border-white/10 pt-2">
                 {selectedBrand.desc}
-              </p>
+              </div>
             </div>
 
-            <div className="mt-5 flex gap-2">
+            <div className="space-y-2">
               <Button
-                variant="outline"
-                size="md"
-                className="flex-1 rounded-2xl border-white/20 bg-white/10 text-white hover:bg-white/20 cursor-pointer"
+                variant="primary"
+                block
+                onClick={() => {
+                  const match = campaigns.find((c) =>
+                    c.title.toLowerCase().includes(selectedBrand.brandName.toLowerCase())
+                  );
+                  if (match && onSelectCampaign) {
+                    onSelectCampaign(match.id);
+                    setSelectedBrand(null);
+                    onClose();
+                  } else {
+                    setSelectedBrand(null);
+                  }
+                }}
+                className={cx('font-black text-white shadow-lg cursor-pointer', selectedBrand.badgeBg)}
+              >
+                Đăng Ký Nhận Mẫu 0đ Ngay 🎁
+              </Button>
+              <Button
+                variant="ghost"
+                block
                 onClick={() => setSelectedBrand(null)}
+                className="text-slate-400 hover:text-white"
               >
                 Đóng
               </Button>
-              <Button
-                variant="primary"
-                size="md"
-                className="flex-1 rounded-2xl bg-gradient-to-r from-pink-500 to-violet-600 font-bold cursor-pointer"
-                onClick={() => {
-                  const target = campaigns.find((c) => c.brandName.toLowerCase().includes(selectedBrand.brandName.toLowerCase()));
-                  setSelectedBrand(null);
-                  onClose();
-                  if (target && onSelectCampaign) {
-                    onSelectCampaign(target.id);
-                  } else {
-                    document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-              >
-                Nhận Mẫu 0đ Tại Đây 🎁
-              </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: HỒ SƠ CƯ DÂN KOC */}
+      {selectedCitizen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="relative w-full max-w-sm rounded-3xl bg-slate-900 border-2 border-pink-500/50 p-6 text-white shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setSelectedCitizen(null)}
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-300"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-3.5 mb-4">
+              <div
+                style={{ backgroundColor: selectedCitizen.avatarColor }}
+                className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl shadow-lg ring-2 ring-white"
+              >
+                {selectedCitizen.isCurrentUser ? '👑' : '🌸'}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-base font-black text-white">{selectedCitizen.name}</h3>
+                  <span className="text-pink-400 font-extrabold text-xs">{selectedCitizen.number}</span>
+                </div>
+                <p className="text-xs text-amber-300">{selectedCitizen.role}</p>
+              </div>
+            </div>
+
+            <div className="bg-white/5 rounded-2xl p-3.5 border border-white/10 space-y-2 mb-4 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Phương tiện:</span>
+                <span className="font-bold text-white flex items-center gap-1">
+                  {selectedCitizen.vehicle === 'motorbike'
+                    ? '🛵 Xe máy'
+                    : selectedCitizen.vehicle === 'bicycle'
+                    ? '🚲 Xe đạp'
+                    : '🚶 Đi bộ'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Số Job hoàn thành:</span>
+                <span className="font-extrabold text-emerald-400">{selectedCitizen.jobsDone} Job</span>
+              </div>
+            </div>
+
+            {selectedCitizen.bubble && (
+              <div className="bg-pink-500/20 border border-pink-500/40 rounded-xl p-3 text-xs text-pink-200 italic mb-4">
+                "{selectedCitizen.bubble}"
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              block
+              onClick={() => setSelectedCitizen(null)}
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              Đóng
+            </Button>
           </div>
         </div>
       )}
 
       {/* ===== FOOTER HƯỚNG DẪN TƯƠNG TÁC ===== */}
-      <footer className="flex flex-wrap items-center justify-between border-t border-white/15 bg-slate-950/90 px-4 py-2 text-xs text-slate-400 sm:px-6 z-30">
+      <footer className="flex flex-wrap items-center justify-between border-t border-white/10 bg-slate-950/90 px-4 py-2 text-xs text-slate-400 sm:px-6 z-30">
         <div className="flex items-center gap-3 text-[11px]">
-          <span>💡 <strong>Lăn chuột / Chạm 2 ngón tay:</strong> Zoom ngắm ảnh vệ tinh sắc nét từ trên không</span>
+          <span>💡 <strong>Lăn chuột / Vuốt 2 ngón tay:</strong> Zoom mượt mà toàn thành phố</span>
           <span className="hidden sm:inline">•</span>
-          <span>Bấm <strong>[ ⛩️ Hà Nội ]</strong> hoặc <strong>[ 🌆 Sài Gòn ]</strong> để bay lướt camera</span>
+          <span>Bấm <strong>👮 Chú Bảo Vệ</strong> để nghe dặn dò & đổi xe</span>
           <span className="hidden sm:inline">•</span>
-          <span>Bấm <strong>👑 Trụ sở KOCity</strong> để nhận Xe đạp 🚲 / Xe máy 🛵</span>
+          <span>Cư dân tự động dừng trước vạch ngựa vằn khi đèn đỏ 🚦🔴</span>
         </div>
-        <div className="text-[10px] text-slate-500">
-          KOCity Satellite Engine v5.0
+        <div className="text-[10px] text-slate-500 hidden md:block">
+          KOCity East-West Boulevard Engine v6.0
         </div>
       </footer>
     </div>
