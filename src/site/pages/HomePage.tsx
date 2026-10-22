@@ -393,7 +393,7 @@ export const HomePage: React.FC = () => {
             <Button
               variant="primary"
               size="lg"
-              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#ec4899] via-[#d946ef] to-[#8b5cf6] px-6 py-3 font-bold text-white shadow-lg shadow-pink-500/25 transition-all duration-300 hover:shadow-pink-500/40 hover:scale-[1.02] active:scale-[0.98] sm:h-12 sm:px-8 sm:text-base cursor-pointer"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#ec4899] via-[#d946ef] to-[#8b5cf6] px-7 py-3.5 font-bold text-white shadow-xl shadow-pink-500/25 transition-all duration-300 hover:shadow-pink-500/40 hover:scale-[1.03] active:scale-[0.98] sm:h-12 sm:px-9 sm:text-base cursor-pointer ring-2 ring-white/20"
               onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
             >
               <span>{currentUser ? 'Khám phá mẫu 0đ ngay' : 'Tham gia ngay'}</span>
@@ -414,43 +414,6 @@ export const HomePage: React.FC = () => {
                 Đơn của tôi {pendingCount + selectedCount > 0 ? `(${pendingCount + selectedCount})` : ''}
               </Button>
             )}
-
-            {/* Nút công tắc Bật/Tắt đèn dạng Pill Switch iOS/Cyber tinh xảo */}
-            <button
-              type="button"
-              onClick={toggleNight}
-              aria-label={isNight ? 'Bật đèn (Chế độ ban ngày)' : 'Tắt đèn (Chế độ ban đêm)'}
-              title={isNight ? 'Bật đèn (Chế độ ban ngày)' : 'Tắt đèn (Chế độ ban đêm)'}
-              className={cx(
-                'inline-flex items-center gap-2.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-300 cursor-pointer backdrop-blur-md ring-1 shadow-xs sm:h-12 sm:px-4 sm:text-sm',
-                isNight
-                  ? 'bg-violet-950/80 text-amber-300 ring-amber-400/30 hover:bg-violet-900/90 hover:ring-amber-400/60 hover:shadow-amber-500/20'
-                  : 'bg-white/90 text-slate-700 ring-violet-200/90 hover:bg-white hover:text-slate-900 hover:ring-violet-300 hover:shadow-violet-500/15'
-              )}
-            >
-              {/* Visual Toggle Pill Slider */}
-              <span
-                className={cx(
-                  'relative flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300',
-                  isNight ? 'bg-amber-400/30' : 'bg-violet-100'
-                )}
-              >
-                <span
-                  className={cx(
-                    'flex h-4 w-4 items-center justify-center rounded-full shadow-xs transition-transform duration-300',
-                    isNight
-                      ? 'translate-x-4 bg-amber-400 text-slate-950'
-                      : 'translate-x-0 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
-                  )}
-                >
-                  <Icon
-                    name={isNight ? 'light_mode' : 'dark_mode'}
-                    className="text-[10px]"
-                  />
-                </span>
-              </span>
-              <span className="font-semibold">{isNight ? 'Bật đèn' : 'Tắt đèn'}</span>
-            </button>
           </div>
 
           {/* 4 Số liệu nhanh dạng 1 hàng siêu gọn */}
