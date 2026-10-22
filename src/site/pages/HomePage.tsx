@@ -10,6 +10,7 @@ import { useSiteUI } from '../SiteUI';
 import { CampaignCard } from '../components/CampaignCard';
 import { HeroImageSheet } from '../components/HeroImageSheet';
 import { KocitySkyline } from '../components/KocitySkyline';
+import { KocityWorldModal } from '../components/KocityWorldModal';
 import { Badge, Button, Chip, EmptyState, Icon, SectionTitle, Sheet, cx } from '../ui';
 
 type SortKey = 'popular' | 'commission' | 'spots' | 'ending';
@@ -96,6 +97,7 @@ export const HomePage: React.FC = () => {
   const [savedOnly, setSavedOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [heroSheetOpen, setHeroSheetOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
   const activeFilters = (sort !== 'popular' ? 1 : 0) + (tier ? 1 : 0) + (savedOnly ? 1 : 0);
 
   // Chế độ Ngày / Đêm cho khối banner KOCity (lưu vào localStorage)
@@ -326,7 +328,7 @@ export const HomePage: React.FC = () => {
               )}
             >
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>✨ Hệ sinh thái TikTok Creator Commerce #1</span>
+              <span>✨ Dân số KOCity: 1,280+ Cư dân sáng tạo</span>
             </div>
           )}
 
@@ -393,12 +395,32 @@ export const HomePage: React.FC = () => {
             <Button
               variant="primary"
               size="lg"
-              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#ec4899] via-[#d946ef] to-[#8b5cf6] px-7 py-3.5 font-bold text-white shadow-xl shadow-pink-500/25 transition-all duration-300 hover:shadow-pink-500/40 hover:scale-[1.03] active:scale-[0.98] sm:h-12 sm:px-9 sm:text-base cursor-pointer ring-2 ring-white/20"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#ec4899] via-[#d946ef] to-[#8b5cf6] px-6 py-3.5 font-bold text-white shadow-xl shadow-pink-500/25 transition-all duration-300 hover:shadow-pink-500/40 hover:scale-[1.03] active:scale-[0.98] sm:h-12 sm:px-8 sm:text-base cursor-pointer ring-2 ring-white/20"
               onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
             >
               <span>{currentUser ? 'Khám phá mẫu 0đ ngay' : 'Tham gia ngay'}</span>
               <Icon name="arrow_forward" className="text-[18px] transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
+
+            {/* Nút Khám phá Thành phố Cư dân */}
+            <button
+              type="button"
+              onClick={() => setCityOpen(true)}
+              className={cx(
+                'group relative inline-flex items-center justify-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold transition-all duration-300 cursor-pointer backdrop-blur-md shadow-lg sm:h-12 sm:px-6 sm:text-base',
+                isNight
+                  ? 'bg-violet-950/70 text-violet-200 ring-1 ring-violet-400/40 hover:bg-violet-900/90 hover:text-white hover:ring-amber-300/60 shadow-purple-950/50'
+                  : 'bg-white/95 text-slate-800 ring-1 ring-violet-200 hover:bg-white hover:text-violet-900 hover:ring-violet-400 shadow-violet-500/10'
+              )}
+            >
+              <span className="text-[18px] animate-bounce">🏙️</span>
+              <span>Vào Thành phố Cư dân</span>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-pink-500" />
+              </span>
+            </button>
+
             {currentUser && !isAdmin && (
               <Button
                 variant="outline"
@@ -637,6 +659,16 @@ export const HomePage: React.FC = () => {
         </section>
 
         {isAdmin && <HeroImageSheet open={heroSheetOpen} onClose={() => setHeroSheetOpen(false)} />}
+
+        {/* Modal Thành phố Cư dân KOCity Metaverse */}
+        <KocityWorldModal
+          open={cityOpen}
+          onClose={() => setCityOpen(false)}
+          campaigns={campaigns}
+          currentUser={currentUser}
+          isNightDefault={isNight}
+          onSelectCampaign={(campId) => navigate(ROUTES.campaign(campId))}
+        />
 
         {/* ===== Bảng lọc ===== */}
         <Sheet
