@@ -66,6 +66,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // Ref cho cử chỉ chạm 2 ngón (Pinch-to-zoom đa điểm chuẩn Google Maps)
+  const touchStartDistRef = useRef<number | null>(null);
+  const touchStartZoomRef = useRef<number>(zoom);
+  const touchStartMidRef = useRef<{ x: number; y: number } | null>(null);
+  const touchStartPanRef = useRef<{ x: number; y: number }>(pan);
+
   // Trạng thái đèn giao thông ngã tư (Xanh 8s -> Vàng 2s -> Đỏ 6s)
   const [trafficLight, setTrafficLight] = useState<TrafficLightState>('green');
   const [trafficTimer, setTrafficTimer] = useState<number>(8);
@@ -86,7 +92,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     const interval = setInterval(() => {
       setTrafficTimer((prev) => {
         if (prev > 1) return prev - 1;
-        // Chuyển trạng thái khi đếm về 1
         setTrafficLight((current) => {
           if (current === 'green') {
             setTrafficTimer(2);
@@ -316,14 +321,11 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     const interval = setInterval(() => {
       setCitizens((prev) =>
         prev.map((c) => {
-          // Vùng ngã tư có đèn giao thông (X từ 1240 đến 1440)
-          const isAtIntersection = c.x >= 1220 && c.x <= 1460;
           const isApproachingRed =
             trafficLight === 'red' &&
             ((c.direction === 'right' && c.x >= 1200 && c.x <= 1260) ||
               (c.direction === 'left' && c.x >= 1420 && c.x <= 1480));
 
-          // Dừng lại trước vạch ngựa vằn khi đèn đỏ
           if (isApproachingRed) {
             return {
               ...c,
@@ -347,7 +349,74 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     return () => clearInterval(interval);
   }, [open, trafficLight]);
 
-  // Xử lý kéo thả (Pan) trên canvas
+  // =========================================================================
+  // THUẬT TOÁN ZOOM GOOGLE MAPS (ZOOM TOWARDS CURSOR / FOCAL POINT MATH)
+  // =========================================================================
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+
+    // Tọa độ thực tế trên bản đồ thế giới trước khi zoom
+    const worldX = (cursorX - pan.x) / zoom;
+    const worldY = (cursorY - pan.y) / zoom;
+
+    // Tỉ lệ scale co giãn mượt mà theo gia tốc con lăn chuột
+    const zoomFactor = Math.exp(-e.deltaY * 0.0022);
+    const newZoom = Math.min(1.6, Math.max(0.35, zoom * zoomFactor));
+
+    // Điểm neo dưới con trỏ chuột giữ nguyên vị trí tuyệt đối trên màn hình
+    const newPanX = cursorX - worldX * newZoom;
+    const newPanY = cursorY - worldY * newZoom;
+
+    setZoom(newZoom);
+    setPan({ x: newPanX, y: newPanY });
+  };
+
+  // NHẤP ĐÚP CHUỘT (DOUBLE CLICK) ĐỂ PHÓNG TO VÀO ĐÚNG ĐIỂM ĐÓ NHƯ GOOGLE MAPS
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, .clickable-element')) return;
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+
+    const worldX = (cursorX - pan.x) / zoom;
+    const worldY = (cursorY - pan.y) / zoom;
+
+    // Phóng to 1.35x và đưa điểm click dần về giữa màn hình
+    const targetZoom = Math.min(1.6, zoom * 1.35);
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const newPanX = centerX - worldX * targetZoom;
+    const newPanY = centerY - worldY * targetZoom;
+
+    setZoom(targetZoom);
+    setPan({ x: newPanX, y: newPanY });
+  };
+
+  // ZOOM THEO TÂM MÀN HÌNH KHI BẤM NÚT [+] VÀ [-]
+  const zoomAtScreenCenter = (factor: number) => {
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const worldX = (centerX - pan.x) / zoom;
+    const worldY = (centerY - pan.y) / zoom;
+
+    const newZoom = Math.min(1.6, Math.max(0.35, zoom * factor));
+    const newPanX = centerX - worldX * newZoom;
+    const newPanY = centerY - worldY * newZoom;
+
+    setZoom(newZoom);
+    setPan({ x: newPanX, y: newPanY });
+  };
+
+  // Kéo thả chuột (Pan / Drag)
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button, .clickable-element')) return;
     setIsDragging(true);
@@ -364,7 +433,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
   const handleMouseUp = () => setIsDragging(false);
 
-  // Xử lý Touch cho Mobile
+  // Xử lý Touch Mobile: 1 ngón vuốt di chuyển, 2 ngón chụm/tách (Pinch-to-zoom đa điểm)
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       setIsDragging(true);
@@ -372,22 +441,60 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         x: e.touches[0].clientX - pan.x,
         y: e.touches[0].clientY - pan.y,
       };
+      touchStartDistRef.current = null;
+    } else if (e.touches.length === 2 && wrapperRef.current) {
+      setIsDragging(false);
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      touchStartDistRef.current = dist;
+      touchStartZoomRef.current = zoom;
+      touchStartPanRef.current = pan;
+
+      const rect = wrapperRef.current.getBoundingClientRect();
+      touchStartMidRef.current = {
+        x: (t1.clientX + t2.clientX) / 2 - rect.left,
+        y: (t1.clientY + t2.clientY) / 2 - rect.top,
+      };
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    setPan({
-      x: e.touches[0].clientX - dragStartRef.current.x,
-      y: e.touches[0].clientY - dragStartRef.current.y,
-    });
+    if (e.touches.length === 1 && isDragging) {
+      setPan({
+        x: e.touches[0].clientX - dragStartRef.current.x,
+        y: e.touches[0].clientY - dragStartRef.current.y,
+      });
+    } else if (
+      e.touches.length === 2 &&
+      touchStartDistRef.current &&
+      touchStartMidRef.current
+    ) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      const scale = currentDist / touchStartDistRef.current;
+      const initialZoom = touchStartZoomRef.current;
+      const initialPan = touchStartPanRef.current;
+      const mid = touchStartMidRef.current;
+
+      const newZoom = Math.min(1.6, Math.max(0.35, initialZoom * scale));
+
+      const worldX = (mid.x - initialPan.x) / initialZoom;
+      const worldY = (mid.y - initialPan.y) / initialZoom;
+
+      const newPanX = mid.x - worldX * newZoom;
+      const newPanY = mid.y - worldY * newZoom;
+
+      setZoom(newZoom);
+      setPan({ x: newPanX, y: newPanY });
+    }
   };
 
-  // Lăn chuột để Zoom
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.08 : -0.08;
-    setZoom((prev) => Math.min(1.4, Math.max(0.38, Number((prev + delta).toFixed(2)))));
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchStartDistRef.current = null;
+    touchStartMidRef.current = null;
   };
 
   // Bay camera (Fly-to) đến các vị trí trọng điểm
@@ -415,7 +522,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               <h1 className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
                 <span>Thành Phố KOCity</span>
                 <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-400/30">
-                  Đại Lộ Đông - Tây v6.0
+                  Google Maps Zoom Engine v7.0
                 </span>
               </h1>
             </div>
@@ -476,7 +583,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => flyTo(1400, 850, 0.45)}
+              onClick={() => flyTo(1400, 850, 0.42)}
               className="rounded-full px-3 py-1 font-bold text-amber-300 hover:bg-white/20 transition cursor-pointer"
             >
               🗺️ Toàn Cảnh
@@ -499,11 +606,11 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <span className="hidden sm:inline">{isNight ? '☀️ Ban Ngày' : '🌙 Ban Đêm'}</span>
           </button>
 
-          {/* Cụm Zoom Button */}
+          {/* Cụm Zoom Button Trên Header */}
           <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15">
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.max(0.38, Number((z - 0.1).toFixed(2))))}
+              onClick={() => zoomAtScreenCenter(0.85)}
               className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 font-black cursor-pointer text-sm"
               title="Thu nhỏ"
             >
@@ -514,7 +621,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.min(1.4, Number((z + 0.1).toFixed(2))))}
+              onClick={() => zoomAtScreenCenter(1.18)}
               className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 font-black cursor-pointer text-sm"
               title="Phóng to"
             >
@@ -534,7 +641,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         </div>
       </header>
 
-      {/* ===== KHU VỰC THÀNH PHỐ CANVAS 2800x1700 (PAN & ZOOM) ===== */}
+      {/* ===== KHU VỰC THÀNH PHỐ CANVAS 2800x1700 (PAN & ZOOM CHUẨN GOOGLE MAPS) ===== */}
       <div
         ref={wrapperRef}
         className={cx(
@@ -546,8 +653,9 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         onMouseUp={handleMouseUp}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
-        onTouchEnd={() => setIsDragging(false)}
+        onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
+        onDoubleClick={handleDoubleClick}
       >
         {/* LỚP NỀN TRỜI & HIỆU ỨNG ÁNH SÁNG */}
         <div
@@ -557,13 +665,14 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           )}
         />
 
-        {/* CONTAINER THÀNH PHỐ CHÍNH (ĐƯỢC SCALE & TRANSLATE) */}
+        {/* CONTAINER THÀNH PHỐ CHÍNH (ĐƯỢC SCALE & TRANSLATE THEO CON TRỎ CHUỘT) */}
         <div
           style={{
             width: `${MAP_W}px`,
             height: `${MAP_H}px`,
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: '0 0',
+            willChange: 'transform',
           }}
           className="relative transition-transform duration-75 ease-out"
         >
@@ -638,15 +747,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               isNight ? 'bg-[#1e293b]' : 'bg-[#334155]'
             )}
           >
-            {/* Vỉa hè trái */}
             <div className="w-6 h-full bg-[#cbd5e1] border-r-2 border-dashed border-slate-400" />
-            {/* Vạch kẻ đường giữa */}
             <div className="w-2 h-full flex flex-col justify-around py-4">
               {Array.from({ length: 30 }).map((_, i) => (
                 <div key={i} className="w-2 h-8 bg-amber-400/80 rounded-full" />
               ))}
             </div>
-            {/* Vỉa hè phải */}
             <div className="w-6 h-full bg-[#cbd5e1] border-l-2 border-dashed border-slate-400" />
           </div>
 
@@ -655,25 +761,21 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             style={{ left: 1230, top: 730, width: 240, height: 240 }}
             className="absolute pointer-events-none"
           >
-            {/* Vạch ngựa vằn phía Tây */}
             <div className="absolute left-0 top-12 bottom-12 w-8 flex flex-col justify-around">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-2 w-full bg-white shadow-md rounded-xs" />
               ))}
             </div>
-            {/* Vạch ngựa vằn phía Đông */}
             <div className="absolute right-0 top-12 bottom-12 w-8 flex flex-col justify-around">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-2 w-full bg-white shadow-md rounded-xs" />
               ))}
             </div>
-            {/* Vạch ngựa vằn phía Bắc */}
             <div className="absolute top-0 left-12 right-12 h-8 flex justify-around">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="w-2 h-full bg-white shadow-md rounded-xs" />
               ))}
             </div>
-            {/* Vạch ngựa vằn phía Nam */}
             <div className="absolute bottom-0 left-12 right-12 h-8 flex justify-around">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="w-2 h-full bg-white shadow-md rounded-xs" />
@@ -688,7 +790,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           >
             <div className="bg-slate-900 border-2 border-amber-400/70 rounded-2xl p-2 flex flex-col items-center gap-1.5 shadow-2xl ring-2 ring-black">
               <div className="text-[9px] font-black tracking-widest text-amber-300">NGÃ TƯ</div>
-              {/* Đèn Đỏ */}
               <div
                 className={cx(
                   'h-5 w-5 rounded-full border-2 transition-all duration-300',
@@ -697,7 +798,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                     : 'bg-rose-950/60 border-rose-900'
                 )}
               />
-              {/* Đèn Vàng */}
               <div
                 className={cx(
                   'h-5 w-5 rounded-full border-2 transition-all duration-300',
@@ -706,7 +806,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                     : 'bg-amber-950/60 border-amber-900'
                 )}
               />
-              {/* Đèn Xanh */}
               <div
                 className={cx(
                   'h-5 w-5 rounded-full border-2 transition-all duration-300',
@@ -715,12 +814,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                     : 'bg-emerald-950/60 border-emerald-900'
                 )}
               />
-              {/* Bộ đếm giây */}
               <div className="bg-black/90 px-1.5 py-0.5 rounded text-[11px] font-mono font-black text-amber-300">
                 0{trafficTimer}s
               </div>
             </div>
-            {/* Cột sắt giữ đèn */}
             <div className="w-2.5 h-12 bg-slate-600 border-x border-slate-700 shadow-md" />
             <div className="w-6 h-2 bg-slate-700 rounded-full" />
           </div>
@@ -728,14 +825,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* ========================================================================= */}
           {/* 3. TÂM ĐIỂM TRUNG TÂM: TRỤ SỞ KOCITY HQ & BỐT GÁC CHÚ BẢO VỆ            */}
           {/* ========================================================================= */}
-          {/* TÒA THÁP TRỤ SỞ KOCITY HQ */}
           <div
             style={{ left: 1470, top: 970 }}
             className="absolute z-20 cursor-pointer group clickable-element"
             onClick={() => setShowHqModal(true)}
           >
             <div className="relative flex flex-col items-center">
-              {/* Biển hiệu trên nóc */}
               <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 px-4 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-2 ring-amber-300 whitespace-nowrap flex items-center gap-1.5 border border-white animate-pulse">
                 <span>👑</span>
                 <span>TRỤ SỞ KOCITY HQ</span>
@@ -744,7 +839,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 </span>
               </div>
 
-              {/* Tòa Tháp Kính Cao Tầng */}
               <div
                 className={cx(
                   'w-56 h-64 mt-2 rounded-3xl border-4 p-4 shadow-2xl transition-all duration-500 group-hover:scale-105 flex flex-col justify-between',
@@ -753,7 +847,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                     : 'bg-gradient-to-b from-white via-indigo-50 to-purple-100 border-purple-500 shadow-indigo-300/50'
                 )}
               >
-                {/* Vương miện trên đỉnh */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-ping" />
@@ -762,7 +855,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                   <span className="text-2xl">👑</span>
                 </div>
 
-                {/* Các ô cửa sổ kính sáng đèn */}
                 <div className="grid grid-cols-4 gap-2 my-2">
                   {Array.from({ length: 12 }).map((_, i) => (
                     <div
@@ -779,7 +871,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                   ))}
                 </div>
 
-                {/* Sảnh chính đón KOC */}
                 <div className="bg-white/10 rounded-xl p-2 text-center border border-white/20">
                   <div className="text-[11px] font-extrabold text-amber-300">
                     SẢNH VINH DANH & CẤP XE
@@ -790,7 +881,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 </div>
               </div>
 
-              {/* Bãi đỗ xe mẫu trước cửa trụ sở */}
               <div className="flex items-center gap-2 mt-2 bg-slate-900/80 px-3 py-1 rounded-full ring-1 ring-white/20 text-[12px]">
                 <span title="Xe đạp KOCity">🚲 🚲</span>
                 <span className="text-slate-400">|</span>
@@ -806,14 +896,11 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             onClick={() => setShowGuardModal(true)}
           >
             <div className="flex flex-col items-center">
-              {/* Bong bóng thoại vẫy chào của Chú Bảo Vệ */}
               <div className="bg-amber-300 text-slate-950 px-3 py-1 rounded-2xl text-[11px] font-black shadow-2xl ring-2 ring-white whitespace-nowrap mb-1 animate-bounce">
                 👮 "Chào cháu! Ghé chú đổi xe nha!"
               </div>
 
-              {/* Bốt gác an ninh */}
               <div className="relative flex items-center gap-2 bg-slate-900/95 border-2 border-amber-400 px-3 py-2 rounded-2xl shadow-2xl group-hover:scale-110 transition-transform">
-                {/* Chú bảo vệ */}
                 <div className="flex flex-col items-center">
                   <div className="h-10 w-10 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-xl shadow-lg">
                     👮
@@ -821,7 +908,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                   <div className="text-[9px] font-bold text-amber-300 mt-0.5">BẢO VỆ</div>
                 </div>
 
-                {/* Bốt gác & Barie */}
                 <div className="flex flex-col text-left">
                   <div className="text-[11px] font-black text-white">BỐT AN NINH KOCITY</div>
                   <div className="text-[9px] text-slate-300">Kiểm tra thẻ & Hướng dẫn</div>
@@ -837,7 +923,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* ========================================================================= */}
           {/* 4. PHÂN KHU TÂY: KHU ĐÔ THỊ CƯ XÁ KOC (NƠI Ở CỦA CÁC CREATOR)            */}
           {/* ========================================================================= */}
-          {/* CỔNG CHÀO CƯ XÁ KOCITY */}
           <div
             style={{ left: 450, top: 120 }}
             className="absolute z-10 flex flex-col items-center cursor-pointer clickable-element"
@@ -855,19 +940,16 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
           {/* DÃY NHÀ PHỐ CƯ DÂN LIỀN KỀ (DÃY TRÊN) */}
           <div style={{ left: 120, top: 220 }} className="absolute z-10 flex items-end gap-5">
-            {/* Căn 1: Nhà của Thu Trang */}
             <div className="w-48 h-56 bg-gradient-to-b from-rose-100 to-rose-200 border-2 border-rose-300 rounded-3xl p-3 shadow-xl relative flex flex-col justify-between">
               <div className="bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full self-start">
                 #0089 · Thu Trang
               </div>
               <div className="text-3xl text-center">🏡</div>
-              {/* Ban công ngập hoa */}
               <div className="bg-white/80 border border-rose-300 rounded-xl p-1.5 text-center text-[10px] font-bold text-rose-700">
                 🌸 Ban công hoa hồng
               </div>
             </div>
 
-            {/* Căn 2: Nhà của Tuấn Anh */}
             <div className="w-52 h-64 bg-gradient-to-b from-amber-100 to-amber-200 border-2 border-amber-300 rounded-3xl p-3 shadow-xl relative flex flex-col justify-between">
               <div className="bg-amber-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full self-start">
                 #0042 · Tuấn Anh (Tech)
@@ -878,7 +960,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </div>
             </div>
 
-            {/* Căn 3: CĂN NHÀ CỦA BẠN (CURRENT USER) */}
             <div className="w-56 h-72 bg-gradient-to-b from-violet-100 via-pink-100 to-amber-100 border-3 border-amber-400 rounded-3xl p-3.5 shadow-2xl relative flex flex-col justify-between ring-4 ring-amber-300/50 animate-pulse">
               <div className="bg-gradient-to-r from-pink-500 to-violet-600 text-white text-[11px] font-black px-2.5 py-1 rounded-full self-start shadow flex items-center gap-1">
                 <span>👑</span>
@@ -902,7 +983,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </div>
             </div>
 
-            {/* Căn 4: Nhà của Linh Chi */}
             <div className="w-48 h-56 bg-gradient-to-b from-emerald-100 to-emerald-200 border-2 border-emerald-300 rounded-3xl p-3 shadow-xl relative flex flex-col justify-between">
               <div className="bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full self-start">
                 #0156 · Linh Chi
@@ -916,7 +996,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
           {/* QUÁN CAFE CÓC VỈA HÈ & CÔNG VIÊN CƯ XÁ (DÃY DƯỚI) */}
           <div style={{ left: 140, top: 1040 }} className="absolute z-10 flex items-center gap-8">
-            {/* Quán Cafe Muối & Trà Chanh Cư Xá */}
             <div className="bg-amber-900/90 border-2 border-amber-300 rounded-3xl p-4 text-white shadow-2xl flex items-center gap-4">
               <div className="text-4xl">☕</div>
               <div>
@@ -929,7 +1008,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </div>
             </div>
 
-            {/* Công viên cây xanh cư xá */}
             <div className="flex items-center gap-4 bg-emerald-950/80 border border-emerald-400/40 p-4 rounded-3xl text-white">
               <span className="text-3xl">🌳</span>
               <div>
@@ -943,7 +1021,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* ========================================================================= */}
           {/* 5. PHÂN KHU ĐÔNG: KHU PHỐ THƯƠNG MẠI BRAND (CHIA THEO PHỐ NGÀNH HÀNG)   */}
           {/* ========================================================================= */}
-          {/* BIỂN CHỈ DẪN KHU PHỐ BRAND */}
           <div
             style={{ left: 1950, top: 120 }}
             className="absolute z-10 flex flex-col items-center cursor-pointer clickable-element"
@@ -959,21 +1036,15 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* TUYẾN 1: PHỐ MỸ PHẨM & SKINCARE (X: 1850 - 2550, Y: 240) */}
-          <div
-            style={{ left: 1750, top: 220 }}
-            className="absolute z-10 flex flex-col gap-2"
-          >
-            {/* Biển tên phố */}
+          {/* TUYẾN 1: PHỐ MỸ PHẨM & SKINCARE */}
+          <div style={{ left: 1750, top: 220 }} className="absolute z-10 flex flex-col gap-2">
             <div className="inline-flex items-center gap-1.5 bg-emerald-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
               <span>📍</span>
               <span>PHỐ MỸ PHẨM & SKINCARE</span>
               <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Kho xuất mẫu HN & SG</span>
             </div>
 
-            {/* Các Showroom trên phố */}
             <div className="flex items-center gap-6 mt-2">
-              {/* Trạm Cỏ Mềm */}
               <div
                 className="w-72 h-64 bg-gradient-to-b from-emerald-900 via-slate-900 to-black border-3 border-emerald-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
                 onClick={() => setSelectedBrand(brandStations[0])}
@@ -998,7 +1069,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 </div>
               </div>
 
-              {/* Boutique Bielenda */}
               <div
                 className="w-72 h-64 bg-gradient-to-b from-fuchsia-900 via-slate-900 to-black border-3 border-fuchsia-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
                 onClick={() => setSelectedBrand(brandStations[1])}
@@ -1025,11 +1095,8 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* TUYẾN 2: PHỐ THỜI TRANG & OOTD (X: 1750 - 2550, Y: 680) */}
-          <div
-            style={{ left: 1750, top: 680 }}
-            className="absolute z-10 flex flex-col gap-2"
-          >
+          {/* TUYẾN 2: PHỐ THỜI TRANG & OOTD */}
+          <div style={{ left: 1750, top: 680 }} className="absolute z-10 flex flex-col gap-2">
             <div className="inline-flex items-center gap-1.5 bg-purple-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
               <span>📍</span>
               <span>PHỐ THỜI TRANG & OOTD</span>
@@ -1037,7 +1104,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
 
             <div className="flex items-center gap-6 mt-2">
-              {/* Showroom ViSecret */}
               <div
                 className="w-80 h-60 bg-gradient-to-b from-purple-900 via-slate-900 to-black border-3 border-purple-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
                 onClick={() => setSelectedBrand(brandStations[2])}
@@ -1062,7 +1128,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 </div>
               </div>
 
-              {/* Shophouse Lookbook Studio kế bên */}
               <div className="w-64 h-60 bg-slate-900/90 border-2 border-slate-700 rounded-3xl p-4 flex flex-col justify-between">
                 <div className="text-2xl">📸</div>
                 <div>
@@ -1076,11 +1141,8 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* TUYẾN 3: PHỐ CÔNG NGHỆ & GAMING (X: 1750 - 2550, Y: 1120) */}
-          <div
-            style={{ left: 1750, top: 1120 }}
-            className="absolute z-10 flex flex-col gap-2"
-          >
+          {/* TUYẾN 3: PHỐ CÔNG NGHỆ & GAMING */}
+          <div style={{ left: 1750, top: 1120 }} className="absolute z-10 flex flex-col gap-2">
             <div className="inline-flex items-center gap-1.5 bg-blue-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
               <span>📍</span>
               <span>PHỐ CÔNG NGHỆ & GAMING</span>
@@ -1088,7 +1150,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
 
             <div className="flex items-center gap-6 mt-2">
-              {/* Flagship Tranyoo */}
               <div
                 className="w-80 h-60 bg-gradient-to-b from-blue-900 via-slate-900 to-black border-3 border-blue-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
                 onClick={() => setSelectedBrand(brandStations[3])}
@@ -1113,7 +1174,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 </div>
               </div>
 
-              {/* Phố Tiêu Dùng Mở Rộng: Chờ đón các Brand mới */}
               <div className="w-64 h-60 bg-slate-900/60 border-2 border-dashed border-amber-400/40 rounded-3xl p-4 flex flex-col justify-between text-center items-center">
                 <div className="text-3xl">📦</div>
                 <div>
@@ -1132,9 +1192,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* ========================================================================= */}
           {/* 6. HỆ THỐNG CÂY XANH RỢP BÓNG & CỘT ĐÈN ĐƯỜNG CHIẾU SÁNG TOÀN THÀNH PHỐ  */}
           {/* ========================================================================= */}
-          {/* Hàng cây bóng mát dọc đại lộ */}
           <div className="absolute inset-0 pointer-events-none">
-            {/* Cây ven đường trên đại lộ */}
             {[200, 450, 750, 1050, 1550, 1850, 2150, 2450].map((treeX) => (
               <React.Fragment key={treeX}>
                 <div
@@ -1152,7 +1210,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </React.Fragment>
             ))}
 
-            {/* Cột đèn đường cao áp chiếu sáng trong đêm */}
             {[350, 800, 1150, 1600, 2050, 2500].map((lampX) => (
               <div key={lampX} style={{ left: lampX, top: 720 }} className="absolute">
                 <div className="text-2xl">🏮</div>
@@ -1178,14 +1235,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               className="absolute cursor-pointer group clickable-element transition-all duration-75"
               onClick={() => setSelectedCitizen(c)}
             >
-              {/* Bong bóng thoại vui vẻ của cư dân */}
               {c.bubble && (
                 <div className="bg-white text-slate-900 px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-2xl ring-2 ring-pink-500 max-w-[170px] text-center mb-1 leading-snug whitespace-normal animate-bounce">
                   {c.bubble}
                 </div>
               )}
 
-              {/* Huy hiệu tên & phương tiện */}
               <div
                 className={cx(
                   'px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xl whitespace-nowrap flex items-center gap-1 border',
@@ -1202,7 +1257,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 </span>
               </div>
 
-              {/* Avatar chibi và hình ảnh phương tiện xe */}
               <div className="mt-0.5 flex flex-col items-center">
                 <div
                   style={{ backgroundColor: c.avatarColor }}
@@ -1210,7 +1264,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 >
                   {c.isCurrentUser ? '👑' : '🌸'}
                 </div>
-                {/* Phương tiện xe lăn bánh */}
                 <div
                   className={cx(
                     'text-[20px] -mt-1.5 filter drop-shadow-md transition-transform',
@@ -1224,7 +1277,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           ))}
         </div>
 
-        {/* BẢNG CHÚ THÍCH HỆ THỐNG GIAO THÔNG Ở GÓC BẢN ĐỒ */}
+        {/* BẢNG CHÚ THÍCH HỆ THỐNG GIAO THÔNG Ở GÓC TRÊN BẢN ĐỒ */}
         <div className="absolute top-4 left-4 z-20 pointer-events-none hidden sm:flex flex-col gap-1.5">
           <div className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-2xl max-w-sm">
             <div className="font-extrabold text-amber-300 flex items-center gap-1.5">
@@ -1238,7 +1291,55 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
           <div className="bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-xl ring-1 ring-white/10 text-[11px] text-emerald-300">
-            🚲 Xong 1 job nhận Xe Đạp · 🛵 Xong 3 job nhận Xe Máy từ Chú Bảo Vệ
+            💡 Nhấp đúp chuột vào bất kỳ đâu để phóng to ngay điểm đó!
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* CỤM ĐIỀU KHIỂN BẢN ĐỒ NỔI GÓC DƯỚI BÊN PHẢI (CHUẨN GOOGLE MAPS CONTROLS)   */}
+        {/* ========================================================================= */}
+        <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2.5">
+          {/* Cụm Nút Phóng to / Thu nhỏ & Định vị trung tâm */}
+          <div className="flex flex-col rounded-2xl bg-slate-900/95 border border-white/20 p-1 shadow-2xl backdrop-blur-md ring-2 ring-black/40">
+            {/* Phóng to */}
+            <button
+              type="button"
+              onClick={() => zoomAtScreenCenter(1.22)}
+              title="Phóng to (Zoom In)"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
+            >
+              +
+            </button>
+
+            {/* Thu nhỏ */}
+            <button
+              type="button"
+              onClick={() => zoomAtScreenCenter(0.82)}
+              title="Thu nhỏ (Zoom Out)"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
+            >
+              −
+            </button>
+
+            {/* Định vị về Trụ Sở KOCity & Chú Bảo Vệ */}
+            <button
+              type="button"
+              onClick={() => flyTo(1400, 950, 1.0)}
+              title="Về Trọng Tâm KOCity HQ & Chú Bảo Vệ"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-base"
+            >
+              🎯
+            </button>
+          </div>
+
+          {/* Thanh đo tỉ lệ Google Maps (Scale Bar) */}
+          <div className="flex items-center gap-1.5 rounded-xl bg-slate-900/90 border border-white/15 px-2.5 py-1 text-[10px] text-slate-300 font-mono shadow-xl backdrop-blur-sm">
+            <span className="font-bold text-amber-300">{Math.round(zoom * 100)}%</span>
+            <span>•</span>
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-1 border-b-2 border-x-2 border-white/80" />
+              <span className="text-[9px] text-slate-400">100m</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1340,7 +1441,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
 
             <div className="space-y-3 mb-5">
-              {/* Cấp độ Xe Đạp */}
               <div
                 className={cx(
                   'p-3.5 rounded-2xl border flex items-center justify-between',
@@ -1368,7 +1468,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 </div>
               </div>
 
-              {/* Cấp độ Xe Máy */}
               <div
                 className={cx(
                   'p-3.5 rounded-2xl border flex items-center justify-between',
@@ -1550,14 +1649,14 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       {/* ===== FOOTER HƯỚNG DẪN TƯƠNG TÁC ===== */}
       <footer className="flex flex-wrap items-center justify-between border-t border-white/10 bg-slate-950/90 px-4 py-2 text-xs text-slate-400 sm:px-6 z-30">
         <div className="flex items-center gap-3 text-[11px]">
-          <span>💡 <strong>Lăn chuột / Vuốt 2 ngón tay:</strong> Zoom mượt mà toàn thành phố</span>
+          <span>💡 <strong>Lăn chuột vào điểm cần xem:</strong> Tự động bám và phóng to đúng con trỏ chuột</span>
           <span className="hidden sm:inline">•</span>
-          <span>Bấm <strong>👮 Chú Bảo Vệ</strong> để nghe dặn dò & đổi xe</span>
+          <span><strong>Nhấp đúp chuột:</strong> Phóng to 1 chạm vào vị trí đó</span>
           <span className="hidden sm:inline">•</span>
-          <span>Cư dân tự động dừng trước vạch ngựa vằn khi đèn đỏ 🚦🔴</span>
+          <span><strong>Chụm 2 ngón tay (Mobile):</strong> Zoom đa điểm mượt mà</span>
         </div>
         <div className="text-[10px] text-slate-500 hidden md:block">
-          KOCity East-West Boulevard Engine v6.0
+          Google Maps Anchor Math Engine
         </div>
       </footer>
     </div>
