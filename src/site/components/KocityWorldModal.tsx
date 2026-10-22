@@ -731,6 +731,34 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   const [showGuardModal, setShowGuardModal] = useState<boolean>(false);
   const [showBiddingModal, setShowBiddingModal] = useState<boolean>(false);
 
+  // Bảng chú thích bản đồ (tự động thu gọn sau 5s hoặc đóng trước bằng nút ✕, có thể mở lại)
+  const [showLegend, setShowLegend] = useState<boolean>(true);
+  const legendTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setShowLegend(true);
+    if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
+    legendTimerRef.current = setTimeout(() => {
+      setShowLegend(false);
+    }, 5000);
+    return () => {
+      if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
+    };
+  }, [open]);
+
+  const handlePauseLegendTimer = () => {
+    if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
+  };
+
+  const handleResumeLegendTimer = () => {
+    if (!showLegend) return;
+    if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
+    legendTimerRef.current = setTimeout(() => {
+      setShowLegend(false);
+    }, 3000);
+  };
+
   // ==================== CẤU HÌNH QUY HOẠCH ĐÔ THỊ ĐỘNG (ADMIN BUILDER) ====================
   const [stores, setStores] = useState<BrandStation[]>(() => {
     try {
@@ -2265,20 +2293,66 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           ))}
         </div>
 
-        {/* BẢNG CHÚ THÍCH HỆ THỐNG GIAO THÔNG Ở GÓC TRÊN BẢN ĐỒ */}
-        <div className="absolute top-4 left-4 z-20 pointer-events-none hidden sm:flex flex-col gap-1.5">
-          <div className="bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-2xl max-w-sm">
-            <div className="font-extrabold text-amber-300 flex items-center gap-1.5">
+        {/* BẢNG CHÚ THÍCH HỆ THỐNG GIAO THÔNG Ở GÓC TRÊN BẢN ĐỒ (TỰ ĐỘNG THU GỌN SAU 5S HOẶC ĐÓNG SỚM) */}
+        <div className="absolute top-4 left-4 z-20 hidden sm:flex flex-col gap-1.5 pointer-events-auto transition-all duration-300">
+          {showLegend ? (
+            <div
+              onMouseEnter={handlePauseLegendTimer}
+              onMouseLeave={handleResumeLegendTimer}
+              className="bg-slate-900/95 backdrop-blur-md p-3 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-2xl max-w-sm animate-in fade-in zoom-in-95 duration-200"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-1.5 mb-1.5">
+                <div className="font-extrabold text-amber-300 flex items-center gap-1.5 text-xs tracking-wide">
+                  <span>🌉</span>
+                  <span>BẢN ĐỒ KOCITY: KẾT NỐI 2 BỜ SÔNG</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handlePauseLegendTimer();
+                    setShowLegend(false);
+                  }}
+                  title="Thu gọn bảng chú thích"
+                  className="flex h-5 w-5 items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition text-xs font-bold cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="text-[11px] text-slate-300 leading-relaxed space-y-1">
+                <div>• 🏠 <strong className="text-white">Bờ Tây (Trái):</strong> Cư Xá KOC (Nơi ở, studio, cafe cóc)</div>
+                <div>• 🌊 <strong className="text-white">Dòng Sông Ngăn Cách:</strong> Tượng trưng khó khăn nếu kết nối tự phát</div>
+                <div>• 🌉 <strong className="text-amber-300">Cầu KOCity & Tòa Tháp:</strong> Chiếc cầu độc quyền giúp KOC nhận hoa hồng cao hơn hẳn & an toàn 100%</div>
+                <div>• 🏪 <strong className="text-white">Bờ Đông (Phải):</strong> Đại Lộ các Store Brand 3D & Khu đất đấu thầu</div>
+              </div>
+              <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
+                <span>⏱️ Tự thu gọn sau 5s</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handlePauseLegendTimer();
+                    setShowLegend(false);
+                  }}
+                  className="text-amber-400 hover:underline cursor-pointer"
+                >
+                  Đóng ngay
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                handlePauseLegendTimer();
+                setShowLegend(true);
+              }}
+              title="Mở bảng chú thích bản đồ"
+              className="flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-amber-300 px-3 py-1.5 rounded-xl border border-white/15 shadow-xl backdrop-blur-md text-xs font-semibold cursor-pointer transition active:scale-95 group"
+            >
               <span>🌉</span>
-              <span>BẢN ĐỒ KOCITY: KẾT NỐI 2 BỜ SÔNG</span>
-            </div>
-            <div className="text-[11px] text-slate-300 mt-1 leading-relaxed">
-              • 🏠 <strong>Bờ Tây (Trái):</strong> Cư Xá KOC (Nơi ở, studio, cafe cóc)<br />
-              • 🌊 <strong>Dòng Sông Ngăn Cách:</strong> Tượng trưng khó khăn nếu kết nối tự phát<br />
-              • 🌉 <strong>Cầu KOCity & Tòa Tháp:</strong> Chiếc cầu độc quyền giúp KOC nhận hoa hồng cao hơn hẳn & an toàn 100%<br />
-              • 🏪 <strong>Bờ Đông (Phải):</strong> Đại Lộ các Store Brand 3D & Khu đất đấu thầu
-            </div>
-          </div>
+              <span>Chú thích bản đồ</span>
+              <span className="text-[10px] text-slate-400 group-hover:text-amber-300">▾</span>
+            </button>
+          )}
         </div>
 
         {/* CỤM ĐIỀU KHIỂN NỔI GÓC DƯỚI BÊN PHẢI (CHUẨN GOOGLE MAPS CONTROLS) */}
