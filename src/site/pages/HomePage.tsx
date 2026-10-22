@@ -289,7 +289,7 @@ export const HomePage: React.FC = () => {
         )}
 
         <div className="relative z-10 mx-auto max-w-4xl px-4 pt-6 pb-2 text-center sm:px-6 sm:pt-8 sm:pb-3 lg:pt-9 lg:pb-4">
-          {currentUser && !isAdmin && (
+          {currentUser && !isAdmin ? (
             <div
               className={cx(
                 'mb-3 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full px-3.5 py-1 text-xs font-medium shadow-sm backdrop-blur transition-colors sm:mb-3.5 sm:py-1.5 sm:text-sm',
@@ -316,42 +316,95 @@ export const HomePage: React.FC = () => {
                 Xem đơn <Icon name="arrow_forward" className="text-[13px]" />
               </Link>
             </div>
+          ) : (
+            <div
+              className={cx(
+                'mb-3 inline-flex items-center gap-2 rounded-full px-3.5 py-1 text-xs font-semibold backdrop-blur-md shadow-xs transition-all duration-300',
+                isNight
+                  ? 'bg-violet-900/40 text-violet-200 ring-1 ring-violet-500/30'
+                  : 'bg-white/90 text-violet-900 ring-1 ring-violet-200/90 shadow-violet-500/5'
+              )}
+            >
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>✨ Hệ sinh thái TikTok Creator Commerce #1</span>
+            </div>
           )}
 
-          <h1
-            className={cx(
-              'font-display text-2xl font-bold tracking-tight transition-colors duration-500 sm:text-3xl md:text-4xl lg:text-5xl',
-              isNight
-                ? 'text-white drop-shadow-[0_0_25px_rgba(168,85,247,0.7)]'
-                : 'text-[#4c1d95]'
-            )}
-          >
-            KOCity Creator
+          <h1 className="font-display text-3xl font-black tracking-tight sm:text-4xl md:text-5xl lg:text-6xl transition-all duration-500">
+            <span
+              className={cx(
+                'bg-clip-text text-transparent transition-all duration-500',
+                isNight
+                  ? 'bg-gradient-to-r from-white via-fuchsia-200 to-pink-300 drop-shadow-[0_0_35px_rgba(217,70,239,0.7)]'
+                  : 'bg-gradient-to-r from-violet-900 via-purple-700 to-pink-600'
+              )}
+            >
+              KOCity Creator
+            </span>
           </h1>
+
           <p
             className={cx(
-              'mx-auto mt-2 max-w-xl text-xs leading-relaxed transition-colors duration-500 sm:mt-2.5 sm:text-sm md:text-base',
+              'mx-auto mt-2.5 max-w-2xl text-xs leading-relaxed transition-colors duration-500 sm:mt-3 sm:text-sm md:text-base',
               isNight ? 'text-slate-300' : 'text-slate-600'
             )}
           >
-            Nền tảng kết nối Nano & Micro KOC TikTok với Brand. Nhận mẫu 0đ tận nhà, lên video theo brief và nhận hoa hồng minh bạch theo từng đơn.
+            Nền tảng kết nối <strong className={cx('font-semibold', isNight ? 'text-violet-300' : 'text-violet-900')}>Nano & Micro KOC TikTok</strong> với Brand. <strong className={cx('font-semibold', isNight ? 'text-fuchsia-300' : 'text-fuchsia-800')}>Nhận mẫu 0đ tận nhà</strong>, lên video theo brief và nhận <strong className={cx('font-semibold', isNight ? 'text-pink-300' : 'text-pink-800')}>hoa hồng minh bạch</strong> theo từng đơn.
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 sm:mt-5 sm:gap-3">
+          {/* 3 Chip cam kết quyền lợi KOC */}
+          <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2 text-[11px] sm:gap-2.5 sm:text-xs">
+            <span
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium backdrop-blur-md transition-all',
+                isNight
+                  ? 'bg-white/10 text-emerald-300 ring-1 ring-emerald-500/30'
+                  : 'bg-white/90 text-emerald-700 ring-1 ring-emerald-200 shadow-xs'
+              )}
+            >
+              <Icon name="check_circle" className="text-[14px] text-emerald-500" />
+              100% Không cọc phí
+            </span>
+            <span
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium backdrop-blur-md transition-all',
+                isNight
+                  ? 'bg-white/10 text-fuchsia-300 ring-1 ring-fuchsia-500/30'
+                  : 'bg-white/90 text-fuchsia-700 ring-1 ring-fuchsia-200 shadow-xs'
+              )}
+            >
+              <Icon name="local_shipping" className="text-[14px] text-fuchsia-500" />
+              Nhận mẫu tận tay 0đ
+            </span>
+            <span
+              className={cx(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium backdrop-blur-md transition-all',
+                isNight
+                  ? 'bg-white/10 text-violet-300 ring-1 ring-violet-500/30'
+                  : 'bg-white/90 text-violet-700 ring-1 ring-violet-200 shadow-xs'
+              )}
+            >
+              <Icon name="payments" className="text-[14px] text-violet-500" />
+              Hoa hồng minh bạch
+            </span>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3 sm:mt-6 sm:gap-3.5">
             <Button
               variant="primary"
-              size="md"
-              className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] px-5 shadow-md shadow-pink-500/20 hover:opacity-95 sm:h-11 sm:px-7"
+              size="lg"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#ec4899] via-[#d946ef] to-[#8b5cf6] px-6 py-3 font-bold text-white shadow-lg shadow-pink-500/25 transition-all duration-300 hover:shadow-pink-500/40 hover:scale-[1.02] active:scale-[0.98] sm:h-12 sm:px-8 sm:text-base cursor-pointer"
               onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
             >
-              {currentUser ? 'Khám phá mẫu 0đ ngay' : 'Tham gia ngay'}
+              <span>{currentUser ? 'Khám phá mẫu 0đ ngay' : 'Tham gia ngay'}</span>
+              <Icon name="arrow_forward" className="text-[18px] transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
             {currentUser && !isAdmin && (
               <Button
                 variant="outline"
-                size="md"
+                size="lg"
                 className={cx(
-                  'rounded-full px-4 backdrop-blur sm:h-11 sm:px-6',
+                  'rounded-full px-5 backdrop-blur sm:h-12 sm:px-6',
                   isNight
                     ? 'bg-white/10 text-white ring-1 ring-white/20 hover:bg-white/20'
                     : 'bg-white/90 text-slate-800 ring-1 ring-violet-200 hover:bg-white'
@@ -362,23 +415,41 @@ export const HomePage: React.FC = () => {
               </Button>
             )}
 
-            {/* Nút công tắc Bật/Tắt đèn ở ngay trung tâm cạnh nút Tham gia ngay */}
+            {/* Nút công tắc Bật/Tắt đèn dạng Pill Switch iOS/Cyber tinh xảo */}
             <button
               type="button"
               onClick={toggleNight}
-              aria-label={isNight ? 'Bật đèn ban ngày' : 'Tắt đèn ngắm thành phố đêm'}
+              aria-label={isNight ? 'Bật đèn (Chế độ ban ngày)' : 'Tắt đèn (Chế độ ban đêm)'}
+              title={isNight ? 'Bật đèn (Chế độ ban ngày)' : 'Tắt đèn (Chế độ ban đêm)'}
               className={cx(
-                'inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all duration-300 cursor-pointer shadow-sm backdrop-blur-md ring-1 sm:h-11 sm:px-5 sm:text-sm',
+                'inline-flex items-center gap-2.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-300 cursor-pointer backdrop-blur-md ring-1 shadow-xs sm:h-12 sm:px-4 sm:text-sm',
                 isNight
-                  ? 'bg-amber-400/20 text-amber-200 ring-amber-300/50 hover:bg-amber-400/30'
-                  : 'bg-white/95 text-violet-900 ring-violet-200 hover:bg-white hover:text-violet-950'
+                  ? 'bg-violet-950/80 text-amber-300 ring-amber-400/30 hover:bg-violet-900/90 hover:ring-amber-400/60 hover:shadow-amber-500/20'
+                  : 'bg-white/90 text-slate-700 ring-violet-200/90 hover:bg-white hover:text-slate-900 hover:ring-violet-300 hover:shadow-violet-500/15'
               )}
             >
-              <Icon
-                name={isNight ? 'light_mode' : 'dark_mode'}
-                className={cx('text-[18px] transition-transform duration-300', isNight ? 'text-amber-300 rotate-45' : 'text-violet-600')}
-              />
-              <span>{isNight ? 'Bật đèn' : 'Tắt đèn (Đêm sao)'}</span>
+              {/* Visual Toggle Pill Slider */}
+              <span
+                className={cx(
+                  'relative flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300',
+                  isNight ? 'bg-amber-400/30' : 'bg-violet-100'
+                )}
+              >
+                <span
+                  className={cx(
+                    'flex h-4 w-4 items-center justify-center rounded-full shadow-xs transition-transform duration-300',
+                    isNight
+                      ? 'translate-x-4 bg-amber-400 text-slate-950'
+                      : 'translate-x-0 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                  )}
+                >
+                  <Icon
+                    name={isNight ? 'light_mode' : 'dark_mode'}
+                    className="text-[10px]"
+                  />
+                </span>
+              </span>
+              <span className="font-semibold">{isNight ? 'Bật đèn' : 'Tắt đèn'}</span>
             </button>
           </div>
 
