@@ -121,14 +121,33 @@ export function login(params: {
 export function register(params: {
   name: string;
   handle: string;
+  phone: string;
   followers: string;
   category: string;
   password: string;
+  confirmPassword?: string;
   remember: boolean;
+  agreedTerms?: boolean;
 }): AuthResult {
   const handle = normalizeHandle(params.handle);
   if (!handle) return { ok: false, error: 'Vui lòng nhập ID TikTok.' };
+  if (!params.name.trim()) return { ok: false, error: 'Vui lòng nhập tên hiển thị của bạn.' };
+
+  const cleanPhone = (params.phone || '').replace(/[\s.-]/g, '');
+  if (!cleanPhone) return { ok: false, error: 'Vui lòng nhập số điện thoại để liên hệ nhận mẫu.' };
+  if (!/^(0|\+84)[0-9]{8,10}$/.test(cleanPhone)) {
+    return { ok: false, error: 'Số điện thoại không hợp lệ (cần từ 10 chữ số, VD: 0908 123 456).' };
+  }
+
   if (params.password.trim().length < 6) return { ok: false, error: 'Mật khẩu cần ít nhất 6 ký tự.' };
+  if (params.confirmPassword !== undefined && params.password.trim() !== params.confirmPassword.trim()) {
+    return { ok: false, error: 'Hai mật khẩu chưa khớp nhau. Vui lòng kiểm tra lại.' };
+  }
+
+  if (params.agreedTerms === false) {
+    return { ok: false, error: 'Vui lòng đồng ý với Điều khoản dịch vụ & Chính sách bảo mật để tiếp tục.' };
+  }
+
   if (handle === ADMIN_HANDLE) return { ok: false, error: 'ID TikTok này không dùng được.' };
 
   const users = readUsers();
@@ -144,7 +163,7 @@ export function register(params: {
     tiktokHandle: handle,
     channelLink: `https://www.tiktok.com/${handle}`,
     followers: params.followers.trim(),
-    phone: '',
+    phone: cleanPhone,
     email: '',
     password: params.password.trim(),
     verified: false,
@@ -166,10 +185,18 @@ export function register(params: {
   return { ok: true, user };
 }
 
-export function resetPassword(params: { handle: string; newPassword: string; confirmPassword: string }): AuthResult {
+export function resetPassword(params: {
+  handle: string;
+  phone: string;
+  newPassword: string;
+  confirmPassword: string;
+}): AuthResult {
   const handle = normalizeHandle(params.handle);
   const newPassword = params.newPassword.trim();
+  const inputPhone = phoneKey(params.phone);
+
   if (!handle) return { ok: false, error: 'Vui lòng nhập ID TikTok của tài khoản.' };
+  if (!inputPhone) return { ok: false, error: 'Vui lòng nhập số điện thoại đã dùng khi đăng ký tài khoản.' };
   if (newPassword.length < 6) return { ok: false, error: 'Mật khẩu mới cần ít nhất 6 ký tự.' };
   if (newPassword !== params.confirmPassword.trim()) return { ok: false, error: 'Hai mật khẩu chưa khớp nhau.' };
   if (handle === ADMIN_HANDLE) {
@@ -181,7 +208,12 @@ export function resetPassword(params: { handle: string; newPassword: string; con
   let user: KOCUser;
 
   if (idx >= 0) {
-    user = { ...users[idx], password: newPassword };
+    const existing = users[idx];
+    // Bảo vệ tài khoản: Kiểm tra số điện thoại xác minh chính chủ
+    if (existing.phone && phoneKey(existing.phone) && phoneKey(existing.phone) !== inputPhone) {
+      return { ok: false, error: 'Số điện thoại không khớp với tài khoản ID TikTok này. Vui lòng kiểm tra lại.' };
+    }
+    user = { ...existing, phone: existing.phone || inputPhone, password: newPassword };
     users[idx] = user;
   } else {
     // Khôi phục từ hồ sơ / đơn đã nộp trên máy này nếu có, để không mất dữ liệu
@@ -197,6 +229,11 @@ export function resetPassword(params: { handle: string; newPassword: string; con
     } catch (e) {
       console.warn(e);
     }
+
+    if (base.phone && phoneKey(base.phone) && phoneKey(base.phone) !== inputPhone) {
+      return { ok: false, error: 'Số điện thoại không khớp với tài khoản ID TikTok này.' };
+    }
+
     user = {
       id: `koc-reg-${Date.now()}`,
       name: base.name || handle.replace('@', ''),
@@ -204,7 +241,7 @@ export function resetPassword(params: { handle: string; newPassword: string; con
       avatar: base.avatar || APP_LOGOS.userProfile,
       tiktokHandle: handle,
       followers: base.followers || '',
-      phone: base.phone || '',
+      phone: base.phone || inputPhone,
       email: base.email || '',
       verified: false,
       ...base,
