@@ -37,6 +37,11 @@ interface BrandStation {
   tagline: string;
   desc: string;
   badgeEmoji: string;
+  // Thông tin Job hiển thị khi bấm vào Store
+  jobTitle: string;
+  jobReward: string;
+  jobRequirements: string;
+  jobQuota: string;
 }
 
 interface KocityWorldModalProps {
@@ -110,12 +115,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     return () => clearInterval(interval);
   }, [open]);
 
-  // Danh sách các Brand chia theo từng phố ngành hàng
+  // Danh sách các Store Brand (Chỉ ghi tên trên Store, bấm vào hiện Thông báo Job)
   const brandStations: BrandStation[] = [
     // --- PHỐ MỸ PHẨM & SKINCARE ---
     {
       id: 'co-mem',
-      name: 'Trạm Cỏ Mềm Greenlab',
+      name: 'Store Cỏ Mềm Homelab',
       brandName: 'Cỏ Mềm',
       streetName: 'Phố Mỹ Phẩm & Skincare',
       x: 1980,
@@ -126,14 +131,18 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       badgeBg: 'bg-emerald-600',
       badgeEmoji: '🌿',
       tagline: 'Lành sạch thuần Việt · Kho tổng xuất mẫu từ Hà Nội',
-      desc: 'Kho Cỏ Mềm gửi son dưỡng, bọt rửa mặt, serum rau má 0đ tận nhà cho KOC lên video trải nghiệm.',
+      desc: 'Kho Cỏ Mềm gửi son dưỡng gạo, bọt rửa mặt trà xanh, serum rau má 0đ tận nhà cho KOC.',
+      jobTitle: 'Review Bọt Rửa Mặt & Son Gạo Thuần Khiết Cỏ Mềm',
+      jobReward: 'Tài trợ 100% mẫu dùng thử 0đ + Hoa hồng affiliate 18% - 20%',
+      jobRequirements: '1 Video ngắn TikTok/Reels/Shorts trải nghiệm chất bọt mịn và độ dưỡng ẩm lành sạch.',
+      jobQuota: 'Còn 35 suất nhận mẫu miễn phí đợt này',
     },
     {
       id: 'bielenda',
-      name: 'Boutique Bielenda Skin House',
+      name: 'Boutique Bielenda',
       brandName: 'Bielenda',
       streetName: 'Phố Mỹ Phẩm & Skincare',
-      x: 2360,
+      x: 2320,
       y: 380,
       category: 'Dược mỹ phẩm Châu Âu',
       sampleCount: 42,
@@ -142,15 +151,19 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       badgeEmoji: '✨',
       tagline: 'Kho nhập khẩu Sài Gòn · Trị mụn & Phục hồi chuyên sâu',
       desc: 'Dòng sản phẩm toner acid, serum peel da được hàng triệu beauty blogger tin dùng.',
+      jobTitle: 'Chiến Dịch Routine Skincare Treatment Cùng Bielenda Skin House',
+      jobReward: 'Tài trợ bộ kit skincare Châu Âu 0đ + Hoa hồng bán hàng 18%',
+      jobRequirements: '1 Video review quy trình dưỡng da treatment an toàn, phục hồi căng bóng.',
+      jobQuota: 'Còn 42 suất nhận mẫu miễn phí đợt này',
     },
 
     // --- PHỐ THỜI TRANG & OOTD ---
     {
       id: 'visecret',
-      name: 'Showroom Thời Trang ViSecret',
+      name: 'Store ViSecret Fashion',
       brandName: 'ViSecret',
       streetName: 'Phố Thời Trang & OOTD',
-      x: 2080,
+      x: 2060,
       y: 840,
       category: 'Thời trang & Nội y thiết kế',
       sampleCount: 25,
@@ -159,15 +172,19 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       badgeEmoji: '👗',
       tagline: 'Kho may mặc Hà Nội · Tôn dáng chuẩn KOC',
       desc: 'Xuất mẫu áo bra tàng hình, đầm thiết kế miễn phí tận nhà cho KOC lên video biến hình OOTD.',
+      jobTitle: 'Biến Hình OOTD Đầm Thiết Kế & Áo Bra Tàng Hình Tôn Dáng',
+      jobReward: 'Tặng 02 set đầm/áo thiết kế 0đ + Hoa hồng bán hàng 22%',
+      jobRequirements: '1 Video biến hình OOTD chuyển cảnh cuốn hút theo nhạc trend, tôn dáng trang phục.',
+      jobQuota: 'Còn 25 suất nhận mẫu miễn phí đợt này',
     },
 
     // --- PHỐ CÔNG NGHỆ & GAMING ---
     {
       id: 'tranyoo',
-      name: 'Flagship Tranyoo Cyber Arena',
+      name: 'Store Tranyoo Audio',
       brandName: 'Tranyoo',
       streetName: 'Phố Công Nghệ & Live Commerce',
-      x: 2180,
+      x: 2160,
       y: 1280,
       category: 'Tai nghe & Phụ kiện Cyberpunk',
       sampleCount: 30,
@@ -176,6 +193,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       badgeEmoji: '🎧',
       tagline: 'Kho công nghệ Sài Gòn · Giao tai nghe 0đ trong 24h',
       desc: 'Trụ sở phân phối tai nghe Bluetooth TWS, củ sạc nhanh chuẩn Gen Z cho creator livestream.',
+      jobTitle: 'Trải Nghiệm Tai Nghe TWS Chống Ồn & Củ Sạc Siêu Tốc Cyber',
+      jobReward: 'Tài trợ 01 tai nghe Bluetooth TWS 0đ + Thưởng view & Hoa hồng 15%',
+      jobRequirements: '1 Video unbox, test chất âm bass cực đã hoặc livestream giới thiệu sản phẩm.',
+      jobQuota: 'Còn 30 suất nhận mẫu miễn phí đợt này',
     },
   ];
 
@@ -195,7 +216,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       minX: 250,
       maxX: 2450,
       avatarColor: '#ec4899',
-      bubble: 'Đạp xe từ Cư Xá qua Phố Mỹ Phẩm nhận son Cỏ Mềm! 🚲',
+      bubble: 'Đạp xe qua Store Cỏ Mềm nhận son dưỡng 0đ! 🚲',
     },
     {
       id: 'c2',
@@ -243,7 +264,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       minX: 350,
       maxX: 2500,
       avatarColor: '#6366f1',
-      bubble: 'Vừa ghé ViSecret lấy váy OOTD, giờ chạy về Cư Xá dựng clip 👗',
+      bubble: 'Vừa ghé Store ViSecret xem job đầm OOTD mới cực xinh 👗',
     },
     {
       id: 'c5',
@@ -259,7 +280,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       minX: 400,
       maxX: 2400,
       avatarColor: '#06b6d4',
-      bubble: 'Đạp xe qua Trạm Tranyoo test thử tai nghe chống ồn 🎧',
+      bubble: 'Đạp xe qua Store Tranyoo ứng tuyển job tai nghe Bluetooth 🎧',
     },
     {
       id: 'c6',
@@ -304,10 +325,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             isCurrentUser: true,
             bubble:
               userVehicle === 'motorbike'
-                ? 'Đã nhận Xe Máy KOCity từ Chú Bảo Vệ, vi vu khắp các phố brand! 🛵💨'
+                ? 'Đã nhận Xe Máy KOCity từ Chú Bảo Vệ, vi vu khắp các store brand! 🛵💨'
                 : userVehicle === 'bicycle'
                 ? 'Đang đạp Xe Đạp KOCity đi nhận job 🚲'
-                : 'Đang đi bộ, xong 1 job ghé Chú Bảo Vệ nhận xe đạp ngay! 🚶',
+                : 'Đang đi bộ, bấm vào Store Brand để xem thông báo Job 0đ nhé! 🚶',
           },
           ...prev,
         ];
@@ -349,9 +370,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     return () => clearInterval(interval);
   }, [open, trafficLight]);
 
-  // =========================================================================
-  // THUẬT TOÁN ZOOM GOOGLE MAPS (ZOOM TOWARDS CURSOR / FOCAL POINT MATH)
-  // =========================================================================
+  // Thuật toán Zoom bám con trỏ chuột chuẩn Google Maps
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     if (!wrapperRef.current) return;
@@ -359,15 +378,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
 
-    // Tọa độ thực tế trên bản đồ thế giới trước khi zoom
     const worldX = (cursorX - pan.x) / zoom;
     const worldY = (cursorY - pan.y) / zoom;
 
-    // Tỉ lệ scale co giãn mượt mà theo gia tốc con lăn chuột
     const zoomFactor = Math.exp(-e.deltaY * 0.0022);
     const newZoom = Math.min(1.6, Math.max(0.35, zoom * zoomFactor));
 
-    // Điểm neo dưới con trỏ chuột giữ nguyên vị trí tuyệt đối trên màn hình
     const newPanX = cursorX - worldX * newZoom;
     const newPanY = cursorY - worldY * newZoom;
 
@@ -375,7 +391,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     setPan({ x: newPanX, y: newPanY });
   };
 
-  // NHẤP ĐÚP CHUỘT (DOUBLE CLICK) ĐỂ PHÓNG TO VÀO ĐÚNG ĐIỂM ĐÓ NHƯ GOOGLE MAPS
+  // Nhấp đúp chuột để phóng to vào đúng điểm nhấp
   const handleDoubleClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button, .clickable-element')) return;
     if (!wrapperRef.current) return;
@@ -386,7 +402,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     const worldX = (cursorX - pan.x) / zoom;
     const worldY = (cursorY - pan.y) / zoom;
 
-    // Phóng to 1.35x và đưa điểm click dần về giữa màn hình
     const targetZoom = Math.min(1.6, zoom * 1.35);
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
@@ -398,7 +413,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     setPan({ x: newPanX, y: newPanY });
   };
 
-  // ZOOM THEO TÂM MÀN HÌNH KHI BẤM NÚT [+] VÀ [-]
+  // Zoom bám tâm màn hình
   const zoomAtScreenCenter = (factor: number) => {
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
@@ -416,7 +431,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     setPan({ x: newPanX, y: newPanY });
   };
 
-  // Kéo thả chuột (Pan / Drag)
+  // Kéo thả chuột (Pan)
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button, .clickable-element')) return;
     setIsDragging(true);
@@ -433,7 +448,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
   const handleMouseUp = () => setIsDragging(false);
 
-  // Xử lý Touch Mobile: 1 ngón vuốt di chuyển, 2 ngón chụm/tách (Pinch-to-zoom đa điểm)
+  // Multi-touch pinch-to-zoom trên mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       setIsDragging(true);
@@ -497,7 +512,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     touchStartMidRef.current = null;
   };
 
-  // Bay camera (Fly-to) đến các vị trí trọng điểm
+  // Fly-to nhanh camera
   const flyTo = (targetX: number, targetY: number, targetZoom = 0.88) => {
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
@@ -522,7 +537,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               <h1 className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
                 <span>Thành Phố KOCity</span>
                 <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-400/30">
-                  Google Maps Zoom Engine v7.0
+                  Phố Store Brand v8.0
                 </span>
               </h1>
             </div>
@@ -531,7 +546,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               <span>↔️</span>
               <span>🚦 Ngã Tư & Chú Bảo Vệ</span>
               <span>↔️</span>
-              <span>🏢 Các Phố Brand</span>
+              <span>🏪 Các Store Brand (Bấm để xem Job)</span>
             </p>
           </div>
         </div>
@@ -657,7 +672,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         onWheel={handleWheel}
         onDoubleClick={handleDoubleClick}
       >
-        {/* LỚP NỀN TRỜI & HIỆU ỨNG ÁNH SÁNG */}
         <div
           className={cx(
             'absolute inset-0 pointer-events-none transition-opacity duration-1000',
@@ -665,7 +679,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           )}
         />
 
-        {/* CONTAINER THÀNH PHỐ CHÍNH (ĐƯỢC SCALE & TRANSLATE THEO CON TRỎ CHUỘT) */}
+        {/* CONTAINER THÀNH PHỐ CHÍNH */}
         <div
           style={{
             width: `${MAP_W}px`,
@@ -676,16 +690,14 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           }}
           className="relative transition-transform duration-75 ease-out"
         >
-          {/* ========================================================================= */}
-          {/* 1. MẶT CỎ, VỈA HÈ & KHU VỰC ĐÔ THỊ NỀN                                   */}
-          {/* ========================================================================= */}
+          {/* 1. MẶT CỎ, VỈA HÈ & KHU VỰC ĐÔ THỊ NỀN */}
           <div
             className={cx(
               'absolute inset-0 rounded-3xl border-4 transition-colors duration-700',
               isNight ? 'bg-[#0f172a] border-slate-800' : 'bg-[#e2e8f0] border-slate-300'
             )}
           >
-            {/* Phân khu Tây: Đất Khu Cư Xá (Nền cỏ xanh mát) */}
+            {/* Phân khu Tây: Đất Khu Cư Xá */}
             <div
               style={{ left: 80, top: 80, width: 1040, height: 1540 }}
               className={cx(
@@ -694,7 +706,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               )}
             />
 
-            {/* Phân khu Đông: Đất Khu Phố Brand (Nền thương mại hiện đại) */}
+            {/* Phân khu Đông: Đất Khu Phố Brand */}
             <div
               style={{ left: 1680, top: 80, width: 1040, height: 1540 }}
               className={cx(
@@ -704,10 +716,8 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             />
           </div>
 
-          {/* ========================================================================= */}
-          {/* 2. HỆ THỐNG ĐƯỜNG XÁ, ĐẠI LỘ HUYẾT MẠCH & NGÃ TƯ TRUNG TÂM               */}
-          {/* ========================================================================= */}
-          {/* ĐẠI LỘ ĐÔNG - TÂY (Nối Khu Cư Xá <-> Ngã Tư <-> Khu Brand) */}
+          {/* 2. HỆ THỐNG ĐƯỜNG XÁ, ĐẠI LỘ HUYẾT MẠCH & NGÃ TƯ TRUNG TÂM */}
+          {/* ĐẠI LỘ ĐÔNG - TÂY */}
           <div
             style={{ left: 0, top: 760, width: MAP_W, height: 180 }}
             className={cx(
@@ -715,14 +725,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               isNight ? 'bg-[#1e293b]' : 'bg-[#334155]'
             )}
           >
-            {/* Vỉa hè trên */}
             <div className="h-6 w-full bg-[#cbd5e1] border-b-2 border-dashed border-slate-400 flex items-center justify-around px-8">
               {Array.from({ length: 40 }).map((_, i) => (
                 <div key={i} className="h-3 w-1.5 bg-slate-400/50 rounded-xs" />
               ))}
             </div>
 
-            {/* Dải phân cách giữa có hoa cúc vàng & hoa đỏ */}
             <div className="h-5 w-full bg-emerald-800/90 border-y border-amber-300/40 flex items-center justify-around px-4">
               {Array.from({ length: 35 }).map((_, i) => (
                 <span key={i} className="text-[10px] select-none">
@@ -731,7 +739,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               ))}
             </div>
 
-            {/* Vỉa hè dưới */}
             <div className="h-6 w-full bg-[#cbd5e1] border-t-2 border-dashed border-slate-400 flex items-center justify-around px-8">
               {Array.from({ length: 40 }).map((_, i) => (
                 <div key={i} className="h-3 w-1.5 bg-slate-400/50 rounded-xs" />
@@ -739,7 +746,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* ĐẠI LỘ BẮC - NAM (Nối Trụ sở KOCity & Công viên Trung tâm qua Ngã Tư) */}
+          {/* ĐẠI LỘ BẮC - NAM */}
           <div
             style={{ left: 1260, top: 0, width: 180, height: MAP_H }}
             className={cx(
@@ -756,7 +763,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <div className="w-6 h-full bg-[#cbd5e1] border-l-2 border-dashed border-slate-400" />
           </div>
 
-          {/* GIAO LỘ NGÃ TƯ TRUNG TÂM & 4 VẠCH NGỰA VẰN SANG ĐƯỜNG */}
+          {/* GIAO LỘ NGÃ TƯ & 4 VẠCH NGỰA VẰN SANG ĐƯỜNG */}
           <div
             style={{ left: 1230, top: 730, width: 240, height: 240 }}
             className="absolute pointer-events-none"
@@ -783,7 +790,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* CỘT ĐÈN GIAO THÔNG THÔNG MINH (4 HƯỚNG TỰ ĐỔI MÀU XANH/VÀNG/ĐỎ) */}
+          {/* CỘT ĐÈN GIAO THÔNG THÔNG MINH */}
           <div
             style={{ left: 1200, top: 700 }}
             className="absolute z-20 flex flex-col items-center drop-shadow-2xl"
@@ -822,9 +829,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <div className="w-6 h-2 bg-slate-700 rounded-full" />
           </div>
 
-          {/* ========================================================================= */}
-          {/* 3. TÂM ĐIỂM TRUNG TÂM: TRỤ SỞ KOCITY HQ & BỐT GÁC CHÚ BẢO VỆ            */}
-          {/* ========================================================================= */}
+          {/* 3. TÂM ĐIỂM TRUNG TÂM: TRỤ SỞ KOCITY HQ & BỐT GÁC CHÚ BẢO VỆ */}
           <div
             style={{ left: 1470, top: 970 }}
             className="absolute z-20 cursor-pointer group clickable-element"
@@ -920,9 +925,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 4. PHÂN KHU TÂY: KHU ĐÔ THỊ CƯ XÁ KOC (NƠI Ở CỦA CÁC CREATOR)            */}
-          {/* ========================================================================= */}
+          {/* 4. PHÂN KHU TÂY: KHU ĐÔ THỊ CƯ XÁ KOC */}
           <div
             style={{ left: 450, top: 120 }}
             className="absolute z-10 flex flex-col items-center cursor-pointer clickable-element"
@@ -938,7 +941,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* DÃY NHÀ PHỐ CƯ DÂN LIỀN KỀ (DÃY TRÊN) */}
+          {/* DÃY NHÀ PHỐ CƯ DÂN LIỀN KỀ */}
           <div style={{ left: 120, top: 220 }} className="absolute z-10 flex items-end gap-5">
             <div className="w-48 h-56 bg-gradient-to-b from-rose-100 to-rose-200 border-2 border-rose-300 rounded-3xl p-3 shadow-xl relative flex flex-col justify-between">
               <div className="bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full self-start">
@@ -994,7 +997,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           </div>
 
-          {/* QUÁN CAFE CÓC VỈA HÈ & CÔNG VIÊN CƯ XÁ (DÃY DƯỚI) */}
+          {/* QUÁN CAFE CÓC VỈA HÈ & CÔNG VIÊN CƯ XÁ */}
           <div style={{ left: 140, top: 1040 }} className="absolute z-10 flex items-center gap-8">
             <div className="bg-amber-900/90 border-2 border-amber-300 rounded-3xl p-4 text-white shadow-2xl flex items-center gap-4">
               <div className="text-4xl">☕</div>
@@ -1019,7 +1022,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           </div>
 
           {/* ========================================================================= */}
-          {/* 5. PHÂN KHU ĐÔNG: KHU PHỐ THƯƠNG MẠI BRAND (CHIA THEO PHỐ NGÀNH HÀNG)   */}
+          {/* 5. PHÂN KHU ĐÔNG: CÁC STORE BRAND (HÌNH STORE + GHI TÊN THÔI)            */}
           {/* ========================================================================= */}
           <div
             style={{ left: 1950, top: 120 }}
@@ -1027,12 +1030,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             onClick={() => flyTo(2150, 850, 0.85)}
           >
             <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 py-2 rounded-2xl text-white font-black text-sm shadow-2xl ring-2 ring-white flex items-center gap-2 border border-white/40">
-              <span>🏢</span>
-              <span>ĐẠI LỘ CÁC THƯƠNG HIỆU CHIẾN LƯỢC</span>
+              <span>🏪</span>
+              <span>PHỐ CÁC CỬA HÀNG BRAND (STORE)</span>
               <span>🛍️</span>
             </div>
-            <div className="text-[11px] text-slate-300 bg-slate-900/80 px-3 py-0.5 rounded-full mt-1 border border-white/20">
-              Chia thành các tuyến phố chuyên ngành: Mỹ Phẩm · Thời Trang · Công Nghệ
+            <div className="text-[11px] text-amber-300 bg-slate-900/90 px-3 py-0.5 rounded-full mt-1 border border-white/20 font-bold">
+              💡 Bấm vào Store để mở Thông Báo Job & Đăng ký nhận mẫu 0đ!
             </div>
           </div>
 
@@ -1041,55 +1044,81 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <div className="inline-flex items-center gap-1.5 bg-emerald-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
               <span>📍</span>
               <span>PHỐ MỸ PHẨM & SKINCARE</span>
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Kho xuất mẫu HN & SG</span>
             </div>
 
-            <div className="flex items-center gap-6 mt-2">
+            <div className="flex items-end gap-10 mt-3">
+              {/* STORE 1: CỎ MỀM */}
               <div
-                className="w-72 h-64 bg-gradient-to-b from-emerald-900 via-slate-900 to-black border-3 border-emerald-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                className="cursor-pointer group clickable-element flex flex-col items-center"
                 onClick={() => setSelectedBrand(brandStations[0])}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl">🌿</span>
-                  <span className="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                    35 Mẫu 0đ
-                  </span>
+                {/* Huy hiệu chuông báo job nhấp nháy trên nóc */}
+                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
+                  <span>🔔</span>
+                  <span>JOB 0Đ MỚI</span>
                 </div>
-                <div>
-                  <div className="text-sm font-black text-white group-hover:text-emerald-300 transition">
-                    Cỏ Mềm Greenlab
+
+                {/* Khối nhà Store Cỏ Mềm */}
+                <div className="w-44 h-48 bg-gradient-to-b from-emerald-100 to-emerald-200 border-2 border-emerald-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
+                  {/* Mái hiên sọc cửa hàng */}
+                  <div className="h-6 w-full bg-repeating-linear-gradient from-emerald-600 to-emerald-700 rounded-lg flex items-center justify-around px-2 shadow">
+                    <span className="text-[10px] text-white font-bold">STORE</span>
                   </div>
-                  <div className="text-[11px] text-emerald-300 mt-0.5">Mỹ phẩm thuần khiết</div>
-                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
-                    Son dưỡng, bọt rửa mặt, serum rau má xuất mẫu miễn phí.
+
+                  {/* Biển hiệu tên Store */}
+                  <div className="bg-emerald-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
+                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
+                      <span>🌿</span>
+                      <span>CỎ MỀM</span>
+                    </div>
                   </div>
-                </div>
-                <div className="bg-emerald-500/20 border border-emerald-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-emerald-300 group-hover:bg-emerald-500 group-hover:text-white transition">
-                  Bấm xem kho mẫu 0đ ➡️
+
+                  {/* Mặt tiền cửa kính trong suốt & chậu cây */}
+                  <div className="bg-white/80 border border-emerald-300 rounded-lg p-2 h-20 flex flex-col justify-end relative shadow-inner">
+                    <div className="absolute top-1 left-2 text-[10px] text-emerald-800 font-bold">
+                      🌾 Homelab
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <span className="text-xl">🚪</span>
+                      <div className="text-right">
+                        <span className="text-base">🪴</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              {/* STORE 2: BIELENDA */}
               <div
-                className="w-72 h-64 bg-gradient-to-b from-fuchsia-900 via-slate-900 to-black border-3 border-fuchsia-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                className="cursor-pointer group clickable-element flex flex-col items-center"
                 onClick={() => setSelectedBrand(brandStations[1])}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl">✨</span>
-                  <span className="bg-fuchsia-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                    42 Mẫu 0đ
-                  </span>
+                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
+                  <span>🔔</span>
+                  <span>JOB 0Đ MỚI</span>
                 </div>
-                <div>
-                  <div className="text-sm font-black text-white group-hover:text-fuchsia-300 transition">
-                    Bielenda Skin House
+
+                <div className="w-44 h-48 bg-gradient-to-b from-fuchsia-100 to-fuchsia-200 border-2 border-fuchsia-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
+                  <div className="h-6 w-full bg-repeating-linear-gradient from-fuchsia-600 to-fuchsia-700 rounded-lg flex items-center justify-around px-2 shadow">
+                    <span className="text-[10px] text-white font-bold">BOUTIQUE</span>
                   </div>
-                  <div className="text-[11px] text-fuchsia-300 mt-0.5">Dược mỹ phẩm Châu Âu</div>
-                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
-                    Toner acid, serum phục hồi da chuyên sâu cho beauty creator.
+
+                  <div className="bg-fuchsia-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
+                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
+                      <span>✨</span>
+                      <span>BIELENDA</span>
+                    </div>
                   </div>
-                </div>
-                <div className="bg-fuchsia-500/20 border border-fuchsia-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-fuchsia-300 group-hover:bg-fuchsia-500 group-hover:text-white transition">
-                  Bấm xem kho mẫu 0đ ➡️
+
+                  <div className="bg-white/80 border border-fuchsia-300 rounded-lg p-2 h-20 flex flex-col justify-end relative shadow-inner">
+                    <div className="absolute top-1 left-2 text-[10px] text-fuchsia-800 font-bold">
+                      💧 Skin House
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <span className="text-xl">🚪</span>
+                      <span className="text-base">🌸</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1100,43 +1129,51 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <div className="inline-flex items-center gap-1.5 bg-purple-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
               <span>📍</span>
               <span>PHỐ THỜI TRANG & OOTD</span>
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">May mặc & Phụ kiện</span>
             </div>
 
-            <div className="flex items-center gap-6 mt-2">
+            <div className="flex items-end gap-10 mt-3">
+              {/* STORE 3: VISECRET */}
               <div
-                className="w-80 h-60 bg-gradient-to-b from-purple-900 via-slate-900 to-black border-3 border-purple-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                className="cursor-pointer group clickable-element flex flex-col items-center"
                 onClick={() => setSelectedBrand(brandStations[2])}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl">👗</span>
-                  <span className="bg-purple-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                    25 Mẫu 0đ
-                  </span>
+                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
+                  <span>🔔</span>
+                  <span>JOB 0Đ MỚI</span>
                 </div>
-                <div>
-                  <div className="text-sm font-black text-white group-hover:text-purple-300 transition">
-                    ViSecret Showroom
+
+                <div className="w-48 h-52 bg-gradient-to-b from-purple-100 to-purple-200 border-2 border-purple-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
+                  <div className="h-6 w-full bg-repeating-linear-gradient from-purple-600 to-purple-700 rounded-lg flex items-center justify-around px-2 shadow">
+                    <span className="text-[10px] text-white font-bold">FASHION STORE</span>
                   </div>
-                  <div className="text-[11px] text-purple-300 mt-0.5">Thời trang & Nội y thiết kế</div>
-                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
-                    Mẫu bra tàng hình, váy đầm thiết kế tôn dáng cực chuẩn.
+
+                  <div className="bg-purple-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
+                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
+                      <span>👗</span>
+                      <span>VISECRET</span>
+                    </div>
                   </div>
-                </div>
-                <div className="bg-purple-500/20 border border-purple-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-purple-300 group-hover:bg-purple-500 group-hover:text-white transition">
-                  Bấm xem kho mẫu 0đ ➡️
+
+                  <div className="bg-white/80 border border-purple-300 rounded-lg p-2 h-24 flex flex-col justify-end relative shadow-inner">
+                    <div className="absolute top-1 left-2 text-[10px] text-purple-800 font-bold">
+                      ✨ Lookbook Studio
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <span className="text-2xl">🚪</span>
+                      <span className="text-xl">🪞</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="w-64 h-60 bg-slate-900/90 border-2 border-slate-700 rounded-3xl p-4 flex flex-col justify-between">
-                <div className="text-2xl">📸</div>
+              {/* Shophouse Lookbook Studio kế bên */}
+              <div className="w-44 h-48 bg-slate-900/90 border-2 border-slate-700 rounded-2xl p-3 flex flex-col justify-between text-center">
+                <div className="text-3xl">📸</div>
                 <div>
-                  <div className="text-xs font-black text-slate-200">STUDIO CHỤP OOTD</div>
-                  <div className="text-[10px] text-slate-400 mt-1">
-                    Góc chụp phông trắng & ánh sáng vàng ấm cho KOC lên đồ.
-                  </div>
+                  <div className="text-xs font-black text-slate-200">STUDIO OOTD</div>
+                  <div className="text-[10px] text-slate-400 mt-1">Phông nền & Đèn chụp</div>
                 </div>
-                <div className="text-[9px] text-amber-400 font-bold">✨ Miễn phí cho cư dân KOCity</div>
+                <div className="text-[9px] text-amber-400 font-bold">Miễn phí cho KOC</div>
               </div>
             </div>
           </div>
@@ -1146,52 +1183,58 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <div className="inline-flex items-center gap-1.5 bg-blue-600/90 text-white text-xs font-black px-4 py-1.5 rounded-full ring-2 ring-white self-start shadow-xl">
               <span>📍</span>
               <span>PHỐ CÔNG NGHỆ & GAMING</span>
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Phụ kiện & Âm thanh</span>
             </div>
 
-            <div className="flex items-center gap-6 mt-2">
+            <div className="flex items-end gap-10 mt-3">
+              {/* STORE 4: TRANYOO */}
               <div
-                className="w-80 h-60 bg-gradient-to-b from-blue-900 via-slate-900 to-black border-3 border-blue-400 rounded-3xl p-4 shadow-2xl flex flex-col justify-between cursor-pointer group hover:scale-105 transition-all clickable-element"
+                className="cursor-pointer group clickable-element flex flex-col items-center"
                 onClick={() => setSelectedBrand(brandStations[3])}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl">🎧</span>
-                  <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-                    30 Mẫu 0đ
-                  </span>
+                <div className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce flex items-center gap-1 mb-1">
+                  <span>🔔</span>
+                  <span>JOB 0Đ MỚI</span>
                 </div>
-                <div>
-                  <div className="text-sm font-black text-white group-hover:text-blue-300 transition">
-                    Tranyoo Cyber Arena
+
+                <div className="w-48 h-52 bg-gradient-to-b from-blue-100 to-blue-200 border-2 border-blue-400 rounded-2xl p-2.5 shadow-2xl relative flex flex-col justify-between group-hover:scale-105 transition-transform">
+                  <div className="h-6 w-full bg-repeating-linear-gradient from-blue-600 to-blue-700 rounded-lg flex items-center justify-around px-2 shadow">
+                    <span className="text-[10px] text-white font-bold">TECH STORE</span>
                   </div>
-                  <div className="text-[11px] text-blue-300 mt-0.5">Tai nghe Bluetooth & Sạc nhanh</div>
-                  <div className="text-[10px] text-slate-300 mt-1 line-clamp-2">
-                    Kho công nghệ Sài Gòn giao tai nghe 0đ trong 24h cho KOC test âm thanh.
+
+                  <div className="bg-blue-600 text-white text-center py-1 rounded-md shadow-md ring-1 ring-white/50">
+                    <div className="text-xs font-black tracking-wide flex items-center justify-center gap-1">
+                      <span>🎧</span>
+                      <span>TRANYOO</span>
+                    </div>
                   </div>
-                </div>
-                <div className="bg-blue-500/20 border border-blue-400/40 rounded-xl py-1 text-center text-[10px] font-bold text-blue-300 group-hover:bg-blue-500 group-hover:text-white transition">
-                  Bấm xem kho mẫu 0đ ➡️
+
+                  <div className="bg-white/80 border border-blue-300 rounded-lg p-2 h-24 flex flex-col justify-end relative shadow-inner">
+                    <div className="absolute top-1 left-2 text-[10px] text-blue-800 font-bold">
+                      ⚡ Cyber Arena
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <span className="text-2xl">🚪</span>
+                      <span className="text-xl">🎙️</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="w-64 h-60 bg-slate-900/60 border-2 border-dashed border-amber-400/40 rounded-3xl p-4 flex flex-col justify-between text-center items-center">
+              {/* Phố Tiêu Dùng Mở Rộng: Chờ đón các Store mới */}
+              <div className="w-44 h-48 bg-slate-900/60 border-2 border-dashed border-amber-400/40 rounded-2xl p-3 flex flex-col justify-between text-center items-center">
                 <div className="text-3xl">📦</div>
                 <div>
-                  <div className="text-xs font-black text-amber-300">PHỐ TIÊU DÙNG MỞ RỘNG</div>
-                  <div className="text-[10px] text-slate-300 mt-1">
-                    Sẵn sàng chào đón các Brand FMCG, Mẹ & Bé, Gia dụng mới gia nhập KOCity!
-                  </div>
+                  <div className="text-xs font-black text-amber-300">STORE MỞ RỘNG</div>
+                  <div className="text-[10px] text-slate-300 mt-1">Chờ đón Brand mới</div>
                 </div>
                 <div className="text-[9px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">
-                  Sức chứa mở rộng vô hạn
+                  Sức chứa vô hạn
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 6. HỆ THỐNG CÂY XANH RỢP BÓNG & CỘT ĐÈN ĐƯỜNG CHIẾU SÁNG TOÀN THÀNH PHỐ  */}
-          {/* ========================================================================= */}
+          {/* 6. HỆ THỐNG CÂY XANH & CỘT ĐÈN ĐƯỜNG */}
           <div className="absolute inset-0 pointer-events-none">
             {[200, 450, 750, 1050, 1550, 1850, 2150, 2450].map((treeX) => (
               <React.Fragment key={treeX}>
@@ -1220,9 +1263,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             ))}
           </div>
 
-          {/* ========================================================================= */}
-          {/* 7. CƯ DÂN KOC DI CHUYỂN TRÊN ĐƯỜNG & CHUYỂN ĐỘNG THEO TÍN HIỆU ĐÈN ĐỎ     */}
-          {/* ========================================================================= */}
+          {/* 7. CƯ DÂN KOC DI CHUYỂN */}
           {citizens.map((c) => (
             <div
               key={c.id}
@@ -1287,7 +1328,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <div className="text-[11px] text-slate-300 mt-1 leading-relaxed">
               • 🏠 <strong>Tây:</strong> Khu Cư Xá KOC (Nơi ở, ban công, cafe cóc)<br />
               • 🚦 <strong>Trung tâm:</strong> Ngã Tư Đèn Giao Thông & Chú Bảo Vệ Trụ Sở<br />
-              • 🏢 <strong>Đông:</strong> Phố Mỹ Phẩm · Phố Thời Trang · Phố Công Nghệ
+              • 🏪 <strong>Đông:</strong> Các Store Brand (Bấm Store mở Thông Báo Job)
             </div>
           </div>
           <div className="bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-xl ring-1 ring-white/10 text-[11px] text-emerald-300">
@@ -1295,13 +1336,9 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* CỤM ĐIỀU KHIỂN BẢN ĐỒ NỔI GÓC DƯỚI BÊN PHẢI (CHUẨN GOOGLE MAPS CONTROLS)   */}
-        {/* ========================================================================= */}
+        {/* CỤM ĐIỀU KHIỂN NỔI GÓC DƯỚI BÊN PHẢI (CHUẨN GOOGLE MAPS CONTROLS) */}
         <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2.5">
-          {/* Cụm Nút Phóng to / Thu nhỏ & Định vị trung tâm */}
           <div className="flex flex-col rounded-2xl bg-slate-900/95 border border-white/20 p-1 shadow-2xl backdrop-blur-md ring-2 ring-black/40">
-            {/* Phóng to */}
             <button
               type="button"
               onClick={() => zoomAtScreenCenter(1.22)}
@@ -1310,8 +1347,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             >
               +
             </button>
-
-            {/* Thu nhỏ */}
             <button
               type="button"
               onClick={() => zoomAtScreenCenter(0.82)}
@@ -1320,8 +1355,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             >
               −
             </button>
-
-            {/* Định vị về Trụ Sở KOCity & Chú Bảo Vệ */}
             <button
               type="button"
               onClick={() => flyTo(1400, 950, 1.0)}
@@ -1332,7 +1365,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </button>
           </div>
 
-          {/* Thanh đo tỉ lệ Google Maps (Scale Bar) */}
           <div className="flex items-center gap-1.5 rounded-xl bg-slate-900/90 border border-white/15 px-2.5 py-1 text-[10px] text-slate-300 font-mono shadow-xl backdrop-blur-sm">
             <span className="font-bold text-amber-300">{Math.round(zoom * 100)}%</span>
             <span>•</span>
@@ -1508,10 +1540,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         </div>
       )}
 
-      {/* MODAL 3: CHI TIẾT TRẠM BRAND THEO PHỐ */}
+      {/* MODAL 3: THÔNG BÁO JOB & CHIẾN DỊCH BRAND (KHI BẤM VÀO STORE) */}
       {selectedBrand && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="relative w-full max-w-md rounded-3xl bg-slate-900 border-2 border-white/20 p-6 text-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border-2 border-white/20 p-6 text-white shadow-2xl ring-4 ring-white/10">
             <button
               type="button"
               onClick={() => setSelectedBrand(null)}
@@ -1520,7 +1552,8 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               ✕
             </button>
 
-            <div className="flex items-center gap-3.5 mb-4">
+            {/* Header thông báo job từ store */}
+            <div className="flex items-center gap-3.5 mb-4 border-b border-white/10 pb-4">
               <div
                 className={cx(
                   'flex h-14 w-14 items-center justify-center rounded-2xl text-3xl shadow-lg ring-2 ring-white/30',
@@ -1530,33 +1563,68 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 {selectedBrand.badgeEmoji}
               </div>
               <div>
-                <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">
-                  {selectedBrand.streetName}
-                </span>
-                <h3 className="text-lg font-black text-white">{selectedBrand.name}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span>📢</span>
+                    <span>THÔNG BÁO JOB MỚI</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider">
+                    {selectedBrand.streetName}
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-white mt-0.5">{selectedBrand.name}</h3>
                 <p className="text-xs text-slate-400">{selectedBrand.category}</p>
               </div>
             </div>
 
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2 mb-4">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Kho mẫu 0đ sẵn có:</span>
-                <span className="font-extrabold text-amber-300 text-sm">
-                  {selectedBrand.sampleCount} Sản phẩm
-                </span>
+            {/* Chi tiết công việc & Chiến dịch mẫu 0đ */}
+            <div className="space-y-3 mb-5">
+              {/* Tên Job */}
+              <div className="bg-gradient-to-r from-purple-900/40 to-slate-900 border border-purple-400/30 rounded-2xl p-3.5">
+                <div className="text-[10px] text-purple-300 font-extrabold uppercase tracking-wider">
+                  Tên Chiến Dịch / Job:
+                </div>
+                <div className="text-sm font-black text-white mt-1 leading-snug">
+                  {selectedBrand.jobTitle}
+                </div>
               </div>
-              <div className="text-xs text-slate-300 leading-relaxed border-t border-white/10 pt-2">
-                {selectedBrand.desc}
+
+              {/* Quyền lợi thù lao */}
+              <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-3.5 flex items-start gap-3">
+                <span className="text-2xl mt-0.5">🎁</span>
+                <div>
+                  <div className="text-[10px] text-emerald-300 font-extrabold uppercase tracking-wider">
+                    Quyền Lợi & Thù Lao KOC:
+                  </div>
+                  <div className="text-xs font-bold text-emerald-100 mt-0.5">
+                    {selectedBrand.jobReward}
+                  </div>
+                  <div className="text-[11px] text-emerald-400 font-mono mt-1">
+                    ✅ {selectedBrand.jobQuota}
+                  </div>
+                </div>
+              </div>
+
+              {/* Yêu cầu công việc */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5">
+                <div className="text-[10px] text-amber-300 font-extrabold uppercase tracking-wider">
+                  Yêu Cầu Nội Dung:
+                </div>
+                <div className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  {selectedBrand.jobRequirements}
+                </div>
               </div>
             </div>
 
+            {/* Nút Ứng Tuyển & Nhận Mẫu 0đ */}
             <div className="space-y-2">
               <Button
                 variant="primary"
                 block
                 onClick={() => {
                   const match = campaigns.find((c) =>
-                    c.title.toLowerCase().includes(selectedBrand.brandName.toLowerCase())
+                    c.title.toLowerCase().includes(selectedBrand.brandName.toLowerCase()) ||
+                    (c as any).brand?.toLowerCase().includes(selectedBrand.brandName.toLowerCase())
                   );
                   if (match && onSelectCampaign) {
                     onSelectCampaign(match.id);
@@ -1566,9 +1634,9 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                     setSelectedBrand(null);
                   }
                 }}
-                className={cx('font-black text-white shadow-lg cursor-pointer', selectedBrand.badgeBg)}
+                className={cx('font-black text-white shadow-lg cursor-pointer h-12 text-sm', selectedBrand.badgeBg)}
               >
-                Đăng Ký Nhận Mẫu 0đ Ngay 🎁
+                Ứng Tuyển & Đăng Ký Nhận Mẫu 0đ Ngay 🎁
               </Button>
               <Button
                 variant="ghost"
@@ -1576,7 +1644,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 onClick={() => setSelectedBrand(null)}
                 className="text-slate-400 hover:text-white"
               >
-                Đóng
+                Để Xem Sau
               </Button>
             </div>
           </div>
@@ -1649,14 +1717,14 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       {/* ===== FOOTER HƯỚNG DẪN TƯƠNG TÁC ===== */}
       <footer className="flex flex-wrap items-center justify-between border-t border-white/10 bg-slate-950/90 px-4 py-2 text-xs text-slate-400 sm:px-6 z-30">
         <div className="flex items-center gap-3 text-[11px]">
-          <span>💡 <strong>Lăn chuột vào điểm cần xem:</strong> Tự động bám và phóng to đúng con trỏ chuột</span>
+          <span>💡 Bấm vào <strong>Store Cửa Hàng</strong> để xem Thông Báo Job & Nhận mẫu 0đ</span>
           <span className="hidden sm:inline">•</span>
-          <span><strong>Nhấp đúp chuột:</strong> Phóng to 1 chạm vào vị trí đó</span>
+          <span>Bấm <strong>👮 Chú Bảo Vệ</strong> để nghe dặn dò & đổi xe</span>
           <span className="hidden sm:inline">•</span>
-          <span><strong>Chụm 2 ngón tay (Mobile):</strong> Zoom đa điểm mượt mà</span>
+          <span>Lăn chuột bám theo con trỏ chuẩn Google Maps 🎯</span>
         </div>
         <div className="text-[10px] text-slate-500 hidden md:block">
-          Google Maps Anchor Math Engine
+          KOCity Clean Storefront Engine
         </div>
       </footer>
     </div>
