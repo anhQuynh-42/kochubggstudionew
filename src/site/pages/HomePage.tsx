@@ -8,10 +8,12 @@ import { LIVE_ACTION_TEXT } from '../../lib/liveActivity';
 import { ROUTES, ZALO_GROUP_URL } from '../../lib/constants';
 import { useSiteUI } from '../SiteUI';
 import { CampaignCard } from '../components/CampaignCard';
-import { HeroImageSheet } from '../components/HeroImageSheet';
 import { KocitySkyline } from '../components/KocitySkyline';
-import { KocityWorldModal } from '../components/KocityWorldModal';
 import { Badge, Button, Chip, EmptyState, Icon, SectionTitle, Sheet, cx } from '../ui';
+
+// Tải lười (Lazy load) các modal nặng để trang chủ hiển thị tức thì
+const HeroImageSheet = React.lazy(() => import('../components/HeroImageSheet').then(m => ({ default: m.HeroImageSheet })));
+const KocityWorldModal = React.lazy(() => import('../components/KocityWorldModal').then(m => ({ default: m.KocityWorldModal })));
 
 type SortKey = 'popular' | 'commission' | 'spots' | 'ending';
 
@@ -658,18 +660,21 @@ export const HomePage: React.FC = () => {
           </a>
         </section>
 
-        {isAdmin && <HeroImageSheet open={heroSheetOpen} onClose={() => setHeroSheetOpen(false)} />}
-
-        {/* Modal Thành phố Cư dân KOCity Metaverse */}
-        <KocityWorldModal
-          open={cityOpen}
-          onClose={() => setCityOpen(false)}
-          campaigns={campaigns}
-          currentUser={currentUser}
-          isAdmin={isAdmin}
-          isNightDefault={isNight}
-          onSelectCampaign={(campId) => navigate(ROUTES.campaign(campId))}
-        />
+        {/* Modal tải lười: chỉ tải và mount khi người dùng bấm mở */}
+        <React.Suspense fallback={null}>
+          {isAdmin && heroSheetOpen && <HeroImageSheet open={heroSheetOpen} onClose={() => setHeroSheetOpen(false)} />}
+          {cityOpen && (
+            <KocityWorldModal
+              open={cityOpen}
+              onClose={() => setCityOpen(false)}
+              campaigns={campaigns}
+              currentUser={currentUser}
+              isAdmin={isAdmin}
+              isNightDefault={isNight}
+              onSelectCampaign={(campId) => navigate(ROUTES.campaign(campId))}
+            />
+          )}
+        </React.Suspense>
 
         {/* ===== Bảng lọc ===== */}
         <Sheet
