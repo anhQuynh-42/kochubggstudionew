@@ -812,33 +812,8 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   const [showGuardModal, setShowGuardModal] = useState<boolean>(false);
   const [showBiddingModal, setShowBiddingModal] = useState<boolean>(false);
 
-  // Bảng chú thích bản đồ (tự động thu gọn sau 5s hoặc đóng trước bằng nút ✕, có thể mở lại)
-  const [showLegend, setShowLegend] = useState<boolean>(true);
-  const legendTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setShowLegend(true);
-    if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
-    legendTimerRef.current = setTimeout(() => {
-      setShowLegend(false);
-    }, 5000);
-    return () => {
-      if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
-    };
-  }, [open]);
-
-  const handlePauseLegendTimer = () => {
-    if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
-  };
-
-  const handleResumeLegendTimer = () => {
-    if (!showLegend) return;
-    if (legendTimerRef.current) clearTimeout(legendTimerRef.current);
-    legendTimerRef.current = setTimeout(() => {
-      setShowLegend(false);
-    }, 3000);
-  };
+  // Modal chú thích bản đồ (chỉ mở khi bấm vào nút ℹ️)
+  const [showLegendModal, setShowLegendModal] = useState<boolean>(false);
 
   // ==================== CẤU HÌNH QUY HOẠCH ĐÔ THỊ ĐỘNG (ADMIN BUILDER) ====================
   const [stores, setStores] = useState<BrandStation[]>(() => {
@@ -1421,160 +1396,70 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none overflow-hidden font-sans">
-      {/* ===== HEADER ĐIỀU KHIỂN & ĐỊNH VỊ NHANH ===== */}
-      <header className="flex flex-wrap items-center justify-between border-b border-white/10 bg-slate-900/90 px-4 py-2.5 backdrop-blur-md z-30 shadow-2xl">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-600 shadow-lg shadow-purple-500/30 ring-2 ring-white/20">
-            <span className="text-xl">🏙️</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
-                <span>Thành Phố KOCity</span>
-                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-emerald-400/30">
-                  Bản Đồ 2 Bờ & Cầu Độc Quyền v10.0
-                </span>
-              </h1>
-            </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5 hidden sm:flex">
-              <span>🏠 Bờ KOC (Tây)</span>
-              <span>↔️</span>
-              <span>🌊 Dòng Sông & 🌉 Cầu KOCity Độc Quyền</span>
-              <span>↔️</span>
-              <span>🏪 Bờ Brand (Đông)</span>
-            </p>
-          </div>
+      {/* ===== CỤM ĐIỀU KHIỂN NỔI GÓC TRÊN BÊN TRÁI (LOGO TINH TẾ) ===== */}
+      <div className="absolute top-4 left-4 z-40 pointer-events-none flex items-center gap-2">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md ring-1 ring-white/15 shadow-xl text-xs font-bold text-white/95">
+          <span className="text-sm">🏙️</span>
+          <span className="tracking-wider font-extrabold bg-gradient-to-r from-amber-300 via-pink-400 to-indigo-300 bg-clip-text text-transparent">
+            KOCITY
+          </span>
         </div>
+      </div>
 
-        {/* Cụm Nút Di Chuyển Camera Nhanh */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <div className="hidden lg:flex items-center gap-1 bg-white/10 p-1 rounded-full ring-1 ring-white/15">
-            <button
-              type="button"
-              onClick={() => flyTo(650, 450, 0.95)}
-              className="rounded-full px-3 py-1 font-semibold text-slate-200 hover:bg-white/20 transition cursor-pointer"
-            >
-              🏠 Bờ KOC (Cư Xá)
-            </button>
-            <button
-              type="button"
-              onClick={() => flyTo(1400, 850, 1.05)}
-              className="rounded-full bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 px-3 py-1 font-black text-white shadow-lg transition hover:opacity-95 ring-1 ring-amber-300/60 cursor-pointer"
-            >
-              🌉 Cầu KOCity & Tòa Tháp
-            </button>
-            <button
-              type="button"
-              onClick={() => flyTo(1220, 960, 1.15)}
-              className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 font-bold text-slate-950 shadow transition hover:opacity-95 cursor-pointer"
-            >
-              👮 Chú Bảo Vệ
-            </button>
-            <button
-              type="button"
-              onClick={() => flyTo(2150, 420, 0.95)}
-              className="rounded-full px-3 py-1 font-black bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow transition hover:opacity-95 cursor-pointer ring-1 ring-white/30"
-            >
-              🏪 Bờ Brand (Store 3D)
-            </button>
-            <button
-              type="button"
-              onClick={() => flyTo(2150, 1250, 0.95)}
-              className="rounded-full px-3 py-1 font-bold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition cursor-pointer ring-1 ring-amber-400/40"
-            >
-              🚧 Đất Trống Đấu Thầu
-            </button>
-            <button
-              type="button"
-              onClick={() => flyTo(1400, 850, 0)}
-              className="rounded-full px-3 py-1 font-bold text-slate-300 hover:bg-white/20 transition cursor-pointer"
-            >
-              🗺️ Toàn Cảnh Tràn Viền
-            </button>
-          </div>
-
-          {/* Công tắc Ngày / Đêm */}
+      {/* ===== CỤM ĐIỀU KHIỂN NỔI GÓC TRÊN BÊN PHẢI (THAY THẾ HEADER DÀY) ===== */}
+      <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+        {/* Nút Chế Độ Quy Hoạch Admin (chỉ hiện với admin) */}
+        {isEffectiveAdmin && (
           <button
             type="button"
-            onClick={() => setIsNight(!isNight)}
-            title={isNight ? 'Chuyển sang Ban ngày rực rỡ' : 'Chuyển sang Ban đêm lung linh'}
+            onClick={() => {
+              const nextState = !isBuilderMode;
+              setIsBuilderMode(nextState);
+              if (nextState) {
+                showToastNotice('🛠️ Chế độ Quy Hoạch bật: Kéo thả các Store / Toà tháp / Đường xá!');
+              } else {
+                showToastNotice('Đã tắt chế độ Quy Hoạch.');
+              }
+            }}
             className={cx(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ring-1',
-              isNight
-                ? 'bg-amber-400/20 text-amber-200 ring-amber-300/40 hover:bg-amber-400/30'
-                : 'bg-white/15 text-white ring-white/20 hover:bg-white/25'
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black transition-all cursor-pointer ring-1 shadow-xl backdrop-blur-md',
+              isBuilderMode
+                ? 'bg-amber-500 text-slate-950 ring-amber-300 animate-pulse'
+                : 'bg-slate-900/80 text-emerald-400 ring-white/15 hover:bg-slate-800'
             )}
+            title="Chế độ Quản trị viên"
           >
-            <Icon name={isNight ? 'light_mode' : 'dark_mode'} className="text-[14px]" />
-            <span className="hidden sm:inline">{isNight ? '☀️ Ban Ngày' : '🌙 Ban Đêm'}</span>
+            <span>🛠️</span>
+            <span className="hidden sm:inline">{isBuilderMode ? 'ĐANG QUY HOẠCH' : 'QUY HOẠCH'}</span>
           </button>
+        )}
 
-          {/* Cụm Zoom Button Trên Header */}
-          <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15">
-            <button
-              type="button"
-              onClick={() => zoomAtScreenCenter(0.85)}
-              className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 font-black cursor-pointer text-sm"
-              title="Thu nhỏ"
-            >
-              -
-            </button>
-            <span className="w-11 text-center font-mono text-[11px] font-bold text-slate-300">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => zoomAtScreenCenter(1.18)}
-              className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/20 font-black cursor-pointer text-sm"
-              title="Phóng to"
-            >
-              +
-            </button>
-          </div>
+        {/* Nút Ngày / Đêm ☀️/🌙 */}
+        <button
+          type="button"
+          onClick={() => setIsNight(!isNight)}
+          title={isNight ? 'Chuyển sang Ban ngày rực rỡ' : 'Chuyển sang Ban đêm lung linh'}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/80 hover:bg-slate-800 text-amber-300 transition ring-1 ring-white/15 backdrop-blur-md shadow-xl cursor-pointer text-sm"
+        >
+          {isNight ? '☀️' : '🌙'}
+        </button>
 
-          {/* Nút Chế Độ Quy Hoạch Admin */}
-          {isEffectiveAdmin && (
-            <button
-              type="button"
-              onClick={() => {
-                const nextState = !isBuilderMode;
-                setIsBuilderMode(nextState);
-                if (nextState) {
-                  showToastNotice('🛠️ Chế độ Quy Hoạch bật: Kéo thả các Store / Toà tháp / Bốt gác / Đường xá thoải mái!');
-                } else {
-                  showToastNotice('Đã tắt chế độ Quy Hoạch.');
-                }
-              }}
-              className={cx(
-                'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ring-2 shadow-lg',
-                isBuilderMode
-                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white ring-amber-300 animate-pulse'
-                  : 'bg-emerald-600/90 text-white ring-emerald-400 hover:bg-emerald-500'
-              )}
-              title="Chế độ Quản trị viên: Kéo thả các vị trí, thêm Store, mở đường mới"
-            >
-              <Icon name="architecture" className="text-[14px]" />
-              <span>{isBuilderMode ? '🛠️ ĐANG QUY HOẠCH' : '🛠️ QUY HOẠCH (ADMIN)'}</span>
-            </button>
-          )}
+        {/* Nút Tròn ✕ Mờ Đóng Bản Đồ */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/80 hover:bg-rose-600 text-white/90 hover:text-white transition ring-1 ring-white/15 backdrop-blur-md shadow-xl cursor-pointer text-sm font-bold"
+          title="Đóng thành phố"
+        >
+          ✕
+        </button>
+      </div>
 
-          {/* Nút Đóng */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-rose-600 text-white transition ring-1 ring-white/20 cursor-pointer"
-            title="Đóng thành phố"
-          >
-            <Icon name="close" className="text-lg" />
-          </button>
-        </div>
-      </header>
-
-      {/* ===== KHU VỰC THÀNH PHỐ CANVAS 2800x1700 (PAN & ZOOM CHUẨN GOOGLE MAPS) ===== */}
+      {/* ===== KHU VỰC THÀNH PHỐ CANVAS 2800x1700 (TOÀN BỘ 100% MÀN HÌNH) ===== */}
       <div
         ref={wrapperRef}
         className={cx(
-          'relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing select-none transition-colors duration-700 touch-none',
+          'relative w-full h-full flex-1 overflow-hidden cursor-grab active:cursor-grabbing select-none transition-colors duration-700 touch-none',
           isNight ? 'bg-[#090b16]' : 'bg-[#e9f2ea]'
         )}
         onMouseDown={handleMouseDown}
@@ -1981,13 +1866,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </div>
             )}
 
-            {/* Huy hiệu đỉnh tháp hào quang */}
-            <div className="bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 px-4 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-4 ring-amber-300 whitespace-nowrap flex items-center gap-1.5 border border-white animate-bounce z-20 mb-[-14px]">
+            {/* Huy hiệu đỉnh tháp tinh tế: 👑 KOCity HQ */}
+            <div className="bg-slate-950/90 backdrop-blur-md px-3 py-1 rounded-full text-amber-300 text-xs font-black shadow-2xl ring-2 ring-amber-400/80 whitespace-nowrap flex items-center gap-1.5 border border-white/15 z-20 mb-[-12px] group-hover:scale-110 transition-transform">
               <span>👑</span>
-              <span>TRỤ SỞ KOCITY · CHIẾC CẦU ĐỘC QUYỀN</span>
-              <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black">
-                HOA HỒNG CAO HƠN ✨
-              </span>
+              <span>KOCity HQ</span>
             </div>
 
             {/* Khối tòa nhà 3D Isometric Clay theo đúng ảnh mẫu */}
@@ -2001,13 +1883,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 alt="Trụ Sở KOCity Landmark 3D"
                 className="w-full h-full object-contain filter drop-shadow-[0_20px_30px_rgba(0,0,0,0.65)] select-none pointer-events-none"
               />
-
-              {/* Tag nổi bật dưới chân tòa nhà */}
-              <div className="absolute bottom-2 bg-slate-950/90 border-2 border-amber-400 px-4 py-1 rounded-full text-amber-300 font-black text-[11px] shadow-2xl tracking-wide flex items-center gap-1.5 ring-2 ring-black">
-                <span>🚀</span>
-                <span>BẤM VÀO XEM ĐẶC QUYỀN HOA HỒNG</span>
-                <span>✨</span>
-              </div>
             </div>
           </div>
 
@@ -2434,77 +2309,68 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           ))}
         </div>
-
-        {/* BẢNG CHÚ THÍCH HỆ THỐNG GIAO THÔNG Ở GÓC TRÊN BẢN ĐỒ (TỰ ĐỘNG THU GỌN SAU 5S HOẶC ĐÓNG SỚM) */}
-        <div className="absolute top-4 left-4 z-20 hidden sm:flex flex-col gap-1.5 pointer-events-auto transition-all duration-300">
-          {showLegend ? (
-            <div
-              onMouseEnter={handlePauseLegendTimer}
-              onMouseLeave={handleResumeLegendTimer}
-              className="bg-slate-900/95 backdrop-blur-md p-3 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-2xl max-w-sm animate-in fade-in zoom-in-95 duration-200"
-            >
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-1.5 mb-1.5">
-                <div className="font-extrabold text-amber-300 flex items-center gap-1.5 text-xs tracking-wide">
-                  <span>🌉</span>
-                  <span>BẢN ĐỒ KOCITY: KẾT NỐI 2 BỜ SÔNG</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handlePauseLegendTimer();
-                    setShowLegend(false);
-                  }}
-                  title="Thu gọn bảng chú thích"
-                  className="flex h-5 w-5 items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition text-xs font-bold cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="text-[11px] text-slate-300 leading-relaxed space-y-1">
-                <div>• 🏠 <strong className="text-white">Bờ Tây (Trái):</strong> Cư Xá KOC (Nơi ở, studio, cafe cóc)</div>
-                <div>• 🌊 <strong className="text-white">Dòng Sông Ngăn Cách:</strong> Tượng trưng khó khăn nếu kết nối tự phát</div>
-                <div>• 🌉 <strong className="text-amber-300">Cầu KOCity & Tòa Tháp:</strong> Chiếc cầu độc quyền giúp KOC nhận hoa hồng cao hơn hẳn & an toàn 100%</div>
-                <div>• 🏪 <strong className="text-white">Bờ Đông (Phải):</strong> Đại Lộ các Store Brand 3D & Khu đất đấu thầu</div>
-              </div>
-              <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
-                <span>⏱️ Tự thu gọn sau 5s</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handlePauseLegendTimer();
-                    setShowLegend(false);
-                  }}
-                  className="text-amber-400 hover:underline cursor-pointer"
-                >
-                  Đóng ngay
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                handlePauseLegendTimer();
-                setShowLegend(true);
-              }}
-              title="Mở bảng chú thích bản đồ"
-              className="flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-amber-300 px-3 py-1.5 rounded-xl border border-white/15 shadow-xl backdrop-blur-md text-xs font-semibold cursor-pointer transition active:scale-95 group"
-            >
-              <span>🌉</span>
-              <span>Chú thích bản đồ</span>
-              <span className="text-[10px] text-slate-400 group-hover:text-amber-300">▾</span>
-            </button>
-          )}
+        {/* ===== THANH DOCK NỔI BO TRÒN SIÊU MỎNG DƯỚI ĐÁY MÀN HÌNH (KIỂU IOS DOCK) ===== */}
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-2xl ring-1 ring-black/40 max-w-[94vw] overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => flyTo(650, 450, 1.15)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+          >
+            <span>🏠</span>
+            <span>Cư Xá KOC</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => flyTo(1400, 850, 1.25)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold text-amber-300 bg-white/10 hover:bg-white/20 active:scale-95 transition whitespace-nowrap ring-1 ring-amber-400/30 cursor-pointer"
+          >
+            <span>🌉</span>
+            <span>Cầu KOCity</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => flyTo(1220, 960, 1.35)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+          >
+            <span>👮</span>
+            <span className="hidden sm:inline">Bảo Vệ</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => flyTo(2150, 420, 1.15)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+          >
+            <span>🏪</span>
+            <span>Store Brand</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => flyTo(2150, 1250, 1.15)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-amber-300/90 hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+          >
+            <span>🚧</span>
+            <span className="hidden sm:inline">Đấu Thầu</span>
+          </button>
+          <div className="w-[1px] h-4 bg-white/20 my-auto mx-0.5" />
+          <button
+            type="button"
+            onClick={() => flyTo(1400, 850, 0)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-sky-300 hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+            title="Xem toàn cảnh tràn màn hình"
+          >
+            <span>🗺️</span>
+            <span>Toàn Cảnh</span>
+          </button>
         </div>
 
-        {/* CỤM ĐIỀU KHIỂN NỔI GÓC DƯỚI BÊN PHẢI (CHUẨN GOOGLE MAPS CONTROLS) */}
-        <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2.5">
-          <div className="flex flex-col rounded-2xl bg-slate-900/95 border border-white/20 p-1 shadow-2xl backdrop-blur-md ring-2 ring-black/40">
+        {/* CỤM ĐIỀU KHIỂN NỔI GÓC DƯỚI BÊN PHẢI (ZOOM + RESET + CHÚ THÍCH ℹ️) */}
+        <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2">
+          <div className="flex flex-col rounded-2xl bg-slate-900/90 border border-white/20 p-1 shadow-2xl backdrop-blur-md ring-2 ring-black/40">
             <button
               type="button"
               onClick={() => zoomAtScreenCenter(1.22)}
               title="Phóng to (Zoom In)"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
             >
               +
             </button>
@@ -2512,17 +2378,25 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               type="button"
               onClick={() => zoomAtScreenCenter(0.82)}
               title="Thu nhỏ (Zoom Out)"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
             >
               −
             </button>
             <button
               type="button"
-              onClick={() => flyTo(1400, 950, 1.0)}
+              onClick={() => flyTo(1400, 850, 1.15)}
               title="Về Trọng Tâm KOCity HQ & Chú Bảo Vệ"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-base"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-base border-b border-white/10"
             >
               🎯
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLegendModal(true)}
+              title="Xem chú thích ý nghĩa bản đồ"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-200 hover:text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-sm font-bold"
+            >
+              ℹ️
             </button>
           </div>
 
@@ -2530,11 +2404,47 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             <span className="font-bold text-amber-300">{Math.round(zoom * 100)}%</span>
             <span>•</span>
             <div className="flex flex-col items-center">
-              <div className="w-12 h-1 border-b-2 border-x-2 border-white/80" />
+              <div className="w-10 h-1 border-b-2 border-x-2 border-white/80" />
               <span className="text-[9px] text-slate-400">100m</span>
             </div>
           </div>
         </div>
+
+        {/* MODAL / POPOVER CHÚ THÍCH Ý NGHĨA BẢN ĐỒ (KHI BẤM NÚT ℹ️) */}
+        {showLegendModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 border border-white/20 p-5 text-white shadow-2xl ring-2 ring-black/50">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+                <div className="font-extrabold text-amber-300 flex items-center gap-2 text-sm">
+                  <span>🌉</span>
+                  <span>BẢN ĐỒ KOCITY: KẾT NỐI 2 BỜ SÔNG</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowLegendModal(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition font-bold text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="text-xs text-slate-300 leading-relaxed space-y-2">
+                <div>• 🏠 <strong className="text-white">Bờ Tây (Trái):</strong> Cư Xá KOC (Nơi ở, studio, cafe cóc)</div>
+                <div>• 🌊 <strong className="text-white">Dòng Sông Ngăn Cách:</strong> Tượng trưng khó khăn nếu kết nối tự phát</div>
+                <div>• 🌉 <strong className="text-amber-300">Cầu KOCity & Tòa Tháp:</strong> Chiếc cầu độc quyền giúp KOC nhận hoa hồng cao hơn hẳn & an toàn 100%</div>
+                <div>• 🏪 <strong className="text-white">Bờ Đông (Phải):</strong> Đại Lộ các Store Brand 3D & Khu đất đấu thầu</div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowLegendModal(false)}
+                  className="px-4 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer shadow-lg"
+                >
+                  Đã hiểu
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -3083,20 +2993,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           <span>{toastNotice}</span>
         </div>
       )}
-
-      {/* ===== FOOTER HƯỚNG DẪN TƯƠNG TÁC ===== */}
-      <footer className="flex flex-wrap items-center justify-between border-t border-white/10 bg-slate-950/90 px-4 py-2 text-xs text-slate-400 sm:px-6 z-30">
-        <div className="flex items-center gap-3 text-[11px]">
-          <span>💡 <strong>Bờ Tây:</strong> Cư Xá KOC · <strong>Ở Giữa:</strong> Dòng Sông & 🌉 Cầu KOCity (Hoa Hồng Cao Hơn) · <strong>Bờ Đông:</strong> Phố Store Brand</span>
-          <span className="hidden sm:inline">•</span>
-          <span>Bấm <strong>👑 Trụ Sở KOCity</strong> để xem đặc quyền hoa hồng & bảo chứng 100%</span>
-          <span className="hidden sm:inline">•</span>
-          <span>Lăn chuột bám theo con trỏ chuẩn Google Maps 🎯</span>
-        </div>
-        <div className="text-[10px] text-slate-500 hidden md:block">
-          KOCity 2-Bank & Exclusive Bridge Master Plan
-        </div>
-      </footer>
     </div>
   );
 };
