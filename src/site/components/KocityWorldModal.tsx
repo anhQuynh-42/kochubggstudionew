@@ -183,6 +183,36 @@ const MAP_W = 2800;
 const MAP_H = 1700;
 
 /**
+ * Thuật toán khóa biên (Boundary Lock): Thành phố luôn tràn viền 100% màn hình,
+ * tuyệt đối không bao giờ bị lộ viền trống hay khoảng đen trên cả PC và Mobile.
+ */
+const clampPan = (x: number, y: number, currentZoom: number, vW: number, vH: number) => {
+  if (!vW || !vH) return { x, y };
+  const renderedW = MAP_W * currentZoom;
+  const renderedH = MAP_H * currentZoom;
+
+  let clampedX = x;
+  if (renderedW <= vW) {
+    clampedX = (vW - renderedW) / 2;
+  } else {
+    const minX = vW - renderedW;
+    const maxX = 0;
+    clampedX = Math.min(maxX, Math.max(minX, x));
+  }
+
+  let clampedY = y;
+  if (renderedH <= vH) {
+    clampedY = (vH - renderedH) / 2;
+  } else {
+    const minY = vH - renderedH;
+    const maxY = 0;
+    clampedY = Math.min(maxY, Math.max(minY, y));
+  }
+
+  return { x: clampedX, y: clampedY };
+};
+
+/**
  * COMPONENT STORE 3D CLAY NHỎ NHẮN CHUẨN THEO ẢNH MẪU
  * Thiết kế tỉ mỉ: Mái hiên sọc đỏ-vàng cong 3D, biển hiệu xanh da trời,
  * chữ tên Brand vàng nổi 3D, cửa kính & bệ chân đế bo tròn.
@@ -708,17 +738,68 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   const userVehicle: VehicleType = userJobsCount >= 3 ? 'motorbike' : userJobsCount >= 1 ? 'bicycle' : 'walk';
 
   const [isNight, setIsNight] = useState(isNightDefault);
-  const [zoom, setZoom] = useState<number>(0.75);
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: -450, y: -250 });
+  const [zoom, setZoom] = useState<number>(0.85);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Ref cho cử chỉ chạm 2 ngón (Pinch-to-zoom đa điểm chuẩn Google Maps)
+  // Sync ref để event listener native luôn nhận giá trị mới nhất mà không gây re-attach
+  const panRef = useRef(pan);
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+  const zoomRef = useRef(zoom);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  // Ref cho cử chỉ chạm 2 ngón (Pinch-to-zoom) và chạm 2 lần (Double Tap) trên Mobile
   const touchStartDistRef = useRef<number | null>(null);
   const touchStartZoomRef = useRef<number>(zoom);
   const touchStartMidRef = useRef<{ x: number; y: number } | null>(null);
   const touchStartPanRef = useRef<{ x: number; y: number }>(pan);
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+
+  // Tự động nhận diện màn hình ngang (PC) hay màn hình dọc (Mobile) để căn chỉnh tỷ lệ tràn viền hoàn hảo
+  useEffect(() => {
+    if (!open) return;
+    let initialDone = false;
+
+    const handleResizeOrInit = (isInit = false) => {
+      if (!wrapperRef.current) return;
+      const rect = wrapperRef.current.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const minZ = Math.max(rect.width / MAP_W, rect.height / MAP_H);
+      if (isInit || !initialDone) {
+        initialDone = true;
+        const isMobile = rect.width < 768;
+        const targetZ = Math.max(minZ, isMobile ? minZ * 1.15 : minZ);
+        const targetPanX = rect.width / 2 - 1400 * targetZ;
+        const targetPanY = rect.height / 2 - 850 * targetZ;
+        const clamped = clampPan(targetPanX, targetPanY, targetZ, rect.width, rect.height);
+        setZoom(targetZ);
+        setPan(clamped);
+      } else {
+        // Chỉ re-clamp nếu thay đổi kích thước cửa sổ / xoay màn hình
+        setZoom((curZoom) => {
+          const nextZ = Math.max(minZ, Math.min(2.0, curZoom));
+          setPan((curPan) => clampPan(curPan.x, curPan.y, nextZ, rect.width, rect.height));
+          return nextZ;
+        });
+      }
+    };
+
+    const timer = setTimeout(() => handleResizeOrInit(true), 50);
+    const onWinResize = () => handleResizeOrInit(false);
+    window.addEventListener('resize', onWinResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', onWinResize);
+    };
+  }, [open]);
 
   // Trạng thái đèn giao thông ngã tư (Xanh 8s -> Vàng 2s -> Đỏ 6s)
   const [trafficLight, setTrafficLight] = useState<TrafficLightState>('green');
@@ -1090,77 +1171,94 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     return () => clearInterval(interval);
   }, [open, trafficLight]);
 
-  // Thuật toán Zoom bám con trỏ chuột chuẩn Google Maps
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    if (!wrapperRef.current) return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    const cursorX = e.clientX - rect.left;
-    const cursorY = e.clientY - rect.top;
+  // 💻 TRÊN MÁY TÍNH: Lăn chuột zoom bám con trỏ chuột, khóa cứng ở mức tràn màn hình, phóng to tới 2.0x
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el || !open) return;
 
-    const worldX = (cursorX - pan.x) / zoom;
-    const worldY = (cursorY - pan.y) / zoom;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
 
-    const zoomFactor = Math.exp(-e.deltaY * 0.0022);
-    const newZoom = Math.min(1.6, Math.max(0.35, zoom * zoomFactor));
+      const minZ = Math.max(rect.width / MAP_W, rect.height / MAP_H);
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
 
-    const newPanX = cursorX - worldX * newZoom;
-    const newPanY = cursorY - worldY * newZoom;
+      const curZoom = zoomRef.current;
+      const curPan = panRef.current;
 
-    setZoom(newZoom);
-    setPan({ x: newPanX, y: newPanY });
-  };
+      const worldX = (cursorX - curPan.x) / curZoom;
+      const worldY = (cursorY - curPan.y) / curZoom;
 
-  // Nhấp đúp chuột để phóng to vào đúng điểm nhấp
+      const zoomFactor = Math.exp(-e.deltaY * 0.0022);
+      // Thu nhỏ: chạm mức vừa khít 100% màn hình là khóa cứng. Phóng to: lên đến 2.0x vào đúng trỏ chuột
+      const newZoom = Math.min(2.0, Math.max(minZ, curZoom * zoomFactor));
+
+      const newPanX = cursorX - worldX * newZoom;
+      const newPanY = cursorY - worldY * newZoom;
+      const clamped = clampPan(newPanX, newPanY, newZoom, rect.width, rect.height);
+
+      setZoom(newZoom);
+      setPan(clamped);
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [open]);
+
+  // Nhấp đúp chuột để phóng to nhanh vào đúng điểm nhấp (Double Click)
   const handleDoubleClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, .clickable-element')) return;
+    if ((e.target as HTMLElement).closest('button, .clickable-element, input, select')) return;
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
+    const minZ = Math.max(rect.width / MAP_W, rect.height / MAP_H);
+
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
 
     const worldX = (cursorX - pan.x) / zoom;
     const worldY = (cursorY - pan.y) / zoom;
 
-    const targetZoom = Math.min(1.6, zoom * 1.35);
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
+    const targetZoom = zoom >= 1.6 ? minZ : Math.min(2.0, Math.max(minZ * 1.4, zoom * 1.4));
 
-    const newPanX = centerX - worldX * targetZoom;
-    const newPanY = centerY - worldY * targetZoom;
+    const newPanX = cursorX - worldX * targetZoom;
+    const newPanY = cursorY - worldY * targetZoom;
 
     setZoom(targetZoom);
-    setPan({ x: newPanX, y: newPanY });
+    setPan(clampPan(newPanX, newPanY, targetZoom, rect.width, rect.height));
   };
 
-  // Zoom bám tâm màn hình
+  // Zoom bám tâm màn hình bằng nút bấm + / −
   const zoomAtScreenCenter = (factor: number) => {
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
+    const minZ = Math.max(rect.width / MAP_W, rect.height / MAP_H);
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
     const worldX = (centerX - pan.x) / zoom;
     const worldY = (centerY - pan.y) / zoom;
 
-    const newZoom = Math.min(1.6, Math.max(0.35, zoom * factor));
+    const newZoom = Math.min(2.0, Math.max(minZ, zoom * factor));
     const newPanX = centerX - worldX * newZoom;
     const newPanY = centerY - worldY * newZoom;
 
     setZoom(newZoom);
-    setPan({ x: newPanX, y: newPanY });
+    setPan(clampPan(newPanX, newPanY, newZoom, rect.width, rect.height));
   };
 
-  // Kéo thả chuột (Pan)
-  // Kéo thả chuột (Pan hoặc Drag Element trong Builder Mode)
+  // 💻 TRÊN MÁY TÍNH: Kéo thả chuột di chuyển bản đồ có khóa biên chống trôi ra ngoài
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button, .clickable-element, input, select')) return;
     setIsDragging(true);
+    isDraggingRef.current = true;
     dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    // 1. Kéo thả phần tử trong chế độ Quy hoạch Admin
     if (draggingItem) {
       const deltaX = (e.clientX - draggingItem.startClientX) / zoom;
       const deltaY = (e.clientY - draggingItem.startClientY) / zoom;
@@ -1185,12 +1283,11 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       return;
     }
 
-    // 2. Kéo thả di chuyển bản đồ (Pan)
-    if (!isDragging) return;
-    setPan({
-      x: e.clientX - dragStartRef.current.x,
-      y: e.clientY - dragStartRef.current.y,
-    });
+    if (!isDragging || !wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const rawX = e.clientX - dragStartRef.current.x;
+    const rawY = e.clientY - dragStartRef.current.y;
+    setPan(clampPan(rawX, rawY, zoom, rect.width, rect.height));
   };
 
   const handleMouseUp = () => {
@@ -1198,19 +1295,55 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       setDraggingItem(null);
     }
     setIsDragging(false);
+    isDraggingRef.current = false;
   };
 
-  // Multi-touch pinch-to-zoom trên mobile
+  // 📱 TRÊN ĐIỆN THOẠI: Vuốt 1 ngón mượt mà, Chụm/Tách 2 ngón (Pinch), Chạm 2 lần (Double Tap)
   const handleTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button, .clickable-element, input, select')) return;
+    if (!wrapperRef.current) return;
+
     if (e.touches.length === 1) {
+      const now = Date.now();
+      const touch = e.touches[0];
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const tapX = touch.clientX - rect.left;
+      const tapY = touch.clientY - rect.top;
+
+      // 📱 Chạm 2 lần (Double Tap): tự động phóng to nhanh vào đúng điểm vừa chạm
+      if (
+        lastTapRef.current &&
+        now - lastTapRef.current.time < 320 &&
+        Math.hypot(tapX - lastTapRef.current.x, tapY - lastTapRef.current.y) < 35
+      ) {
+        lastTapRef.current = null;
+        const minZ = Math.max(rect.width / MAP_W, rect.height / MAP_H);
+        const worldX = (tapX - pan.x) / zoom;
+        const worldY = (tapY - pan.y) / zoom;
+
+        const targetZoom = zoom >= 1.6 ? minZ : Math.min(2.0, Math.max(minZ * 1.4, zoom * 1.4));
+        const newPanX = tapX - worldX * targetZoom;
+        const newPanY = tapY - worldY * targetZoom;
+
+        setZoom(targetZoom);
+        setPan(clampPan(newPanX, newPanY, targetZoom, rect.width, rect.height));
+        setIsDragging(false);
+        isDraggingRef.current = false;
+        return;
+      }
+
+      lastTapRef.current = { time: now, x: tapX, y: tapY };
       setIsDragging(true);
+      isDraggingRef.current = true;
       dragStartRef.current = {
-        x: e.touches[0].clientX - pan.x,
-        y: e.touches[0].clientY - pan.y,
+        x: touch.clientX - pan.x,
+        y: touch.clientY - pan.y,
       };
       touchStartDistRef.current = null;
-    } else if (e.touches.length === 2 && wrapperRef.current) {
+    } else if (e.touches.length === 2) {
       setIsDragging(false);
+      isDraggingRef.current = false;
+      lastTapRef.current = null;
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
@@ -1227,16 +1360,21 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const minZ = Math.max(rect.width / MAP_W, rect.height / MAP_H);
+
+    // 📱 Vuốt 1 ngón: lướt xem các góc thành phố mượt mà theo tay, khóa biên chống trôi
     if (e.touches.length === 1 && isDragging) {
-      setPan({
-        x: e.touches[0].clientX - dragStartRef.current.x,
-        y: e.touches[0].clientY - dragStartRef.current.y,
-      });
+      const rawX = e.touches[0].clientX - dragStartRef.current.x;
+      const rawY = e.touches[0].clientY - dragStartRef.current.y;
+      setPan(clampPan(rawX, rawY, zoom, rect.width, rect.height));
     } else if (
       e.touches.length === 2 &&
       touchStartDistRef.current &&
       touchStartMidRef.current
     ) {
+      // 📱 Chụm / Tách 2 ngón (Pinch-to-zoom): tách để phóng to, chụm để thu nhỏ đến ngưỡng tràn viền là dừng
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
@@ -1245,7 +1383,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       const initialPan = touchStartPanRef.current;
       const mid = touchStartMidRef.current;
 
-      const newZoom = Math.min(1.6, Math.max(0.35, initialZoom * scale));
+      const newZoom = Math.min(2.0, Math.max(minZ, initialZoom * scale));
 
       const worldX = (mid.x - initialPan.x) / initialZoom;
       const worldY = (mid.y - initialPan.y) / initialZoom;
@@ -1254,24 +1392,29 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       const newPanY = mid.y - worldY * newZoom;
 
       setZoom(newZoom);
-      setPan({ x: newPanX, y: newPanY });
+      setPan(clampPan(newPanX, newPanY, newZoom, rect.width, rect.height));
     }
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
+    isDraggingRef.current = false;
     touchStartDistRef.current = null;
     touchStartMidRef.current = null;
   };
 
-  // Fly-to nhanh camera
-  const flyTo = (targetX: number, targetY: number, targetZoom = 0.88) => {
+  // Fly-to nhanh camera có khóa biên
+  const flyTo = (targetX: number, targetY: number, targetZoom?: number) => {
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
-    const newPanX = rect.width / 2 - targetX * targetZoom;
-    const newPanY = rect.height / 2 - targetY * targetZoom;
-    setZoom(targetZoom);
-    setPan({ x: newPanX, y: newPanY });
+    const minZ = Math.max(rect.width / MAP_W, rect.height / MAP_H);
+    const finalZoom = targetZoom !== undefined ? Math.min(2.0, Math.max(minZ, targetZoom)) : Math.max(minZ, zoom);
+
+    const newPanX = rect.width / 2 - targetX * finalZoom;
+    const newPanY = rect.height / 2 - targetY * finalZoom;
+
+    setZoom(finalZoom);
+    setPan(clampPan(newPanX, newPanY, finalZoom, rect.width, rect.height));
   };
 
   if (!open) return null;
@@ -1343,10 +1486,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => flyTo(1400, 850, 0.38)}
+              onClick={() => flyTo(1400, 850, 0)}
               className="rounded-full px-3 py-1 font-bold text-slate-300 hover:bg-white/20 transition cursor-pointer"
             >
-              🗺️ Toàn Cảnh 2 Bờ
+              🗺️ Toàn Cảnh Tràn Viền
             </button>
           </div>
 
@@ -1431,7 +1574,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       <div
         ref={wrapperRef}
         className={cx(
-          'relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing select-none transition-colors duration-700',
+          'relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing select-none transition-colors duration-700 touch-none',
           isNight ? 'bg-[#090b16]' : 'bg-[#e9f2ea]'
         )}
         onMouseDown={handleMouseDown}
@@ -1440,7 +1583,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onWheel={handleWheel}
         onDoubleClick={handleDoubleClick}
       >
         <div
