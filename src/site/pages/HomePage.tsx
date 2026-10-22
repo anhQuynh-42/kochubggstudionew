@@ -448,7 +448,9 @@ export const HomePage: React.FC = () => {
 
       {/* Phần còn lại của trang (nằm trong container max-w-6xl căn giữa) */}
       <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6">
-        {liveActivity.length > 0 && <LiveTicker items={liveActivity} />}
+        {(liveActivity.length > 0 || campaigns.length > 0) && (
+          <LiveTicker items={liveActivity} isNight={isNight} campaigns={campaigns} />
+        )}
 
         {/* ===== Danh sách mẫu (đẩy lên ngay dưới Hero & LiveTicker) ===== */}
         <section className="pt-6 sm:pt-10">
@@ -680,30 +682,177 @@ const FilterGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ l
   </fieldset>
 );
 
-/** Dải hoạt động thật (đã che tên). Không hiện gì nếu chưa có hoạt động — không tạo hoạt động giả. */
-const LiveTicker: React.FC<{ items: LiveActivityItem[] }> = ({ items }) => {
+interface LiveTickerProps {
+  items: LiveActivityItem[];
+  isNight?: boolean;
+  campaigns?: Campaign[];
+}
+
+type TickerItem =
+  | {
+      type: 'activity';
+      id: string;
+      icon: string;
+      displayName: string;
+      city?: string;
+      actionText: string;
+      brandName: string;
+      dateLabel?: string;
+    }
+  | {
+      type: 'pulse';
+      id: string;
+      icon: string;
+      prefix: string;
+      highlight: string;
+      suffix: string;
+    };
+
+/** Dải hoạt động trực tiếp đa tầng (Glassmorphism + Icon + Xen kẽ thông số hệ thống tránh trùng lặp) */
+const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaigns = [] }) => {
   const loop = useMemo(() => {
-    const half: LiveActivityItem[] = [];
-    while (half.length < 8) half.push(...items);
-    return [...half, ...half];
-  }, [items]);
+    // 1. Chuyển đổi hoạt động KOC thật
+    const realList: TickerItem[] = items.map((it) => {
+      let icon = '🎁';
+      if (it.action === 'selected') icon = '✨';
+      if (it.action === 'posted') icon = '🎬';
+
+      return {
+        type: 'activity',
+        id: `act-${it.id}`,
+        icon,
+        displayName: it.displayName,
+        city: it.city,
+        actionText: LIVE_ACTION_TEXT[it.action] || 'vừa tham gia',
+        brandName: it.brandName,
+        dateLabel: it.dateLabel,
+      };
+    });
+
+    // 2. Tạo các mẩu tin hệ thống hữu ích / Chiến dịch nổi bật
+    const pulseList: TickerItem[] = [];
+
+    // Lấy chiến dịch đang mở
+    if (campaigns.length > 0) {
+      const topCamp = campaigns[0];
+      pulseList.push({
+        type: 'pulse',
+        id: `pulse-camp-${topCamp.id}`,
+        icon: '🚀',
+        prefix: 'Chiến dịch hot',
+        highlight: topCamp.brandName,
+        suffix: `đang mở ${topCamp.sampleQuantity || 20} suất mẫu 0đ`,
+      });
+    }
+
+    pulseList.push({
+      type: 'pulse',
+      id: 'pulse-speed',
+      icon: '⚡',
+      prefix: 'Tốc độ duyệt mẫu',
+      highlight: '24 giờ',
+      suffix: 'kể từ khi nộp đơn',
+    });
+
+    if (campaigns.length > 1) {
+      const secondCamp = campaigns[1];
+      pulseList.push({
+        type: 'pulse',
+        id: `pulse-camp-${secondCamp.id}`,
+        icon: '🔥',
+        prefix: 'Mẫu mới về',
+        highlight: secondCamp.brandName,
+        suffix: 'ưu tiên Nano & Micro KOC',
+      });
+    }
+
+    pulseList.push({
+      type: 'pulse',
+      id: 'pulse-sample',
+      icon: '📦',
+      prefix: 'Quyền lợi Creator',
+      highlight: 'Mẫu 0đ gửi tận nhà',
+      suffix: 'hoàn toàn miễn phí',
+    });
+
+    pulseList.push({
+      type: 'pulse',
+      id: 'pulse-comm',
+      icon: '💰',
+      prefix: 'Thu nhập KOC',
+      highlight: 'Hoa hồng minh bạch',
+      suffix: 'tự động đối soát theo đơn',
+    });
+
+    // 3. Xen kẽ mẩu tin thật với tin hệ thống để tạo nhịp điệu sinh động, không bao giờ bị lặp 1 dòng đơn điệu
+    const combined: TickerItem[] = [];
+    const maxLen = Math.max(realList.length, pulseList.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < realList.length) combined.push(realList[i]);
+      if (i < pulseList.length) combined.push(pulseList[i]);
+    }
+
+    // Đảm bảo có tối thiểu 6 items trước khi nhân đôi chạy marquee
+    let base = [...combined];
+    while (base.length < 6) {
+      base = [...base, ...pulseList];
+    }
+
+    // Nhân đôi mảng để animation translateX(-50%) liền mạch vô tận
+    return [...base, ...base];
+  }, [items, campaigns]);
+
   return (
-    <div className="mt-3 flex items-center overflow-hidden rounded-2xl bg-white py-2.5 ring-1 ring-slate-100">
-      <span className="ml-3 mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] px-2.5 py-1 text-[10px] font-black tracking-wider text-white">
+    <div
+      className={cx(
+        'mt-3.5 flex items-center overflow-hidden rounded-2xl py-2 px-1 transition-all duration-500 backdrop-blur-md shadow-xs ring-1',
+        isNight
+          ? 'bg-[#0f0926]/80 text-slate-300 ring-violet-500/25 shadow-purple-950/30'
+          : 'bg-white/90 text-slate-600 ring-violet-200/80 shadow-slate-100'
+      )}
+    >
+      <div className="ml-2.5 mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] px-2.5 py-1 text-[10px] font-black tracking-wider text-white shadow-xs shadow-pink-500/20">
         <span className="relative flex h-1.5 w-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
         </span>
         LIVE
-      </span>
+      </div>
+
       <div className="min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_20px,black_calc(100%-20px),transparent)]">
-        <div className="animate-marquee-infinite gap-8">
+        <div className="animate-marquee-infinite items-center gap-6 py-0.5">
           {loop.map((it, idx) => (
-            <span key={`${it.id}-${idx}`} className={cx('shrink-0 text-xs text-slate-600')}>
-              <b className="text-slate-900">{it.displayName}</b>
-              {it.city && <span className="text-slate-400"> · {it.city}</span>} {LIVE_ACTION_TEXT[it.action]} <b className="text-[#6366f1]">{it.brandName}</b>
-              {it.dateLabel && <span className="ml-1.5 text-slate-400">{it.dateLabel}</span>}
-            </span>
+            <div key={`${it.id}-${idx}`} className="inline-flex shrink-0 items-center gap-2 text-xs">
+              <span
+                className={cx(
+                  'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[12px] shadow-xs',
+                  isNight ? 'bg-white/10' : 'bg-violet-50'
+                )}
+              >
+                {it.icon}
+              </span>
+
+              {it.type === 'activity' ? (
+                <span>
+                  <strong className={cx('font-semibold', isNight ? 'text-white' : 'text-slate-900')}>{it.displayName}</strong>
+                  {it.city && <span className={cx(isNight ? 'text-slate-400' : 'text-slate-400')}> · {it.city}</span>}{' '}
+                  <span className={isNight ? 'text-slate-300' : 'text-slate-600'}>{it.actionText}</span>{' '}
+                  <strong className={cx('font-bold', isNight ? 'text-fuchsia-300' : 'text-violet-700')}>{it.brandName}</strong>
+                  {it.dateLabel && <span className="ml-1 text-[11px] text-slate-400">({it.dateLabel})</span>}
+                </span>
+              ) : (
+                <span>
+                  <span className={isNight ? 'text-slate-400' : 'text-slate-500'}>{it.prefix}: </span>
+                  <strong className={cx('font-bold', isNight ? 'text-amber-300' : 'text-violet-700')}>{it.highlight}</strong>{' '}
+                  <span className={isNight ? 'text-slate-300' : 'text-slate-600'}>{it.suffix}</span>
+                </span>
+              )}
+
+              {/* Dấu phân cách tinh tế giữa các tin */}
+              <span className={cx('ml-6 select-none text-[11px]', isNight ? 'text-violet-400/40' : 'text-violet-200')}>
+                ✦
+              </span>
+            </div>
           ))}
         </div>
       </div>
