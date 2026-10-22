@@ -5,6 +5,7 @@ import { Campaign } from '../../types';
 import { Icon, Button, cx } from '../ui';
 
 export type VehicleType = 'walk' | 'bicycle' | 'motorbike';
+export type MapLayerType = 'satellite' | 'street' | 'night';
 
 interface Citizen {
   id: string;
@@ -16,10 +17,13 @@ interface Citizen {
   vehicle: VehicleType;
   lat: number;
   lng: number;
+  direction: 'left' | 'right';
+  speed: number;
+  minX: number;
+  maxX: number;
   avatarColor: string;
   isCurrentUser?: boolean;
   bubble?: string;
-  pathOffset?: number;
 }
 
 interface BrandStation {
@@ -52,7 +56,28 @@ const COORDS = {
   vietnamCenter: [16.0544, 106.5] as [number, number],
   hanoiCenter: [21.0285, 105.8542] as [number, number], // Hồ Gươm
   saigonCenter: [10.7745, 106.703] as [number, number], // Phố Đi Bộ Nguyễn Huệ
-  kocityHQ: [21.0245, 105.8525] as [number, number], // Trụ sở KOCity (Tràng Tiền / Hoàn Kiếm)
+  kocityHQ: [21.0245, 105.8525] as [number, number], // Trụ sở KOCity
+};
+
+// Các nguồn Tile bản đồ
+const TILE_PROVIDERS: Record<MapLayerType, { url: string; attribution: string; subdomains?: string }> = {
+  // 🛰️ Ảnh vệ tinh chụp thật độ nét cao từ trên cao (Esri World Imagery)
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+  },
+  // 🗺️ Bản đồ đường phố sáng đẹp (CartoDB Voyager)
+  street: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: 'abcd',
+  },
+  // 🌆 Bản đồ đêm Neon Cyber (CartoDB Dark Matter)
+  night: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: 'abcd',
+  },
 };
 
 export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
@@ -63,7 +88,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   isNightDefault = false,
   onSelectCampaign,
 }) => {
-  const [isNight, setIsNight] = useState(isNightDefault);
+  const [mapLayer, setMapLayer] = useState<MapLayerType>('satellite'); // Mặc định mở ngay Ảnh Vệ Tinh Chụp Thật
   const [activeRegion, setActiveRegion] = useState<'hanoi' | 'saigon' | 'vietnam'>('hanoi');
   const [selectedCitizen, setSelectedCitizen] = useState<Citizen | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<BrandStation | null>(null);
@@ -72,6 +97,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const labelLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Tiến độ nhận xe của tài khoản
@@ -88,7 +114,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       city: 'Hà Nội',
       lat: 21.0225,
       lng: 105.8485,
-      category: 'Mỹ phẩm thiên nhiên thuần Việt',
+      category: 'Mỹ phẩm thiên nhiên thuần khiết',
       sampleCount: 35,
       icon: 'spa',
       badgeBg: 'bg-emerald-600',
@@ -103,7 +129,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       city: 'Hà Nội',
       lat: 21.018,
       lng: 105.854,
-      category: 'Thời trang & Nội y thiết kế',
+      category: 'Thời trang & May mặc cao cấp',
       sampleCount: 25,
       icon: 'checkroom',
       badgeBg: 'bg-purple-600',
@@ -147,7 +173,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
   // Danh sách các Cư dân mẫu đi lại trên các tuyến đường thật
   const [citizens, setCitizens] = useState<Citizen[]>([
-    // Cư dân Hà Nội (quanh Hồ Gươm, Đinh Tiên Hoàng, Tràng Tiền)
     {
       id: 'c1',
       name: 'Thu Trang (QA***)',
@@ -163,8 +188,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       minX: 105.851,
       maxX: 105.856,
       avatarColor: '#ec4899',
-      bubble: 'Đang đạp xe quanh Hồ Gươm nhận son Cỏ Mềm! 🚲',
-      pathOffset: 0,
+      bubble: 'Đạp xe quanh Hồ Gươm chụp ảnh nhận son Cỏ Mềm! 🚲',
     },
     {
       id: 'c2',
@@ -182,7 +206,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       maxX: 105.858,
       avatarColor: '#f59e0b',
       bubble: 'Lái xe máy qua Trụ sở KOCity đối soát hoa hồng! 🛵',
-      pathOffset: 0,
     },
     {
       id: 'c3',
@@ -200,10 +223,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       maxX: 105.8545,
       avatarColor: '#10b981',
       bubble: 'Đi bộ phố Hàng Mẫu, cố gắng xong 1 job để nhận xe đạp 🌸',
-      pathOffset: 0,
     },
-
-    // Cư dân Sài Gòn (quanh Phố Đi Bộ Nguyễn Huệ, Đồng Khởi, Bến Bạch Đằng)
     {
       id: 'c4',
       name: 'Minh Thư (Thư N.)',
@@ -220,7 +240,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       maxX: 106.706,
       avatarColor: '#6366f1',
       bubble: 'Lượn xe máy dọc phố đi bộ Nguyễn Huệ cực đã! 🛵',
-      pathOffset: 0,
     },
     {
       id: 'c5',
@@ -238,7 +257,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       maxX: 106.702,
       avatarColor: '#06b6d4',
       bubble: 'Đạp xe ghé Trạm Tranyoo lấy tai nghe mới test bass 🎧',
-      pathOffset: 0,
     },
     {
       id: 'c6',
@@ -256,7 +274,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       maxX: 106.703,
       avatarColor: '#d946ef',
       bubble: 'Đang đi bộ qua chợ Bến Thành ngắm đồ OOTD ✨',
-      pathOffset: 0,
     },
   ]);
 
@@ -295,7 +312,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 : userVehicle === 'bicycle'
                 ? 'Đang đạp Xe Đạp KOCity đi nhận job 🚲'
                 : 'Đang đi bộ, hoàn thành 1 job để nhận xe đạp tại Trụ sở KOCity! 🚶',
-            pathOffset: 0,
           },
           ...prev,
         ];
@@ -325,37 +341,47 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     return () => clearInterval(interval);
   }, [open]);
 
-  // Khởi tạo bản đồ Leaflet
+  // Khởi tạo bản đồ Leaflet & SỬA TRIỆT ĐỂ LỖI KÍCH THƯỚC QUA INVALIDATESIZE()
   useEffect(() => {
     if (!open || !mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         center: COORDS.hanoiCenter,
-        zoom: 15,
+        zoom: 16, // Zoom sát Hồ Gươm ngắm ảnh vệ tinh tuyệt đẹp
         minZoom: 5,
         maxZoom: 18,
-        zoomControl: false, // Dùng zoom control đẹp mắt riêng
+        zoomControl: false,
       });
 
-      // Lớp Tile CartoDB
-      const tileUrl = isNight
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-
-      const tileLayer = L.tileLayer(tileUrl, {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        subdomains: 'abcd',
+      // Lớp Tile ảnh vệ tinh Esri World Imagery
+      const config = TILE_PROVIDERS[mapLayer];
+      const tileLayer = L.tileLayer(config.url, {
+        attribution: config.attribution,
+        subdomains: config.subdomains || 'abc',
         maxZoom: 19,
       }).addTo(map);
 
       tileLayerRef.current = tileLayer;
+
+      // Lớp nhãn đường phố để đọc tên đường trên nền vệ tinh
+      const labelLayer = L.tileLayer(
+        'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, opacity: 0.85 }
+      ).addTo(map);
+      labelLayerRef.current = labelLayer;
 
       // Layer group chứa các markers
       const markersLayer = L.layerGroup().addTo(map);
       markersLayerRef.current = markersLayer;
 
       mapInstanceRef.current = map;
+
+      // SỬA TRIỆT ĐỂ LỖI KHÔNG NẠP ĐƯỢC ẢNH BẢN ĐỒ KHI MỞ MODAL:
+      // Gọi invalidateSize liên tiếp để Leaflet tải full 100% mảnh ảnh vệ tinh
+      setTimeout(() => map.invalidateSize(), 150);
+      setTimeout(() => map.invalidateSize(), 400);
+      setTimeout(() => map.invalidateSize(), 800);
     }
 
     return () => {
@@ -366,31 +392,44 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     };
   }, [open]);
 
-  // Cập nhật theme Bản đồ khi đổi Ngày / Đêm
+  // Cập nhật lớp Tile khi đổi chế độ Vệ tinh / Đường phố / Đêm
   useEffect(() => {
-    if (!tileLayerRef.current) return;
-    const tileUrl = isNight
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    tileLayerRef.current.setUrl(tileUrl);
-  }, [isNight]);
+    if (!tileLayerRef.current || !mapInstanceRef.current) return;
+    const config = TILE_PROVIDERS[mapLayer];
+    tileLayerRef.current.setUrl(config.url);
 
-  // Render các Marker (Cư dân, Brand, Trụ sở KOCity) lên bản đồ Leaflet
+    // Nếu là chế độ vệ tinh thì bật nhãn đường phố, ngược lại thì ẩn nhãn để tránh đè chữ
+    if (labelLayerRef.current) {
+      if (mapLayer === 'satellite') {
+        if (!mapInstanceRef.current.hasLayer(labelLayerRef.current)) {
+          labelLayerRef.current.addTo(mapInstanceRef.current);
+        }
+      } else {
+        if (mapInstanceRef.current.hasLayer(labelLayerRef.current)) {
+          labelLayerRef.current.remove();
+        }
+      }
+    }
+  }, [mapLayer]);
+
+  // Render các Marker 3D Sáng Tạo (Cư dân, Brand, Trụ sở KOCity) nổi bật trên nền vệ tinh
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
     const layer = markersLayerRef.current;
     layer.clearLayers();
 
-    // 1. CẮM GHIM TRỤ SỞ KOCITY CHÍNH (KOCITY TOWER)
+    // 1. CẮM GHIM TRỤ SỞ KOCITY (VƯƠNG MIỆN PHÁT SÁNG HÀO QUANG 3D)
     const hqIcon = L.divIcon({
       className: 'custom-hq-marker',
       html: `
         <div style="transform: translate(-50%, -100%); cursor: pointer;" class="flex flex-col items-center group">
-          <div style="background: linear-gradient(135deg, #ec4899, #8b5cf6);" class="px-3 py-1 rounded-full text-white text-[11px] font-black shadow-xl ring-2 ring-amber-300 animate-pulse whitespace-nowrap">
-            👑 TRỤ SỞ KOCITY HQ
+          <div style="background: linear-gradient(135deg, #ec4899, #8b5cf6);" class="px-3.5 py-1.5 rounded-full text-white text-xs font-black shadow-2xl ring-2 ring-amber-300 animate-pulse whitespace-nowrap flex items-center gap-1.5 border border-white">
+            <span class="text-[14px]">👑</span>
+            <span>TRỤ SỞ KOCITY HQ</span>
+            <span class="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.2 rounded-full font-bold">ĐỔI XE</span>
           </div>
-          <div class="h-3 w-3 bg-fuchsia-600 rotate-45 -mt-1.5 shadow-md"></div>
-          <div class="h-2 w-5 rounded-full bg-black/40 blur-xs mt-1"></div>
+          <div class="h-3 w-3 bg-fuchsia-600 rotate-45 -mt-1.5 shadow-xl border-r border-b border-white/50"></div>
+          <div class="h-2 w-7 rounded-full bg-black/60 blur-xs mt-1"></div>
         </div>
       `,
       iconSize: [0, 0],
@@ -399,17 +438,23 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     const hqMarker = L.marker(COORDS.kocityHQ, { icon: hqIcon }).addTo(layer);
     hqMarker.on('click', () => setShowHqModal(true));
 
-    // 2. CẮM GHIM CÁC TRẠM BRAND THEO TOẠ ĐỘ THỰC
+    // 2. CẮM GHIM CÁC TRẠM BRAND 3D NỔI BẬT TRÊN NỀN VỆ TINH
     brandStations.forEach((station) => {
+      const isCoMem = station.brandName.includes('Cỏ Mềm');
+      const isTranyoo = station.brandName.includes('Tranyoo');
+      const isBielenda = station.brandName.includes('Bielenda');
+
       const brandIcon = L.divIcon({
         className: 'custom-brand-marker',
         html: `
           <div style="transform: translate(-50%, -100%); cursor: pointer;" class="flex flex-col items-center group">
-            <div class="${station.badgeBg} text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow-xl ring-2 ring-white whitespace-nowrap flex items-center gap-1 transition-transform group-hover:scale-110">
-              <span>${station.name.includes('Cỏ Mềm') ? '🌿' : station.name.includes('Tranyoo') ? '🎧' : station.name.includes('Bielenda') ? '✨' : '👗'}</span>
-              <span>${station.brandName} (${station.sampleCount} Mẫu 0đ)</span>
+            <div class="${station.badgeBg} text-white px-3 py-1 rounded-full text-xs font-black shadow-2xl ring-2 ring-white whitespace-nowrap flex items-center gap-1.5 transition-transform group-hover:scale-110 border border-white/30">
+              <span class="text-[14px]">${isCoMem ? '🌿' : isTranyoo ? '🎧' : isBielenda ? '✨' : '👗'}</span>
+              <span>${station.brandName}</span>
+              <span class="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full">${station.sampleCount} Mẫu 0đ</span>
             </div>
-            <div class="h-2.5 w-2.5 ${station.badgeBg} rotate-45 -mt-1 shadow-md"></div>
+            <div class="h-2.5 w-2.5 ${station.badgeBg} rotate-45 -mt-1 shadow-md border-r border-b border-white/40"></div>
+            <div class="h-2 w-6 rounded-full bg-black/50 blur-xs mt-0.5"></div>
           </div>
         `,
         iconSize: [0, 0],
@@ -419,7 +464,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       marker.on('click', () => setSelectedBrand(station));
     });
 
-    // 3. CẮM CÁC CƯ DÂN KOC CHIBI ĐI LẠI TRÊN ĐƯỜNG
+    // 3. CẮM CÁC CƯ DÂN KOC CHIBI LƯỚT XE TRÊN ĐƯỜNG PHỐ THẬT
     citizens.forEach((c) => {
       const citizenIcon = L.divIcon({
         className: 'custom-citizen-marker',
@@ -427,22 +472,22 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           <div style="transform: translate(-50%, -100%); cursor: pointer;" class="flex flex-col items-center group">
             ${
               c.bubble
-                ? `<div class="bg-white text-slate-900 px-2 py-0.5 rounded-lg text-[9px] font-bold shadow-xl ring-1 ring-pink-500 max-w-[150px] text-center mb-1 leading-snug whitespace-normal">
+                ? `<div class="bg-white text-slate-900 px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-2xl ring-2 ring-pink-500 max-w-[170px] text-center mb-1 leading-snug whitespace-normal animate-bounce">
                     ${c.bubble}
                   </div>`
                 : ''
             }
-            <div class="${c.isCurrentUser ? 'bg-amber-400 text-slate-950 ring-2 ring-white animate-bounce' : 'bg-slate-900/90 text-white ring-1 ring-violet-400'} px-1.5 py-0.5 rounded-full text-[9px] font-bold shadow-md whitespace-nowrap flex items-center gap-1">
+            <div class="${c.isCurrentUser ? 'bg-amber-400 text-slate-950 ring-2 ring-white animate-pulse' : 'bg-slate-900/95 text-white ring-1 ring-violet-300'} px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xl whitespace-nowrap flex items-center gap-1">
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping"></span>
               <span>${c.name}</span>
               <span class="text-pink-400 font-extrabold">${c.number}</span>
               <span>${c.vehicle === 'motorbike' ? '🛵' : c.vehicle === 'bicycle' ? '🚲' : '🚶'}</span>
             </div>
             <div class="mt-0.5 flex flex-col items-center">
-              <div style="background-color: ${c.avatarColor};" class="h-7 w-7 rounded-full text-white text-[12px] flex items-center justify-center font-bold shadow-md">
+              <div style="background-color: ${c.avatarColor};" class="h-8 w-8 rounded-full text-white text-[14px] flex items-center justify-center font-bold shadow-xl ring-2 ring-white">
                 ${c.isCurrentUser ? '👑' : c.city === 'Hà Nội' ? '🌸' : '☕'}
               </div>
-              <div class="text-[14px] -mt-1">
+              <div class="text-[18px] -mt-1.5 filter drop-shadow-md">
                 ${c.vehicle === 'motorbike' ? '🛵' : c.vehicle === 'bicycle' ? '🚲' : '👟'}
               </div>
             </div>
@@ -454,7 +499,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       const marker = L.marker([c.lat, c.lng], { icon: citizenIcon }).addTo(layer);
       marker.on('click', () => setSelectedCitizen(c));
     });
-  }, [citizens, isNight]);
+  }, [citizens, mapLayer]);
 
   // Chuyển vùng camera mượt mà (Fly-to)
   const flyToRegion = (region: 'hanoi' | 'saigon' | 'vietnam') => {
@@ -463,11 +508,11 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     if (!map) return;
 
     if (region === 'hanoi') {
-      map.flyTo(COORDS.hanoiCenter, 15, { duration: 1.6 });
+      map.flyTo(COORDS.hanoiCenter, 16, { duration: 1.8 });
     } else if (region === 'saigon') {
-      map.flyTo(COORDS.saigonCenter, 15, { duration: 1.8 });
+      map.flyTo(COORDS.saigonCenter, 16, { duration: 2.0 });
     } else {
-      map.flyTo(COORDS.vietnamCenter, 6, { duration: 1.5 });
+      map.flyTo(COORDS.vietnamCenter, 6, { duration: 1.6 });
     }
   };
 
@@ -481,36 +526,37 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none animate-fade-in">
-      {/* ===== HEADER ĐIỀU KHIỂN BẢN ĐỒ KOCITY MAP ENGINE ===== */}
-      <header className="relative z-30 flex flex-wrap items-center justify-between border-b border-white/10 bg-slate-950/85 px-4 py-2.5 backdrop-blur-md sm:px-6">
+      {/* ===== HEADER ĐIỀU KHIỂN BẢN ĐỒ VỆ TINH KOCITY ===== */}
+      <header className="relative z-30 flex flex-wrap items-center justify-between border-b border-white/15 bg-slate-950/90 px-4 py-2.5 backdrop-blur-md sm:px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-500 via-fuchsia-500 to-violet-600 text-[20px] shadow-lg shadow-pink-500/25">
-            🗺️
+            🛰️
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-display text-sm font-black tracking-tight text-white sm:text-base">
-                KOCITY INTERACTIVE REAL-MAP
+                KOCITY REAL SATELLITE METAVERSE
               </h2>
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 ring-1 ring-emerald-400/40">
-                ● Bản Đồ Thực Tế Hà Nội & Sài Gòn
+                ● Ảnh Vệ Tinh Chụp Thật
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Lăn chuột để Zoom không giới hạn · Bấm vào KOC hoặc Trạm Brand để tương tác
+              Ngắm nhìn nóc nhà, mặt nước Hồ Gươm, sông Sài Gòn & đường phố thật từ trên cao
             </p>
           </div>
         </div>
 
-        {/* Cụm nút chuyển vùng & Zoom & Ngày/Đêm */}
+        {/* Cụm nút chuyển vùng & Chế độ Vệ tinh & Nút đóng */}
         <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
+          {/* Chọn Thành Phố Bay Lướt */}
           <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15 text-xs">
             <button
               type="button"
               onClick={() => flyToRegion('hanoi')}
               className={cx(
                 'rounded-full px-3 py-1 font-semibold transition cursor-pointer',
-                activeRegion === 'hanoi' ? 'bg-rose-600 text-white' : 'text-slate-200 hover:bg-white/20'
+                activeRegion === 'hanoi' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-200 hover:bg-white/20'
               )}
             >
               ⛩️ Hà Nội
@@ -520,14 +566,14 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               onClick={flyToHQ}
               className="rounded-full bg-gradient-to-r from-pink-500 to-violet-600 px-3 py-1 font-black text-white shadow-md transition hover:opacity-95 ring-1 ring-amber-300/40 cursor-pointer"
             >
-              🏢 Trụ sở KOCity
+              👑 Trụ sở KOCity
             </button>
             <button
               type="button"
               onClick={() => flyToRegion('saigon')}
               className={cx(
                 'rounded-full px-3 py-1 font-semibold transition cursor-pointer',
-                activeRegion === 'saigon' ? 'bg-indigo-600 text-white' : 'text-slate-200 hover:bg-white/20'
+                activeRegion === 'saigon' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-200 hover:bg-white/20'
               )}
             >
               🌆 Sài Gòn
@@ -537,30 +583,54 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               onClick={() => flyToRegion('vietnam')}
               className={cx(
                 'rounded-full px-3 py-1 font-semibold transition cursor-pointer hidden md:inline-block',
-                activeRegion === 'vietnam' ? 'bg-amber-600 text-white' : 'text-slate-200 hover:bg-white/20'
+                activeRegion === 'vietnam' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-200 hover:bg-white/20'
               )}
             >
               🇻🇳 Toàn Cảnh VN
             </button>
           </div>
 
-          {/* Công tắc Ngày / Đêm */}
-          <button
-            type="button"
-            onClick={() => setIsNight(!isNight)}
-            title={isNight ? 'Chuyển sang Bản đồ Ban ngày' : 'Chuyển sang Bản đồ Đêm Neon'}
-            className={cx(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ring-1',
-              isNight
-                ? 'bg-amber-400/20 text-amber-200 ring-amber-300/40 hover:bg-amber-400/30'
-                : 'bg-white/15 text-white ring-white/20 hover:bg-white/25'
-            )}
-          >
-            <Icon name={isNight ? 'light_mode' : 'dark_mode'} className="text-[14px]" />
-            <span className="hidden sm:inline">{isNight ? 'Bản đồ Sáng' : 'Đêm Neon'}</span>
-          </button>
+          {/* Chọn Chế Độ Bản Đồ: Vệ Tinh / Đường Phố / Đêm */}
+          <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15 text-xs">
+            <button
+              type="button"
+              onClick={() => setMapLayer('satellite')}
+              title="Ảnh Vệ Tinh chụp thật độ nét cao"
+              className={cx(
+                'rounded-full px-2.5 py-1 font-bold transition cursor-pointer flex items-center gap-1',
+                mapLayer === 'satellite' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:bg-white/20'
+              )}
+            >
+              <span>🛰️</span>
+              <span className="hidden sm:inline">Vệ Tinh</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapLayer('street')}
+              title="Bản đồ đường phố sáng đẹp"
+              className={cx(
+                'rounded-full px-2.5 py-1 font-bold transition cursor-pointer flex items-center gap-1',
+                mapLayer === 'street' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/20'
+              )}
+            >
+              <span>🗺️</span>
+              <span className="hidden sm:inline">Đường Phố</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapLayer('night')}
+              title="Bản đồ đêm Neon Cyber"
+              className={cx(
+                'rounded-full px-2.5 py-1 font-bold transition cursor-pointer flex items-center gap-1',
+                mapLayer === 'night' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-white/20'
+              )}
+            >
+              <span>🌙</span>
+              <span className="hidden sm:inline">Đêm Neon</span>
+            </button>
+          </div>
 
-          {/* Nút Zoom điều khiển bản đồ */}
+          {/* Cụm Zoom Button */}
           <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-white/15">
             <button
               type="button"
@@ -592,22 +662,23 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         </div>
       </header>
 
-      {/* ===== KHUNG BẢN ĐỒ THỰC TẾ LEAFLET TOÀN MÀN HÌNH ===== */}
-      <div className="relative flex-1 w-full h-full">
+      {/* ===== KHUNG BẢN ĐỒ VỆ TINH TOÀN MÀN HÌNH ===== */}
+      <div className="relative flex-1 w-full h-full bg-[#0a0518]">
+        {/* Bản đồ Leaflet Container */}
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
 
-        {/* Thanh ghi chú địa danh nổi bật */}
+        {/* Thanh trạng thái định vị */}
         <div className="absolute top-4 left-4 z-20 pointer-events-none hidden sm:flex flex-col gap-1.5">
-          <div className="bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-xl max-w-xs">
-            📍 <strong>Đang xem:</strong>{' '}
+          <div className="bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl ring-1 ring-white/15 text-xs text-slate-200 shadow-2xl max-w-xs">
+            📍 <strong>Khu vực:</strong>{' '}
             {activeRegion === 'hanoi'
               ? 'Hồ Gươm & Phố Cổ Hà Nội'
               : activeRegion === 'saigon'
               ? 'Phố Đi Bộ Nguyễn Huệ & Quận 1 Sài Gòn'
-              : 'Tuyến Sáng Tạo Bắc - Nam KOCity'}
+              : 'Tuyến Kết Nối Sáng Tạo Bắc - Nam'}
           </div>
-          <div className="bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-xl ring-1 ring-white/10 text-[11px] text-amber-300">
-            🚲 Cư dân hoàn thành ≥1 job có xe đạp · 🛵 ≥3 job có xe máy
+          <div className="bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-xl ring-1 ring-white/10 text-[11px] text-amber-300">
+            🚲 Cư dân xong 1 job có xe đạp · 🛵 xong 3 job có xe máy
           </div>
         </div>
       </div>
@@ -875,16 +946,16 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       )}
 
       {/* ===== FOOTER HƯỚNG DẪN TƯƠNG TÁC ===== */}
-      <footer className="flex flex-wrap items-center justify-between border-t border-white/10 bg-slate-950/90 px-4 py-2 text-xs text-slate-400 sm:px-6 z-30">
+      <footer className="flex flex-wrap items-center justify-between border-t border-white/15 bg-slate-950/90 px-4 py-2 text-xs text-slate-400 sm:px-6 z-30">
         <div className="flex items-center gap-3 text-[11px]">
-          <span>💡 <strong>Lăn chuột / Chạm 2 ngón tay:</strong> Zoom mượt mà trên bản đồ thực tế</span>
+          <span>💡 <strong>Lăn chuột / Chạm 2 ngón tay:</strong> Zoom ngắm ảnh vệ tinh sắc nét từ trên không</span>
           <span className="hidden sm:inline">•</span>
           <span>Bấm <strong>[ ⛩️ Hà Nội ]</strong> hoặc <strong>[ 🌆 Sài Gòn ]</strong> để bay lướt camera</span>
           <span className="hidden sm:inline">•</span>
-          <span>Bấm <strong>🏢 Trụ sở KOCity</strong> để nhận Xe đạp 🚲 / Xe máy 🛵</span>
+          <span>Bấm <strong>👑 Trụ sở KOCity</strong> để nhận Xe đạp 🚲 / Xe máy 🛵</span>
         </div>
         <div className="text-[10px] text-slate-500">
-          KOCity Real-Map Engine v4.0
+          KOCity Satellite Engine v5.0
         </div>
       </footer>
     </div>
