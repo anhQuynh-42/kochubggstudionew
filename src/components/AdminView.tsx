@@ -9,6 +9,7 @@ import {
 } from '../services/supabaseService';
 import { APP_LOGOS } from '../data/mockData';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { AdminBlogManager } from './AdminBlogManager';
 
 // Hàm tính số ngày còn lại theo thời gian thực từ chuỗi ngày kết thúc
 export const calculateDaysLeftFromDate = (endDateStr?: string, fallbackDays: number = 15): number => {
@@ -42,7 +43,7 @@ interface AdminViewProps {
   onBackToMarketplace: () => void;
   initialEditingCampaign?: Campaign | null;
   onClearInitialEditingCampaign?: () => void;
-  initialTab?: 'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm';
+  initialTab?: 'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog';
   onClearInitialTab?: () => void;
 }
 
@@ -61,7 +62,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 }) => {
   // Navigation inside Admin (Sidebar Tab)
   const [activeAdminTab, setActiveAdminTab] = useState<
-    'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm'
+    'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog'
   >(initialTab || 'dashboard');
 
   useEffect(() => {
@@ -1920,6 +1921,31 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 }`}
               >
                 {metrics.uniqueKOCs}
+              </span>
+            </button>
+
+            {/* MỤC: CẨM NANG & BÀI VIẾT SEO */}
+            <button
+              onClick={() => {
+                setActiveAdminTab('blog');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer ${
+                activeAdminTab === 'blog'
+                  ? 'bg-purple-600 text-white font-bold shadow-sm shadow-purple-500/20'
+                  : 'text-slate-600 hover:bg-purple-50 hover:text-purple-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-[20px]">menu_book</span>
+                <span>Cẩm Nang & Bài Viết SEO</span>
+              </div>
+              <span
+                className={`rounded text-[10px] font-bold px-2 py-0.5 ${
+                  activeAdminTab === 'blog' ? 'bg-white text-purple-700' : 'bg-purple-100 text-purple-700'
+                }`}
+              >
+                5 bài
               </span>
             </button>
           </nav>
@@ -4577,6 +4603,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
           );
         })()}
+
+        {/* TAB QUẢN LÝ BÀI VIẾT CẨM NANG & SEO */}
+        {activeAdminTab === 'blog' && (
+          <AdminBlogManager onShowToast={onShowToast} />
+        )}
       </main>
 
       {/* DETAIL & SHIPPING UPDATE MODAL */}

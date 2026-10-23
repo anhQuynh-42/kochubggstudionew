@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Campaign, LiveActivityItem } from '../../types';
+import { BlogPost, getStoredBlogPosts } from '../../data/blogData';
 import { calculateDaysLeft, useAppData } from '../../state/AppDataContext';
 import { getCommissionLabel, getScarcity } from '../../lib/campaignDisplay';
 import { getApplicationProgress } from '../../lib/applicationStatus';
@@ -9,6 +10,7 @@ import { ROUTES, ZALO_GROUP_URL } from '../../lib/constants';
 import { useSiteUI } from '../SiteUI';
 import { CampaignCard } from '../components/CampaignCard';
 import { KocitySkyline } from '../components/KocitySkyline';
+import { BlogReaderModal } from '../components/BlogReaderModal';
 import { Badge, Button, Chip, EmptyState, Icon, SectionTitle, Sheet, cx } from '../ui';
 
 // Tải lười (Lazy load) các modal nặng để trang chủ hiển thị tức thì
@@ -160,6 +162,17 @@ export const HomePage: React.FC = () => {
       return next;
     });
   };
+
+  // Dữ liệu cẩm nang SEO và bài viết mây che
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() => getStoredBlogPosts());
+  const [selectedBlogPost, setSelectedBlogPost] = useState<BlogPost | null>(null);
+  const [uncloudedPostIds, setUncloudedPostIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const onUpdate = () => setBlogPosts(getStoredBlogPosts());
+    window.addEventListener('kocity-blog-updated', onUpdate);
+    return () => window.removeEventListener('kocity-blog-updated', onUpdate);
+  }, []);
 
   // Link "Cách hoạt động" từ menu → cuộn tới đúng mục
   useEffect(() => {
@@ -817,33 +830,118 @@ export const HomePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ===== Ai có thể tham gia ===== */}
+        {/* ===== CẨM NANG KOC & BÀI VIẾT CHUẨN SEO (5 BÀI VIẾT - 2 BÀI MÂY CHE ÚP MỞ) ===== */}
         <section className="mt-20">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-display text-xl font-bold text-slate-950 sm:text-2xl">Ai có thể tham gia KOCity?</h2>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-[#6d28d9]">
+                <Icon name="menu_book" className="text-[14px]" /> Cẩm nang Creator & Bí kíp 0đ
+              </span>
+              <h2 className="mt-2 font-display text-2xl font-black text-slate-950 sm:text-3xl">
+                Bí kíp làm KOC & Tiếp thị liên kết từ con số 0
+              </h2>
+              <p className="mt-1 text-xs sm:text-sm text-slate-600">
+                Tổng hợp kiến thức chuẩn SEO, hướng dẫn nhận mẫu 0đ và kinh nghiệm săn job hoa hồng cao từ KOCITY.
+              </p>
+            </div>
             <Button
               variant="primary"
               size="sm"
-              className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
+              className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] shrink-0 self-start sm:self-auto cursor-pointer"
               onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
             >
-              {currentUser ? 'Xem mẫu ngay' : 'Tham gia ngay'}
+              {currentUser ? 'Nhận mẫu 0đ ngay' : 'Tham gia ngay'}
             </Button>
           </div>
-          <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
-            {PERSONAS.map((p) => (
-              <article key={p.title} className="card-fx group relative aspect-[3/4] w-[78%] shrink-0 snap-center overflow-hidden rounded-[26px] sm:w-auto shadow-md">
-                <img src={p.image} alt={p.title} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                <span className="absolute top-3.5 left-3.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-md ring-1 ring-white/30">
-                  {p.tag}
-                </span>
-                <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-white/15 p-4 text-white ring-1 ring-white/30 backdrop-blur-md">
-                  <h3 className="font-display text-base font-extrabold sm:text-lg">{p.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-white/90">{p.desc}</p>
-                </div>
-              </article>
-            ))}
+
+          {/* Danh sách 5 bài viết: 3 bài công khai + 2 bài phủ mây úp mở */}
+          <div className="no-scrollbar -mx-4 mt-6 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:px-0">
+            {blogPosts.map((post, idx) => {
+              const isTeaser = post.isCloudCovered && !uncloudedPostIds.has(post.id);
+
+              return (
+                <article
+                  key={post.id}
+                  onClick={() => {
+                    if (isTeaser) {
+                      setUncloudedPostIds(prev => new Set([...prev, post.id]));
+                    }
+                    setSelectedBlogPost(post);
+                  }}
+                  className={cx(
+                    'card-fx group relative flex flex-col justify-between overflow-hidden rounded-[26px] bg-white border border-slate-200/80 shadow-sm hover:shadow-xl transition-all cursor-pointer',
+                    idx >= 3 ? 'sm:col-span-1 lg:col-span-1.5' : '',
+                    'w-[82%] sm:w-auto shrink-0 snap-center'
+                  )}
+                >
+                  {/* Ảnh bìa */}
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+                    <img
+                      src={post.coverImage}
+                      alt={post.title}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                    <span className="absolute top-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold text-slate-800 backdrop-blur-md shadow-sm">
+                      {post.tag}
+                    </span>
+                    <span className="absolute bottom-3 left-3 text-[11px] font-medium text-white/90">
+                      ⏱️ {post.readTime}
+                    </span>
+                  </div>
+
+                  {/* Nội dung tóm tắt */}
+                  <div className="relative flex flex-1 flex-col p-5">
+                    <h3 className="font-display text-base sm:text-lg font-bold text-slate-900 group-hover:text-violet-700 transition line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-2">
+                      {post.summary}
+                    </p>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs font-semibold text-violet-600">
+                      <span>Đọc chi tiết →</span>
+                      <span className="text-[11px] font-normal text-slate-400">{post.publishedAt}</span>
+                    </div>
+                  </div>
+
+                  {/* LỚP MÂY PHA LÊ CHE ÚP MỞ (KHI BÀI VIẾT BẬT CLOUD COVER) */}
+                  {isTeaser && (
+                    <div
+                      className="absolute inset-0 z-20 flex flex-col items-center justify-end p-5 text-center bg-gradient-to-t from-slate-950/95 via-violet-950/75 to-slate-900/35 backdrop-blur-[6px] animate-cloud-drift select-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setUncloudedPostIds(prev => new Set([...prev, post.id]));
+                        setSelectedBlogPost(post);
+                      }}
+                    >
+                      {/* Biểu tượng mây & tia sáng */}
+                      <div className="mb-2 flex items-center justify-center h-12 w-12 rounded-full bg-violet-600/30 border border-violet-400/50 shadow-lg shadow-violet-500/30 backdrop-blur-md text-2xl animate-pulse">
+                        ☁️
+                      </div>
+
+                      {/* Huy hiệu bí mật */}
+                      <span className="rounded-full bg-gradient-to-r from-amber-400 to-pink-500 px-3 py-1 text-[11px] font-black tracking-wide text-slate-950 shadow-md">
+                        {post.cloudSecretLabel || '💎 BÍ KÍP ĐỘC QUYỀN'}
+                      </span>
+
+                      <p className="mt-2 text-xs font-semibold text-white/95 max-w-[240px] leading-snug drop-shadow-md">
+                        Nội dung chứa bí mật hoa hồng cao & hồ sơ VIP. Chạm để mở!
+                      </p>
+
+                      {/* Nút bấm xua tan mây */}
+                      <button
+                        type="button"
+                        className="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-black text-violet-800 shadow-xl hover:bg-violet-50 active:scale-95 transition cursor-pointer"
+                      >
+                        <span>✨</span>
+                        <span>Xua tan mây & Khám phá</span>
+                      </button>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </section>
 
@@ -901,6 +999,13 @@ export const HomePage: React.FC = () => {
             Vào nhóm Zalo KOC <Icon name="arrow_outward" className="text-[18px]" />
           </a>
         </section>
+
+        {/* Modal Đọc bài viết SEO hoàn chỉnh */}
+        <BlogReaderModal
+          post={selectedBlogPost}
+          onClose={() => setSelectedBlogPost(null)}
+          onExploreCampaigns={() => document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' })}
+        />
 
         {/* Modal tải lười: chỉ tải và mount khi người dùng bấm mở */}
         <React.Suspense fallback={null}>
