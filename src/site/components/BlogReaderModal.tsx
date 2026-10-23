@@ -52,9 +52,10 @@ export const BlogReaderModal: React.FC<BlogReaderModalProps> = ({
         <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-8 space-y-6">
           {/* Article Header */}
           <div className="space-y-3">
-            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-950 leading-tight">
-              {post.title}
-            </h1>
+            <h1
+              className="font-display text-2xl sm:text-3xl font-extrabold text-slate-950 leading-tight"
+              dangerouslySetInnerHTML={{ __html: post.title }}
+            />
             <p className="text-xs sm:text-sm text-slate-500 leading-relaxed italic border-l-2 border-violet-500 pl-3">
               {post.metaDescription}
             </p>

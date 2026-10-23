@@ -892,9 +892,10 @@ export const HomePage: React.FC = () => {
 
                   {/* Nội dung tóm tắt */}
                   <div className="relative flex flex-1 flex-col p-5">
-                    <h3 className="font-display text-base sm:text-lg font-bold text-slate-900 group-hover:text-violet-700 transition line-clamp-2">
-                      {post.title}
-                    </h3>
+                    <h3
+                      className="font-display text-base sm:text-lg font-bold text-slate-900 group-hover:text-violet-700 transition line-clamp-2"
+                      dangerouslySetInnerHTML={{ __html: post.title }}
+                    />
                     <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-2">
                       {post.summary}
                     </p>

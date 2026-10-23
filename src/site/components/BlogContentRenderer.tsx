@@ -99,13 +99,14 @@ export const BlogContentRenderer: React.FC<BlogContentRendererProps> = ({ conten
 
         // 3. Headings
         if (text.startsWith('## ')) {
+          const headingText = text.replace('## ', '');
           return (
             <h2
               key={index}
               className="text-xl sm:text-2xl font-black text-slate-950 mt-8 mb-3 font-display border-b border-slate-100 pb-2 flex items-center gap-2"
             >
-              <span className="h-6 w-1 rounded-full bg-violet-600 inline-block"></span>
-              <span>{text.replace('## ', '')}</span>
+              <span className="h-6 w-1 rounded-full bg-violet-600 inline-block shrink-0"></span>
+              <span dangerouslySetInnerHTML={{ __html: parseInlineFormatting(headingText) }} />
             </h2>
           );
         }
@@ -115,17 +116,18 @@ export const BlogContentRenderer: React.FC<BlogContentRendererProps> = ({ conten
             <h3
               key={index}
               className="text-lg sm:text-xl font-bold text-slate-900 mt-6 mb-2 font-display text-violet-950"
-            >
-              {text.replace('### ', '')}
-            </h3>
+              dangerouslySetInnerHTML={{ __html: parseInlineFormatting(text.replace('### ', '')) }}
+            />
           );
         }
 
         if (text.startsWith('#### ')) {
           return (
-            <h4 key={index} className="text-base sm:text-lg font-bold text-violet-800 mt-4 mb-2">
-              {text.replace('#### ', '')}
-            </h4>
+            <h4
+              key={index}
+              className="text-base sm:text-lg font-bold text-violet-800 mt-4 mb-2"
+              dangerouslySetInnerHTML={{ __html: parseInlineFormatting(text.replace('#### ', '')) }}
+            />
           );
         }
 
