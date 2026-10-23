@@ -108,22 +108,48 @@ export const CampaignPage: React.FC = () => {
 
           {campaign.sampleProducts && campaign.sampleProducts.length > 0 && (
             <Section title={`Mẫu bạn có thể chọn (${campaign.sampleProducts.length})`}>
-              <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white ring-1 ring-slate-100">
-                {campaign.sampleProducts.map((p) => (
-                  <li key={p.code} className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-semibold text-slate-900">{p.name}</p>
-                      <Badge tone="violet" className="shrink-0">{p.code}</Badge>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {campaign.sampleProducts.map((p) => {
+                  const sampleImg = p.image || campaign.productHeroImage;
+                  return (
+                    <div
+                      key={p.code}
+                      className={`relative flex gap-3.5 rounded-2xl bg-white p-3.5 ring-1 transition-all ${
+                        p.disabled
+                          ? 'opacity-60 ring-slate-200 bg-slate-50'
+                          : 'ring-slate-100 hover:ring-indigo-300 shadow-2xs'
+                      }`}
+                    >
+                      {sampleImg && (
+                        <img
+                          src={sampleImg}
+                          alt={p.name}
+                          className="h-20 w-20 rounded-xl object-cover border border-slate-100 shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <p className="font-bold text-slate-900 text-sm truncate">{p.name}</p>
+                          <Badge tone="violet" className="shrink-0 font-mono text-[11px]">{p.code}</Badge>
+                        </div>
+                        {p.disabled ? (
+                          <span className="inline-block mt-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                            Tạm ngưng nhận mẫu
+                          </span>
+                        ) : (
+                          p.shortDesc && <p className="mt-1 text-xs text-slate-600 line-clamp-2">{p.shortDesc}</p>
+                        )}
+                        {p.reviewTips && !p.disabled && (
+                          <p className="mt-2 flex gap-1 rounded-lg bg-amber-50/70 p-1.5 text-[11px] text-amber-900">
+                            <Icon name="lightbulb" className="text-[14px] shrink-0 text-amber-600" />
+                            <span className="truncate">{p.reviewTips}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    {p.shortDesc && <p className="mt-1 text-sm text-slate-600">{p.shortDesc}</p>}
-                    {p.reviewTips && (
-                      <p className="mt-2 flex gap-1.5 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900">
-                        <Icon name="lightbulb" className="text-[16px]" /> {p.reviewTips}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                  );
+                })}
+              </div>
             </Section>
           )}
 

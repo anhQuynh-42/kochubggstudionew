@@ -58,8 +58,8 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     setShippingNote(u?.shippingNote || '');
     setHandle(u?.tiktokHandle || '');
     setFollowers(u?.followers || '');
-    setAvgViews(u?.avgViews || '');
-    setProductCode(campaign.sampleProducts?.[0]?.code || '');
+    const firstAvailable = campaign.sampleProducts?.find((p) => !p.disabled) || campaign.sampleProducts?.[0];
+    setProductCode(firstAvailable?.code || '');
     setConcept('');
     setSparkAds(Boolean(u?.allowSparkAds));
     setCommitted(false);
@@ -159,6 +159,9 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       campaignId: campaign.id,
       campaignName: campaign.title,
       verified: Boolean(currentUser?.verified),
+      selectedSampleCode: product?.code,
+      selectedSampleName: product?.name,
+      selectedSampleImage: product?.image || campaign.productHeroImage,
     };
 
     // Gửi sang Google Sheets Webhook (giữ nguyên cơ chế hiện tại)
@@ -394,22 +397,57 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
               <legend className="mb-2 text-sm font-semibold text-slate-800">
                 Chọn mẫu muốn nhận <span className="text-[#ec4899]">*</span>
               </legend>
-              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                {campaign.sampleProducts.map((p) => (
-                  <label
-                    key={p.code}
-                    className={cx(
-                      'flex cursor-pointer items-center gap-3 rounded-2xl p-3 text-sm transition-colors',
-                      p.code === productCode ? 'bg-violet-50 ring-2 ring-[#8b5cf6]' : 'ring-1 ring-slate-200 hover:bg-slate-50'
-                    )}
-                  >
-                    <input type="radio" name="sample" checked={p.code === productCode} onChange={() => setProductCode(p.code)} className="h-4 w-4 accent-[#8b5cf6]" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold text-slate-900">{p.name}</span>
-                      <span className="text-xs text-slate-500">Mã {p.code}</span>
-                    </span>
-                  </label>
-                ))}
+              <div className="max-h-60 space-y-2.5 overflow-y-auto pr-1">
+                {campaign.sampleProducts.map((p) => {
+                  const sampleImg = p.image || campaign.productHeroImage;
+                  const isSelected = p.code === productCode;
+                  const isDisabled = Boolean(p.disabled);
+
+                  return (
+                    <label
+                      key={p.code}
+                      className={cx(
+                        'flex items-center gap-3 rounded-2xl p-3 text-sm transition-all border',
+                        isDisabled
+                          ? 'opacity-50 cursor-not-allowed bg-slate-100/70 border-slate-200'
+                          : isSelected
+                            ? 'bg-violet-50/80 border-violet-500 ring-2 ring-violet-400/50 cursor-pointer shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-violet-300 hover:bg-slate-50 cursor-pointer'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="sample"
+                        disabled={isDisabled}
+                        checked={isSelected}
+                        onChange={() => !isDisabled && setProductCode(p.code)}
+                        className="h-4 w-4 accent-[#8b5cf6] shrink-0"
+                      />
+                      {sampleImg && (
+                        <img
+                          src={sampleImg}
+                          alt={p.name}
+                          className="h-12 w-12 rounded-xl object-cover border border-slate-200 shrink-0 bg-white"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-slate-900 text-xs sm:text-sm">{p.name}</span>
+                          <span className="rounded bg-violet-100 text-violet-700 px-1.5 py-0.2 text-[10px] font-mono font-bold">
+                            {p.code}
+                          </span>
+                        </div>
+                        {isDisabled ? (
+                          <span className="text-[11px] font-medium text-red-500 block mt-0.5">
+                            (Đã tạm dừng nhận đăng ký mẫu này)
+                          </span>
+                        ) : p.shortDesc ? (
+                          <span className="text-xs text-slate-500 line-clamp-1 block mt-0.5">{p.shortDesc}</span>
+                        ) : null}
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </fieldset>
           )}

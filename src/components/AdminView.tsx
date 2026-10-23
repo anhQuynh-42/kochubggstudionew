@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Campaign, KOCApplication, ApplicationStatus, AppNotification, KOCUser } from '../types';
+import { Campaign, KOCApplication, ApplicationStatus, AppNotification, KOCUser, SampleProduct } from '../types';
 import {
   updateApplicationStatusOnSupabase,
   createCampaignOnSupabase,
@@ -162,6 +162,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
     description: '',
     productHeroImage: '',
   });
+
+  // Quản lý danh sách mẫu sản phẩm cho chiến dịch mới
+  const [newCampaignSamples, setNewCampaignSamples] = useState<SampleProduct[]>([
+    { code: 'M01', name: '', image: '', shortDesc: '' },
+  ]);
 
   // Date range filter for Dashboard & Reporting (Quản trị viên tự chọn Từ ngày ... Đến ngày ...)
   const [startDate, setStartDate] = useState('');
@@ -1029,6 +1034,128 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
+  // =========================================================================
+  // XỬ LÝ QUẢN LÝ MẪU SẢN PHẨM TRONG CHIẾN DỊCH (TẠO MỚI & CHỈNH SỬA)
+  // =========================================================================
+
+  // 1. Thêm mẫu mới vào chiến dịch mới
+  const handleAddSampleToNewCampaign = () => {
+    const nextIdx = newCampaignSamples.length + 1;
+    const nextCode = `M${nextIdx < 10 ? '0' : ''}${nextIdx}`;
+    setNewCampaignSamples((prev) => [
+      ...prev,
+      { code: nextCode, name: '', image: '', shortDesc: '' },
+    ]);
+  };
+
+  // 2. Xóa mẫu khỏi chiến dịch mới (Bắt buộc giữ lại ít nhất 1 mẫu)
+  const handleRemoveSampleFromNewCampaign = (index: number) => {
+    if (newCampaignSamples.length <= 1) {
+      onShowToast('Không thể xóa', 'Chiến dịch phải có ít nhất một mẫu sản phẩm', 'warning');
+      return;
+    }
+    setNewCampaignSamples((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // 3. Cập nhật thông tin mẫu trong chiến dịch mới
+  const handleUpdateSampleInNewCampaign = (index: number, updates: Partial<SampleProduct>) => {
+    setNewCampaignSamples((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
+      return next;
+    });
+  };
+
+  // 4. Xử lý tải ảnh đại diện cho mẫu trong chiến dịch mới
+  const handleNewSampleImageFile = (index: number, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hình ảnh hợp lệ (PNG, JPG, WEBP)', 'warning');
+      return;
+    }
+    compressImageFile(file, (optimizedUrl) => {
+      handleUpdateSampleInNewCampaign(index, { image: optimizedUrl });
+      onShowToast('Tải ảnh mẫu thành công!', file.name, 'success');
+    });
+  };
+
+  // 5. Thêm mẫu vào chiến dịch đang chỉnh sửa
+  const handleAddSampleToEditCampaign = () => {
+    if (!editingCampaign) return;
+    const current = editingCampaign.sampleProducts || [];
+    const nextIdx = current.length + 1;
+    const nextCode = `M${nextIdx < 10 ? '0' : ''}${nextIdx}`;
+    const newSample: SampleProduct = { code: nextCode, name: '', image: '', shortDesc: '' };
+    setEditingCampaign({
+      ...editingCampaign,
+      sampleProducts: [...current, newSample],
+    });
+  };
+
+  // 6. Cập nhật mẫu trong chiến dịch đang chỉnh sửa (Chỉ đổi mẫu đó, không ảnh hưởng mẫu khác)
+  const handleUpdateSampleInEditCampaign = (index: number, updates: Partial<SampleProduct>) => {
+    if (!editingCampaign) return;
+    const current = editingCampaign.sampleProducts ? [...editingCampaign.sampleProducts] : [];
+    current[index] = { ...current[index], ...updates };
+    setEditingCampaign({
+      ...editingCampaign,
+      sampleProducts: current,
+    });
+  };
+
+  // 7. Xử lý tải/đổi ảnh đại diện cho mẫu trong chiến dịch đang chỉnh sửa
+  const handleEditSampleImageFile = (index: number, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hình ảnh hợp lệ (PNG, JPG, WEBP)', 'warning');
+      return;
+    }
+    compressImageFile(file, (optimizedUrl) => {
+      handleUpdateSampleInEditCampaign(index, { image: optimizedUrl });
+      onShowToast('Đã cập nhật ảnh mẫu thành công!', file.name, 'success');
+    });
+  };
+
+  // 8. Xóa mẫu khỏi chiến dịch đang chỉnh sửa (Bảo toàn lịch sử đăng ký của KOC)
+  const handleRemoveSampleFromEditCampaign = (index: number) => {
+    if (!editingCampaign) return;
+    const current = editingCampaign.sampleProducts || [];
+    if (current.length <= 1) {
+      onShowToast('Không thể xóa', 'Chiến dịch phải có ít nhất một mẫu sản phẩm. Hãy thêm mẫu thay thế trước khi xóa.', 'warning');
+      return;
+    }
+
+    const sampleToDelete = current[index];
+    // Kiểm tra xem mẫu đã có KOC đăng ký hay chưa
+    const registeredCount = applications.filter(
+      (a) =>
+        a.campaignId === editingCampaign.id &&
+        (a.selectedSampleCode === sampleToDelete.code ||
+          (a.contentConcept && a.contentConcept.includes(sampleToDelete.code)))
+    ).length;
+
+    if (registeredCount > 0) {
+      const confirmDeactivate = window.confirm(
+        `⚠️ CẢNH BÁO QUAN TRỌNG:\n\n` +
+          `Mẫu "${sampleToDelete.name || sampleToDelete.code}" đã có ${registeredCount} KOC đăng ký nhận trong hệ thống!\n\n` +
+          `Để bảo toàn 100% lịch sử đơn của KOC, hệ thống khuyến nghị bạn chọn "Ngừng nhận đăng ký" (mẫu sẽ ẩn với KOC mới nhưng bảo toàn lịch sử đơn cũ).\n\n` +
+          `• Nhấn OK để NGỪNG NHẬN ĐĂNG KÝ mẫu này (Khuyên dùng, an toàn tuyệt đối).\n` +
+          `• Nhấn Cancel để hủy bỏ thao tác.`
+      );
+      if (confirmDeactivate) {
+        handleUpdateSampleInEditCampaign(index, { disabled: true });
+        onShowToast('Đã ngừng nhận đăng ký', `Mẫu ${sampleToDelete.name} đã được chuyển sang trạng thái tạm dừng nhận mẫu.`, 'info');
+      }
+      return;
+    }
+
+    if (window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn mẫu "${sampleToDelete.name || sampleToDelete.code}"?`)) {
+      setEditingCampaign({
+        ...editingCampaign,
+        sampleProducts: current.filter((_, i) => i !== index),
+      });
+      onShowToast('Đã xóa mẫu', 'Đã xóa mẫu sản phẩm khỏi chiến dịch', 'info');
+    }
+  };
+
   // Action: Add New Campaign
   const handleCreateCampaign = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1037,8 +1164,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
+    // Yêu cầu: Phải có ít nhất một mẫu hợp lệ trước khi cho phép tạo chiến dịch thành công
+    if (!newCampaignSamples || newCampaignSamples.length === 0) {
+      onShowToast('Thiếu mẫu sản phẩm', 'Chiến dịch phải có ít nhất một mẫu sản phẩm', 'warning');
+      return;
+    }
+
+    const emptyNameIdx = newCampaignSamples.findIndex((s) => !s.name.trim());
+    if (emptyNameIdx !== -1) {
+      onShowToast('Thiếu tên mẫu', `Vui lòng nhập tên cho Mẫu số ${emptyNameIdx + 1}`, 'warning');
+      return;
+    }
+
     const heroImg =
       newCampaignData.productHeroImage ||
+      newCampaignSamples[0]?.image ||
       'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=800&auto=format&fit=crop&q=60';
 
     const newCamp: Campaign = {
@@ -1077,6 +1217,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         { stepNum: '02', status: 'Sắp tới', date: '3 ngày sau', title: 'Giao mẫu miễn phí', desc: 'Ship tận nhà' },
         { stepNum: '03', status: 'Sắp tới', date: '7 ngày sau', title: 'Đăng video review', desc: 'Gắn giỏ hàng & hashtag' },
       ],
+      sampleProducts: newCampaignSamples,
     };
 
     onUpdateCampaigns([newCamp, ...campaigns]);
@@ -1097,18 +1238,37 @@ export const AdminView: React.FC<AdminViewProps> = ({
       description: '',
       productHeroImage: '',
     });
+    setNewCampaignSamples([{ code: 'M01', name: '', image: '', shortDesc: '' }]);
 
-    onShowToast('Tạo chiến dịch mới thành công!', `Chiến dịch "${newCamp.title}" đã được hiển thị lên trang chủ KOC.`, 'success');
+    onShowToast('Tạo chiến dịch mới thành công!', `Chiến dịch "${newCamp.title}" cùng ${newCamp.sampleProducts?.length || 1} mẫu sản phẩm đã được hiển thị lên trang chủ KOC.`, 'success');
   };
 
   // Action: Open Edit Campaign Modal
   const handleOpenEditCampaign = (camp: Campaign) => {
     const effectiveDays = camp.endDate ? calculateDaysLeftFromDate(camp.endDate, camp.daysLeft) : camp.daysLeft;
     const effectiveEndDate = camp.endDate || getDefaultEndDateString(effectiveDays);
+    const effectiveSamples: SampleProduct[] =
+      camp.sampleProducts && camp.sampleProducts.length > 0
+        ? camp.sampleProducts.map((p, idx) => ({
+            ...p,
+            code: p.code || `M0${idx + 1}`,
+            name: p.name || `Mẫu ${idx + 1}`,
+            image: p.image || '',
+          }))
+        : [
+            {
+              code: 'M01',
+              name: camp.title || 'Mẫu trải nghiệm',
+              image: camp.productHeroImage || '',
+              shortDesc: '',
+            },
+          ];
+
     setEditingCampaign({
       ...camp,
       daysLeft: effectiveDays,
       endDate: effectiveEndDate,
+      sampleProducts: effectiveSamples,
     });
     setIsEditCampaignModalOpen(true);
   };
@@ -1174,6 +1334,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     if (!editingCampaign.title.trim() || !editingCampaign.brandName.trim()) {
       onShowToast('Thiếu thông tin', 'Vui lòng nhập tên chiến dịch và tên nhãn hàng', 'warning');
+      return;
+    }
+
+    // Yêu cầu: Phải có ít nhất một mẫu hợp lệ trước khi cho phép lưu
+    const currentSamples = editingCampaign.sampleProducts || [];
+    if (currentSamples.length === 0) {
+      onShowToast('Thiếu mẫu sản phẩm', 'Chiến dịch phải có ít nhất một mẫu sản phẩm', 'warning');
+      return;
+    }
+    const emptyNameIdx = currentSamples.findIndex((s) => !s.name.trim());
+    if (emptyNameIdx !== -1) {
+      onShowToast('Thiếu tên mẫu', `Vui lòng nhập tên cho Mẫu số ${emptyNameIdx + 1}`, 'warning');
       return;
     }
 
@@ -3593,6 +3765,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             <span className="inline-block mt-1 text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded">
                               {app.followers} • {app.avgViews}
                             </span>
+                            {/* Mẫu sản phẩm KOC đã đăng ký nhận */}
+                            {(app.selectedSampleName || app.selectedSampleCode) && (
+                              <div className="mt-1.5 flex items-center gap-1.5 p-1 rounded-lg bg-indigo-50 border border-indigo-100 max-w-[200px]">
+                                {app.selectedSampleImage ? (
+                                  <img
+                                    src={app.selectedSampleImage}
+                                    alt={app.selectedSampleName}
+                                    className="w-6 h-6 rounded-md object-cover border border-indigo-200 shrink-0"
+                                  />
+                                ) : (
+                                  <span className="flex h-5 w-5 items-center justify-center rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold shrink-0">
+                                    SP
+                                  </span>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[10px] font-bold text-indigo-900 truncate">
+                                    {app.selectedSampleCode ? `[${app.selectedSampleCode}] ` : ''}
+                                    {app.selectedSampleName}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                           </td>
 
                           <td className="px-4 py-3 sm:px-5 sm:py-3.5">
@@ -4439,6 +4633,42 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <p className="font-semibold text-slate-900 text-sm mt-0.5">{selectedApp.campaignName}</p>
               </div>
 
+              {/* Mẫu sản phẩm KOC đăng ký nhận */}
+              {(selectedApp.selectedSampleName || selectedApp.selectedSampleCode) && (
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 space-y-1.5">
+                  <label className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-indigo-600">inventory_2</span>
+                    Mẫu sản phẩm KOC yêu cầu nhận
+                  </label>
+                  <div className="flex items-center gap-3 bg-white p-2.5 rounded-lg border border-indigo-100">
+                    {selectedApp.selectedSampleImage ? (
+                      <img
+                        src={selectedApp.selectedSampleImage}
+                        alt={selectedApp.selectedSampleName}
+                        className="w-14 h-14 rounded-lg object-cover border border-slate-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                        {selectedApp.selectedSampleCode || 'SP'}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-mono font-bold text-indigo-700">
+                          {selectedApp.selectedSampleCode || 'Mẫu'}
+                        </span>
+                        <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                          {selectedApp.selectedSampleName}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Vui lòng đóng gói và dán nhãn đúng phân loại mẫu trên khi xuất kho gửi KOC.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Delivery Info */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -4806,6 +5036,147 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 )}
               </div>
 
+              {/* QUẢN LÝ DANH SÁCH MẪU SẢN PHẨM (CHO CHIẾN DỊCH MỚI) */}
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[17px] text-indigo-600">inventory_2</span>
+                      <span>Danh sách mẫu sản phẩm ({newCampaignSamples.length} mẫu) *</span>
+                    </label>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Tự do tạo 1 hoặc nhiều mẫu (phân loại màu sắc, mùi hương, dòng sản phẩm) để KOC chọn khi nhận mẫu.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSampleToNewCampaign}
+                    className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">add</span>
+                    <span>Thêm mẫu</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {newCampaignSamples.map((sample, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs space-y-3 transition-all hover:border-indigo-300"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-700">
+                            Mẫu #{idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={sample.code}
+                            onChange={(e) => handleUpdateSampleInNewCampaign(idx, { code: e.target.value })}
+                            placeholder="Mã mẫu (VD: M01)"
+                            className="w-20 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 text-center uppercase focus:bg-white focus:border-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                        {newCampaignSamples.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSampleFromNewCampaign(idx)}
+                            className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-medium"
+                            title="Xóa mẫu này"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                            <span>Xóa</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                        {/* Cột tải ảnh mẫu */}
+                        <div className="sm:col-span-4">
+                          <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                            Hình ảnh mẫu
+                          </label>
+                          <input
+                            type="file"
+                            id={`new-sample-file-${idx}`}
+                            accept="image/*"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleNewSampleImageFile(idx, f);
+                            }}
+                            className="hidden"
+                          />
+                          {sample.image ? (
+                            <div className="relative rounded-xl overflow-hidden border border-slate-200 group h-24 bg-slate-50">
+                              <img
+                                src={sample.image}
+                                alt={sample.name || 'Mẫu SP'}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
+                                <label
+                                  htmlFor={`new-sample-file-${idx}`}
+                                  className="px-2 py-1 rounded bg-white text-slate-800 text-[10px] font-bold hover:bg-slate-100 cursor-pointer shadow-xs"
+                                >
+                                  Đổi ảnh
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSampleInNewCampaign(idx, { image: '' })}
+                                  className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold hover:bg-red-700 cursor-pointer shadow-xs"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <label
+                              htmlFor={`new-sample-file-${idx}`}
+                              className="flex flex-col items-center justify-center h-24 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50/80 text-center cursor-pointer transition-colors p-2"
+                            >
+                              <span className="material-symbols-outlined text-[20px] text-indigo-500 mb-0.5">
+                                add_photo_alternate
+                              </span>
+                              <span className="text-[10px] font-bold text-indigo-700">Tải ảnh mẫu</span>
+                              <span className="text-[9px] text-slate-400 mt-0.5">Từ máy tính</span>
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Cột tên & mô tả */}
+                        <div className="sm:col-span-8 space-y-2">
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-0.5">
+                              Tên mẫu sản phẩm *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={sample.name}
+                              onChange={(e) => handleUpdateSampleInNewCampaign(idx, { name: e.target.value })}
+                              placeholder="VD: Kem dưỡng cấp ẩm 50ml, Son kem #03 Đỏ gạch..."
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-0.5">
+                              Mô tả phân loại / Ghi chú (tùy chọn)
+                            </label>
+                            <input
+                              type="text"
+                              value={sample.shortDesc || ''}
+                              onChange={(e) => handleUpdateSampleInNewCampaign(idx, { shortDesc: e.target.value })}
+                              placeholder="VD: Dành cho da dầu mụn / Tặng kèm mút tán..."
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-bold text-slate-700">Mô tả sản phẩm & Brief kịch bản</label>
                 <textarea
@@ -5077,6 +5448,183 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       Chọn ảnh khác từ máy tính
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* QUẢN LÝ DANH SÁCH MẪU SẢN PHẨM (CHO CHIẾN DỊCH ĐANG CHỈNH SỬA) */}
+              <div className="rounded-2xl border-2 border-indigo-200 bg-linear-to-b from-indigo-50/70 to-indigo-50/20 p-4 space-y-3.5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-indigo-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs">
+                        <span className="material-symbols-outlined text-[17px]">inventory_2</span>
+                      </span>
+                      <label className="text-sm font-bold text-slate-900">
+                        Danh sách mẫu sản phẩm ({editingCampaign.sampleProducts?.length || 0} mẫu) *
+                      </label>
+                      <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-extrabold text-indigo-700">
+                        Bắt buộc $\ge$ 1 mẫu
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Chỉnh sửa tên, mã mẫu hoặc đổi hình ảnh cho từng mẫu. KOC sẽ nhìn thấy và chọn các mẫu này khi ứng tuyển.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSampleToEditCampaign}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm transition-all cursor-pointer self-start sm:self-auto active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                    <span>+ Thêm mẫu mới</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {(editingCampaign.sampleProducts || []).map((sample, idx) => (
+                    <div
+                      key={idx}
+                      className={`rounded-xl border p-3.5 shadow-2xs space-y-3 transition-all ${
+                        sample.disabled
+                          ? 'border-red-200 bg-red-50/40'
+                          : 'border-slate-200 bg-white hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${
+                              sample.disabled ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700'
+                            }`}
+                          >
+                            Mẫu #{idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={sample.code}
+                            onChange={(e) => handleUpdateSampleInEditCampaign(idx, { code: e.target.value })}
+                            placeholder="Mã mẫu (VD: M01)"
+                            className="w-20 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 text-center uppercase focus:bg-white focus:border-indigo-500 focus:outline-none"
+                          />
+                          {sample.disabled && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-100/70 px-2 py-0.5 rounded-full">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                              Tạm dừng nhận mẫu
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {sample.disabled ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleUpdateSampleInEditCampaign(idx, { disabled: false });
+                                onShowToast('Đã kích hoạt lại mẫu', `Mẫu ${sample.name} đã sẵn sàng nhận KOC đăng ký.`, 'success');
+                              }}
+                              className="text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                              <span>Kích hoạt lại</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSampleFromEditCampaign(idx)}
+                              className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-medium"
+                              title="Xóa hoặc ngừng nhận mẫu này"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                              <span>Xóa / Tạm dừng</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                        {/* Cột hình ảnh mẫu */}
+                        <div className="sm:col-span-4">
+                          <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                            Hình ảnh mẫu
+                          </label>
+                          <input
+                            type="file"
+                            id={`edit-sample-file-${idx}`}
+                            accept="image/*"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleEditSampleImageFile(idx, f);
+                            }}
+                            className="hidden"
+                          />
+                          {sample.image ? (
+                            <div className="relative rounded-xl overflow-hidden border border-slate-200 group h-24 bg-slate-50">
+                              <img
+                                src={sample.image}
+                                alt={sample.name || 'Mẫu SP'}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
+                                <label
+                                  htmlFor={`edit-sample-file-${idx}`}
+                                  className="px-2 py-1 rounded bg-white text-slate-800 text-[10px] font-bold hover:bg-slate-100 cursor-pointer shadow-xs"
+                                >
+                                  Đổi ảnh
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateSampleInEditCampaign(idx, { image: '' })}
+                                  className="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold hover:bg-red-700 cursor-pointer shadow-xs"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <label
+                              htmlFor={`edit-sample-file-${idx}`}
+                              className="flex flex-col items-center justify-center h-24 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50/80 text-center cursor-pointer transition-colors p-2"
+                            >
+                              <span className="material-symbols-outlined text-[20px] text-indigo-500 mb-0.5">
+                                add_photo_alternate
+                              </span>
+                              <span className="text-[10px] font-bold text-indigo-700">Tải ảnh mẫu</span>
+                              <span className="text-[9px] text-slate-400 mt-0.5">Từ máy tính</span>
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Cột tên & mô tả */}
+                        <div className="sm:col-span-8 space-y-2">
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-0.5">
+                              Tên mẫu sản phẩm *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={sample.name}
+                              onChange={(e) => handleUpdateSampleInEditCampaign(idx, { name: e.target.value })}
+                              placeholder="VD: Kem dưỡng cấp ẩm 50ml, Son kem #03..."
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-0.5">
+                              Mô tả phân loại / Ghi chú (tùy chọn)
+                            </label>
+                            <input
+                              type="text"
+                              value={sample.shortDesc || ''}
+                              onChange={(e) => handleUpdateSampleInEditCampaign(idx, { shortDesc: e.target.value })}
+                              placeholder="VD: Tone màu ấm / Dung tích 50ml..."
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

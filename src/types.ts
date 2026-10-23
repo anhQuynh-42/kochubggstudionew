@@ -18,6 +18,21 @@ export interface TimelineStep {
   desc: string;
 }
 
+export interface SampleProduct {
+  id?: string;
+  code: string;
+  name: string;
+  image?: string;
+  category?: string;
+  commission?: string;
+  shortDesc?: string;
+  detailDesc?: string;
+  reviewTips?: string;
+  tags?: string;
+  affiliateLink?: string;
+  disabled?: boolean;
+}
+
 export interface Campaign {
   id: string;
   code: string;
@@ -48,17 +63,7 @@ export interface Campaign {
   tiktokUrl?: string;
   tiktokHandle?: string;
   timeline: TimelineStep[];
-  sampleProducts?: Array<{
-    code: string;
-    name: string;
-    category?: string;
-    commission?: string;
-    shortDesc?: string;
-    detailDesc?: string;
-    reviewTips?: string;
-    tags?: string;
-    affiliateLink?: string;
-  }>;
+  sampleProducts?: SampleProduct[];
   registrationFormUrl?: string;
   zaloGroupUrl?: string;
   minVideos?: number;
@@ -104,6 +109,9 @@ export interface KOCApplication {
   verified?: boolean;
   adminFeedback?: string;
   videoSubmittedAt?: string;
+  selectedSampleCode?: string;
+  selectedSampleName?: string;
+  selectedSampleImage?: string;
 }
 
 export interface AppNotification {
