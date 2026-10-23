@@ -170,6 +170,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [dashboardSubTab, setDashboardSubTab] = useState<'pending' | 'overdue' | 'top_koc'>('pending');
 
+  // Google Analytics 4 (GA4) / Meta Insights Style Interactive Line Chart State
+  const [gaTimeframe, setGaTimeframe] = useState<'7d' | '28d'>('7d');
+  const [gaActiveMetric, setGaActiveMetric] = useState<'applications' | 'approved' | 'completed'>('applications');
+  const [gaHoverIndex, setGaHoverIndex] = useState<number | null>(null);
+
   // Chuyển định dạng YYYY-MM-DD sang DD/MM/YYYY hiển thị tiếng Việt
   const formatVNDate = (dStr: string) => {
     if (!dStr) return '';
@@ -340,44 +345,275 @@ export const AdminView: React.FC<AdminViewProps> = ({
     );
   };
 
-  // Biểu đồ cột mini: Thống kê số lượng KOC nộp đơn trong 7 ngày gần nhất
-  const last7DaysTrend = useMemo(() => {
-    const list = [];
+  // Dữ liệu Phân Tích Xu Hướng & Đối Chiếu Chu Kỳ Chuẩn GA4 / Meta Insights
+  const gaChartData = useMemo(() => {
+    const daysCount = gaTimeframe === '7d' ? 7 : 28;
     const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(today.getDate() - i);
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const fullDate = `${day}/${month}/${d.getFullYear()}`;
-      const shortDate = `${day}/${month}`;
-      const weekdayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-      const weekday = weekdayNames[d.getDay()];
+    today.setHours(23, 59, 59, 999);
 
-      const count = applications.filter((a) => {
-        if (!a.createdAtDate) return false;
-        return a.createdAtDate.trim() === fullDate;
-      }).length;
+    const normalizeAppDate = (dateStr: string) => {
+      if (!dateStr) return '';
+      const parts = dateStr.trim().split('/');
+      if (parts.length === 3) {
+        const d = parts[0].padStart(2, '0');
+        const m = parts[1].padStart(2, '0');
+        const y = parts[2];
+        return `${d}/${m}/${y}`;
+      }
+      return dateStr.trim();
+    };
 
-      list.push({
-        fullDate,
-        shortDate,
-        weekday,
-        count,
+    const weekdayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+    const shortWeekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    interface PointData {
+      index: number;
+      currDate: Date;
+      currFullDate: string;
+      currShortDate: string;
+      currWeekday: string;
+      currShortWeekday: string;
+      currApps: number;
+      currApproved: number;
+      currCompleted: number;
+      prevDate: Date;
+      prevFullDate: string;
+      prevShortDate: string;
+      prevWeekday: string;
+      prevShortWeekday: string;
+      prevApps: number;
+      prevApproved: number;
+      prevCompleted: number;
+      isToday: boolean;
+    }
+
+    const points: PointData[] = [];
+
+    for (let i = daysCount - 1; i >= 0; i--) {
+      // Kỳ hiện tại
+      const cDate = new Date();
+      cDate.setDate(today.getDate() - i);
+      const cD = String(cDate.getDate()).padStart(2, '0');
+      const cM = String(cDate.getMonth() + 1).padStart(2, '0');
+      const cY = cDate.getFullYear();
+      const currFullDate = `${cD}/${cM}/${cY}`;
+      const currShortDate = `${cD}/${cM}`;
+
+      // Kỳ trước đối chiếu (Tuần trước hoặc 28 ngày trước)
+      const pDate = new Date();
+      pDate.setDate(today.getDate() - i - daysCount);
+      const pD = String(pDate.getDate()).padStart(2, '0');
+      const pM = String(pDate.getMonth() + 1).padStart(2, '0');
+      const pY = pDate.getFullYear();
+      const prevFullDate = `${pD}/${pM}/${pY}`;
+      const prevShortDate = `${pD}/${pM}`;
+
+      let currApps = 0;
+      let currApproved = 0;
+      let currCompleted = 0;
+
+      let prevApps = 0;
+      let prevApproved = 0;
+      let prevCompleted = 0;
+
+      applications.forEach((a) => {
+        const aDate = normalizeAppDate(a.createdAtDate);
+        if (!aDate) return;
+
+        const isApproved =
+          a.status === 'Đã duyệt gửi mẫu' ||
+          a.status === 'Đang giao' ||
+          a.status === 'Đã lên bài' ||
+          a.status === 'Đã hoàn thành';
+        const isCompleted = a.status === 'Đã lên bài' || a.status === 'Đã hoàn thành';
+
+        if (aDate === currFullDate) {
+          currApps++;
+          if (isApproved) currApproved++;
+          if (isCompleted) currCompleted++;
+        } else if (aDate === prevFullDate) {
+          prevApps++;
+          if (isApproved) prevApproved++;
+          if (isCompleted) prevCompleted++;
+        }
+      });
+
+      points.push({
+        index: daysCount - 1 - i,
+        currDate: cDate,
+        currFullDate,
+        currShortDate,
+        currWeekday: weekdayNames[cDate.getDay()],
+        currShortWeekday: shortWeekdays[cDate.getDay()],
+        currApps,
+        currApproved,
+        currCompleted,
+        prevDate: pDate,
+        prevFullDate,
+        prevShortDate,
+        prevWeekday: weekdayNames[pDate.getDay()],
+        prevShortWeekday: shortWeekdays[pDate.getDay()],
+        prevApps,
+        prevApproved,
+        prevCompleted,
         isToday: i === 0,
       });
     }
 
-    const maxCount = Math.max(...list.map((item) => item.count), 4);
-    const totalInWeek = list.reduce((acc, item) => acc + item.count, 0);
+    const totalCurrApps = points.reduce((acc, p) => acc + p.currApps, 0);
+    const totalPrevApps = points.reduce((acc, p) => acc + p.prevApps, 0);
+
+    const totalCurrApproved = points.reduce((acc, p) => acc + p.currApproved, 0);
+    const totalPrevApproved = points.reduce((acc, p) => acc + p.prevApproved, 0);
+
+    const totalCurrCompleted = points.reduce((acc, p) => acc + p.currCompleted, 0);
+    const totalPrevCompleted = points.reduce((acc, p) => acc + p.prevCompleted, 0);
+
+    const calcGrowth = (curr: number, prev: number) => {
+      if (prev === 0) {
+        return curr > 0 ? { percent: 100, isUp: true, diff: curr } : { percent: 0, isUp: true, diff: 0 };
+      }
+      const diff = curr - prev;
+      const percent = Math.round((diff / prev) * 100);
+      return { percent: Math.abs(percent), isUp: diff >= 0, diff };
+    };
+
+    const metricsSummary = {
+      applications: {
+        id: 'applications' as const,
+        title: 'Lượt Ứng Tuyển Mới',
+        icon: 'how_to_reg',
+        currTotal: totalCurrApps,
+        prevTotal: totalPrevApps,
+        growth: calcGrowth(totalCurrApps, totalPrevApps),
+      },
+      approved: {
+        id: 'approved' as const,
+        title: 'Đã Duyệt Cấp Mẫu',
+        icon: 'local_shipping',
+        currTotal: totalCurrApproved,
+        prevTotal: totalPrevApproved,
+        growth: calcGrowth(totalCurrApproved, totalPrevApproved),
+      },
+      completed: {
+        id: 'completed' as const,
+        title: 'Video Nghiệm Thu',
+        icon: 'smart_display',
+        currTotal: totalCurrCompleted,
+        prevTotal: totalPrevCompleted,
+        growth: calcGrowth(totalCurrCompleted, totalPrevCompleted),
+      },
+    };
+
+    const getMetricVal = (p: PointData, isCurr: boolean) => {
+      if (gaActiveMetric === 'applications') return isCurr ? p.currApps : p.prevApps;
+      if (gaActiveMetric === 'approved') return isCurr ? p.currApproved : p.prevApproved;
+      return isCurr ? p.currCompleted : p.prevCompleted;
+    };
+
+    const allValues = points.flatMap((p) => [getMetricVal(p, true), getMetricVal(p, false)]);
+    const rawMax = Math.max(...allValues, 1);
+    const chartMax = Math.max(4, Math.ceil(rawMax * 1.25));
+
+    // SVG Layout Geometry
+    const svgWidth = 840;
+    const svgHeight = 220;
+    const paddingLeft = 38;
+    const paddingRight = 24;
+    const paddingTop = 24;
+    const paddingBottom = 32;
+    const plotWidth = svgWidth - paddingLeft - paddingRight;
+    const plotHeight = svgHeight - paddingTop - paddingBottom;
+    const bottomY = paddingTop + plotHeight;
+
+    const currCoords = points.map((p, idx) => {
+      const x = paddingLeft + (idx / Math.max(points.length - 1, 1)) * plotWidth;
+      const y = paddingTop + plotHeight - (getMetricVal(p, true) / chartMax) * plotHeight;
+      return { x, y, val: getMetricVal(p, true), point: p };
+    });
+
+    const prevCoords = points.map((p, idx) => {
+      const x = paddingLeft + (idx / Math.max(points.length - 1, 1)) * plotWidth;
+      const y = paddingTop + plotHeight - (getMetricVal(p, false) / chartMax) * plotHeight;
+      return { x, y, val: getMetricVal(p, false), point: p };
+    });
+
+    const buildSmoothPath = (coords: { x: number; y: number }[]) => {
+      if (coords.length === 0) return '';
+      if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
+      let d = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const p0 = coords[i === 0 ? 0 : i - 1];
+        const p1 = coords[i];
+        const p2 = coords[i + 1];
+        const p3 = coords[i + 2] || p2;
+
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+        d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return d;
+    };
+
+    const currLinePath = buildSmoothPath(currCoords);
+    const prevLinePath = buildSmoothPath(prevCoords);
+    const currAreaPath =
+      currCoords.length > 0
+        ? `${currLinePath} L ${currCoords[currCoords.length - 1].x.toFixed(1)} ${bottomY} L ${currCoords[0].x.toFixed(1)} ${bottomY} Z`
+        : '';
+
+    const steps = 4;
+    const yTicks = Array.from({ length: steps + 1 }, (_, i) => {
+      const pct = i / steps;
+      const val = Math.round(chartMax * pct);
+      const y = paddingTop + plotHeight - pct * plotHeight;
+      return { val, y };
+    });
 
     return {
-      items: list,
-      maxCount,
+      daysCount,
+      points,
+      currCoords,
+      prevCoords,
+      currLinePath,
+      prevLinePath,
+      currAreaPath,
+      yTicks,
+      chartMax,
+      svgWidth,
+      svgHeight,
+      paddingLeft,
+      paddingRight,
+      paddingTop,
+      paddingBottom,
+      plotWidth,
+      plotHeight,
+      bottomY,
+      metricsSummary,
+      activeSummary: metricsSummary[gaActiveMetric],
+    };
+  }, [applications, gaTimeframe, gaActiveMetric]);
+
+  // Backward compatibility cho khối cũ nếu cần
+  const last7DaysTrend = useMemo(() => {
+    const p7 = gaChartData.points.slice(-7);
+    const totalInWeek = p7.reduce((acc, p) => acc + p.currApps, 0);
+    return {
+      items: p7.map((p) => ({
+        fullDate: p.currFullDate,
+        shortDate: p.currShortDate,
+        weekday: p.currShortWeekday,
+        count: p.currApps,
+        isToday: p.isToday,
+      })),
+      maxCount: Math.max(...p7.map((p) => p.currApps), 4),
       totalInWeek,
       avgPerDay: (totalInWeek / 7).toFixed(1),
     };
-  }, [applications]);
+  }, [gaChartData]);
 
   // Xếp hạng Top KOC thật từ dữ liệu hồ sơ (Ưu tiên đã lên bài & view cao nhất)
   const topKocList = useMemo(() => {
@@ -1915,78 +2151,468 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             {/* =========================================================================
-                BIỂU ĐỒ CỘT MINI: XU HƯỚNG NỘP ĐƠN KOC (7 NGÀY GẦN NHẤT)
+                BIỂU ĐỒ ĐỐI CHIẾU XU HƯỚNG KOC CHUẨN GOOGLE ANALYTICS 4 & META INSIGHTS
                 ========================================================================= */}
-            <div className="rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                    <span className="material-symbols-outlined text-[20px]">bar_chart</span>
+            <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-xs border border-slate-200/80">
+              {/* Header: Title + Timeframe Switcher */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-4 ring-indigo-50/50">
+                    <span className="material-symbols-outlined text-[22px]">ssid_chart</span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      Nhịp Độ Ứng Tuyển KOC (7 Ngày Gần Nhất)
-                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
-                        Biểu đồ xu hướng
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold text-slate-900">
+                        Nhịp Độ & Xu Hướng Tăng Trưởng KOC
+                      </h3>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        GA4 Insights Live
                       </span>
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Theo dõi số lượng hồ sơ KOC nộp mới theo từng ngày để chủ động kế hoạch duyệt và chuyển kho
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Đối chiếu chu kỳ thời gian thực · Đường nét liền (Kỳ này) vs Đường nét đứt (Kỳ trước)
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 text-xs">
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
-                    <span className="text-slate-400">Tổng tuần qua:</span>
-                    <strong className="text-indigo-600 font-extrabold">{last7DaysTrend.totalInWeek} đơn</strong>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
-                    <span className="text-slate-400">Bình quân:</span>
-                    <strong className="text-slate-900 font-extrabold">{last7DaysTrend.avgPerDay} đơn/ngày</strong>
+                {/* Bộ Chọn 7 Ngày / 28 Ngày */}
+                <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+                  <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200/70 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGaTimeframe('7d');
+                        setGaHoverIndex(null);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        gaTimeframe === '7d'
+                          ? 'bg-white text-indigo-700 font-extrabold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      7 ngày qua
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGaTimeframe('28d');
+                        setGaHoverIndex(null);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg transition-all ${
+                        gaTimeframe === '28d'
+                          ? 'bg-white text-indigo-700 font-extrabold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      28 ngày qua
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Thanh Cột Bar Trực Quan & Đầy Đủ Thông Số */}
-              <div className="mt-5 grid grid-cols-7 gap-2 sm:gap-4 items-end h-36 pt-4 px-2">
-                {last7DaysTrend.items.map((item, idx) => {
-                  const heightPercent = Math.max(14, Math.round((item.count / last7DaysTrend.maxCount) * 100));
+              {/* 3 Metric Scorecard Tabs (GA4 Style) */}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(['applications', 'approved', 'completed'] as const).map((mKey) => {
+                  const mData = gaChartData.metricsSummary[mKey];
+                  const isActive = gaActiveMetric === mKey;
                   return (
-                    <div key={idx} className="flex flex-col items-center justify-end h-full gap-1.5 group cursor-pointer">
-                      {/* Số lượng đơn trên đỉnh cột */}
-                      <span
-                        className={`text-[11px] font-extrabold transition-all group-hover:scale-110 ${
-                          item.count > 0 ? (item.isToday ? 'text-indigo-600 font-black' : 'text-slate-800') : 'text-slate-300'
-                        }`}
-                      >
-                        {item.count}
-                      </span>
-
-                      {/* Thanh Bar */}
-                      <div className="w-full max-w-[46px] h-24 bg-slate-100 rounded-xl overflow-hidden flex items-end p-1 transition-all group-hover:bg-indigo-50">
-                        <div
-                          style={{ height: `${heightPercent}%` }}
-                          className={`w-full rounded-lg transition-all duration-500 ${
-                            item.isToday
-                              ? 'bg-gradient-to-t from-indigo-600 to-indigo-500 shadow-sm shadow-indigo-500/25'
-                              : item.count > 0
-                              ? 'bg-gradient-to-t from-slate-700 to-slate-500 group-hover:from-indigo-600 group-hover:to-indigo-400'
-                              : 'bg-slate-200'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Nhãn Thứ & Ngày */}
-                      <div className="text-center mt-0.5">
-                        <span className={`text-xs block font-bold ${item.isToday ? 'text-indigo-600 font-black' : 'text-slate-700'}`}>
-                          {item.isToday ? 'Hôm nay' : item.weekday}
+                    <button
+                      key={mKey}
+                      type="button"
+                      onClick={() => setGaActiveMetric(mKey)}
+                      className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden ${
+                        isActive
+                          ? 'border-indigo-500 bg-indigo-50/40 shadow-xs ring-1 ring-indigo-500/20'
+                          : 'border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/60 hover:border-slate-300'
+                      }`}
+                    >
+                      {isActive && (
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-indigo-600" />
+                      )}
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                        <span className="font-bold flex items-center gap-1.5 text-slate-700">
+                          <span className={`material-symbols-outlined text-[16px] ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
+                            {mData.icon}
+                          </span>
+                          {mData.title}
                         </span>
-                        <span className="text-[10px] text-slate-400 block font-mono">{item.shortDate}</span>
+                        <span
+                          className={`inline-flex items-center gap-0.5 text-[11px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                            mData.growth.isUp
+                              ? 'text-emerald-700 bg-emerald-50 border border-emerald-200/60'
+                              : 'text-rose-700 bg-rose-50 border border-rose-200/60'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[12px]">
+                            {mData.growth.isUp ? 'trending_up' : 'trending_down'}
+                          </span>
+                          {mData.growth.isUp ? '+' : '-'}{mData.growth.percent}%
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-2xl font-black text-slate-900 tracking-tight">
+                          {mData.currTotal}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          vs kỳ trước: <span className="font-semibold text-slate-600">{mData.prevTotal}</span>
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend & Guide note */}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 px-1">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 h-0.5 bg-indigo-600 rounded-full inline-block" />
+                    <span className="font-semibold text-slate-700">
+                      Kỳ này ({gaTimeframe === '7d' ? '7 ngày qua' : '28 ngày qua'})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 border-t-2 border-dashed border-slate-400 inline-block" />
+                    <span className="font-semibold text-slate-500">
+                      Kỳ trước đối chiếu ({gaTimeframe === '7d' ? '7 ngày trước đó' : '28 ngày trước đó'})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                  <span className="material-symbols-outlined text-[14px] text-indigo-500">touch_app</span>
+                  <span>Rê chuột trên biểu đồ để xem chi tiết đối chiếu</span>
+                </div>
+              </div>
+
+              {/* Chart SVG Canvas with Vertical Guideline & Tooltip */}
+              <div className="relative mt-3 select-none">
+                <svg
+                  viewBox={`0 0 ${gaChartData.svgWidth} ${gaChartData.svgHeight}`}
+                  className="w-full h-auto overflow-visible cursor-crosshair"
+                  onMouseMove={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const pct = Math.max(0, Math.min(1, mouseX / rect.width));
+                    const targetSvgX = pct * gaChartData.svgWidth;
+                    let closest = 0;
+                    let minDiff = Infinity;
+                    gaChartData.currCoords.forEach((pt, idx) => {
+                      const diff = Math.abs(pt.x - targetSvgX);
+                      if (diff < minDiff) {
+                        minDiff = diff;
+                        closest = idx;
+                      }
+                    });
+                    setGaHoverIndex(closest);
+                  }}
+                  onMouseLeave={() => setGaHoverIndex(null)}
+                >
+                  <defs>
+                    <linearGradient id="gaAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity="0.28" />
+                      <stop offset="60%" stopColor="#818cf8" stopOpacity="0.08" />
+                      <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
+                    </linearGradient>
+                    <filter id="gaGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#6366f1" floodOpacity="0.35" />
+                    </filter>
+                  </defs>
+
+                  {/* Invisible Hit-box backdrop for responsive hover tracking */}
+                  <rect
+                    x="0"
+                    y="0"
+                    width={gaChartData.svgWidth}
+                    height={gaChartData.svgHeight}
+                    fill="transparent"
+                    style={{ pointerEvents: 'all' }}
+                  />
+
+                  {/* Horizontal Gridlines & Y-Axis Labels */}
+                  {gaChartData.yTicks.map((tick, i) => (
+                    <g key={i}>
+                      <line
+                        x1={gaChartData.paddingLeft}
+                        y1={tick.y}
+                        x2={gaChartData.svgWidth - gaChartData.paddingRight}
+                        y2={tick.y}
+                        stroke="#e2e8f0"
+                        strokeDasharray={i === 0 ? 'none' : '3 3'}
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={gaChartData.paddingLeft - 8}
+                        y={tick.y + 4}
+                        textAnchor="end"
+                        fontSize="10"
+                        fill="#94a3b8"
+                        fontFamily="ui-monospace, monospace"
+                      >
+                        {tick.val}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* Area fill under Current curve */}
+                  {gaChartData.currAreaPath && (
+                    <path d={gaChartData.currAreaPath} fill="url(#gaAreaGrad)" />
+                  )}
+
+                  {/* Previous Period: Dashed Gray Line */}
+                  {gaChartData.prevLinePath && (
+                    <path
+                      d={gaChartData.prevLinePath}
+                      fill="none"
+                      stroke="#94a3b8"
+                      strokeWidth="2"
+                      strokeDasharray="5 4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* Current Period: Solid Indigo Line */}
+                  {gaChartData.currLinePath && (
+                    <path
+                      d={gaChartData.currLinePath}
+                      fill="none"
+                      stroke="#6366f1"
+                      strokeWidth="2.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      filter="url(#gaGlow)"
+                    />
+                  )}
+
+                  {/* X-Axis Date Labels */}
+                  {gaChartData.points.map((p, idx) => {
+                    const coord = gaChartData.currCoords[idx];
+                    // On 28d timeframe, avoid label crowding: show every 4 days + last day
+                    const shouldShowLabel =
+                      gaTimeframe === '7d' ||
+                      idx === 0 ||
+                      idx === gaChartData.points.length - 1 ||
+                      idx % 4 === 0;
+
+                    if (!shouldShowLabel) return null;
+
+                    return (
+                      <g key={idx} transform={`translate(${coord.x}, ${gaChartData.bottomY + 16})`}>
+                        <text
+                          textAnchor="middle"
+                          fontSize={gaTimeframe === '7d' ? '11' : '10'}
+                          fontWeight={p.isToday ? '700' : '500'}
+                          fill={p.isToday ? '#4f46e5' : '#64748b'}
+                        >
+                          {gaTimeframe === '7d' ? (p.isToday ? 'Hôm nay' : p.currShortWeekday) : p.currShortDate}
+                        </text>
+                        {gaTimeframe === '7d' && (
+                          <text
+                            y="12"
+                            textAnchor="middle"
+                            fontSize="9"
+                            fill="#94a3b8"
+                            fontFamily="ui-monospace, monospace"
+                          >
+                            {p.currShortDate}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+
+                  {/* Hover Guideline & Crosshair Elements */}
+                  {gaHoverIndex !== null && gaChartData.currCoords[gaHoverIndex] && (
+                    <g>
+                      {/* Vertical Crosshair Line (Thước Gióng) */}
+                      <line
+                        x1={gaChartData.currCoords[gaHoverIndex].x}
+                        y1={gaChartData.paddingTop}
+                        x2={gaChartData.currCoords[gaHoverIndex].x}
+                        y2={gaChartData.bottomY}
+                        stroke="#6366f1"
+                        strokeWidth="1.5"
+                        strokeDasharray="3 3"
+                        opacity="0.8"
+                      />
+
+                      {/* Point on Previous Curve (Gray) */}
+                      <circle
+                        cx={gaChartData.prevCoords[gaHoverIndex].x}
+                        cy={gaChartData.prevCoords[gaHoverIndex].y}
+                        r="5"
+                        fill="#ffffff"
+                        stroke="#94a3b8"
+                        strokeWidth="2.5"
+                      />
+
+                      {/* Point on Current Curve (Indigo Glowing) */}
+                      <circle
+                        cx={gaChartData.currCoords[gaHoverIndex].x}
+                        cy={gaChartData.currCoords[gaHoverIndex].y}
+                        r="7"
+                        fill="#ffffff"
+                        stroke="#6366f1"
+                        strokeWidth="3.5"
+                        filter="url(#gaGlow)"
+                      />
+                    </g>
+                  )}
+
+                  {/* Default pulse on latest day when not hovering */}
+                  {gaHoverIndex === null && gaChartData.currCoords.length > 0 && (() => {
+                    const lastPt = gaChartData.currCoords[gaChartData.currCoords.length - 1];
+                    return (
+                      <g>
+                        <circle
+                          cx={lastPt.x}
+                          cy={lastPt.y}
+                          r="5"
+                          fill="#6366f1"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                        />
+                        <circle
+                          cx={lastPt.x}
+                          cy={lastPt.y}
+                          r="9"
+                          fill="none"
+                          stroke="#6366f1"
+                          strokeWidth="1.5"
+                          opacity="0.4"
+                        />
+                      </g>
+                    );
+                  })()}
+
+                  {/* Individual Date Column Hit-Boxes for Guaranteed Hover Detection */}
+                  {gaChartData.currCoords.map((coord, idx) => {
+                    const colWidth = gaChartData.plotWidth / Math.max(gaChartData.points.length - 1, 1);
+                    return (
+                      <rect
+                        key={`hit-${idx}`}
+                        x={coord.x - colWidth / 2}
+                        y={gaChartData.paddingTop}
+                        width={colWidth}
+                        height={gaChartData.plotHeight + 30}
+                        fill="transparent"
+                        style={{ pointerEvents: 'all' }}
+                        className="cursor-crosshair"
+                        onMouseEnter={() => setGaHoverIndex(idx)}
+                      />
+                    );
+                  })}
+                </svg>
+
+                {/* Floating Comparison Tooltip Card */}
+                {gaHoverIndex !== null && gaChartData.currCoords[gaHoverIndex] && (() => {
+                  const p = gaChartData.points[gaHoverIndex];
+                  const currCoord = gaChartData.currCoords[gaHoverIndex];
+                  const prevCoord = gaChartData.prevCoords[gaHoverIndex];
+                  const diff = currCoord.val - prevCoord.val;
+                  const pct = prevCoord.val === 0 ? (currCoord.val > 0 ? 100 : 0) : Math.round((diff / prevCoord.val) * 100);
+                  const isRightHalf = gaHoverIndex > gaChartData.points.length / 2;
+                  const leftPercent = (currCoord.x / gaChartData.svgWidth) * 100;
+
+                  return (
+                    <div
+                      className="pointer-events-none absolute z-30 transition-all duration-75 ease-out"
+                      style={{
+                        left: `${leftPercent}%`,
+                        top: '10px',
+                        transform: isRightHalf ? 'translateX(calc(-100% - 14px))' : 'translateX(14px)',
+                      }}
+                    >
+                      <div className="w-64 rounded-xl border border-slate-200 bg-white/95 backdrop-blur-md p-3.5 shadow-xl ring-1 ring-black/5 text-xs">
+                        {/* Tooltip Header Date */}
+                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                          <div>
+                            <span className="font-extrabold text-slate-900 block">
+                              {p.currWeekday}, {p.currFullDate}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              Đối chiếu: {p.prevWeekday}, {p.prevFullDate}
+                            </span>
+                          </div>
+                          {p.isToday && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[9px] font-black text-indigo-700">
+                              Hôm nay
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Metric Row 1: Current Period */}
+                        <div className="flex items-center justify-between py-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block shadow-xs" />
+                            <span className="text-slate-600 font-medium">Kỳ này:</span>
+                          </div>
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            {currCoord.val} <span className="text-[11px] font-normal text-slate-500">đơn</span>
+                          </span>
+                        </div>
+
+                        {/* Metric Row 2: Comparison Period */}
+                        <div className="flex items-center justify-between py-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-slate-300 border border-slate-400 inline-block" />
+                            <span className="text-slate-500">Kỳ trước:</span>
+                          </div>
+                          <span className="font-bold text-slate-600">
+                            {prevCoord.val} <span className="text-[11px] font-normal text-slate-400">đơn</span>
+                          </span>
+                        </div>
+
+                        {/* Metric Row 3: Growth & Delta */}
+                        <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-[11px] text-slate-400">Tăng trưởng:</span>
+                          <span
+                            className={`inline-flex items-center gap-0.5 font-black text-xs px-2 py-0.5 rounded-md ${
+                              diff > 0
+                                ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                                : diff < 0
+                                ? 'text-rose-700 bg-rose-50 border border-rose-200'
+                                : 'text-slate-600 bg-slate-100'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[13px]">
+                              {diff > 0 ? 'arrow_upward' : diff < 0 ? 'arrow_downward' : 'remove'}
+                            </span>
+                            {diff > 0 ? `+${diff}` : diff} ({diff > 0 ? `+${pct}%` : `${pct}%`})
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
-                })}
+                })()}
+              </div>
+
+              {/* Bottom Quick KPI Summary Pill */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">Chỉ số đang xem:</span>
+                  <strong className="text-slate-800 font-extrabold">
+                    {gaChartData.activeSummary.title}
+                  </strong>
+                  <span className="text-slate-300">•</span>
+                  <span>Tổng kỳ này: <strong className="text-indigo-600 font-black">{gaChartData.activeSummary.currTotal}</strong></span>
+                  <span className="text-slate-300">•</span>
+                  <span>Tổng kỳ trước: <strong className="text-slate-700 font-bold">{gaChartData.activeSummary.prevTotal}</strong></span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">Trung bình ngày:</span>
+                  <span className="font-mono font-bold text-slate-700">
+                    {(gaChartData.activeSummary.currTotal / gaChartData.daysCount).toFixed(1)} / ngày
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-400">Kỳ trước:</span>
+                  <span className="font-mono text-slate-500">
+                    {(gaChartData.activeSummary.prevTotal / gaChartData.daysCount).toFixed(1)} / ngày
+                  </span>
+                </div>
               </div>
             </div>
 
