@@ -3431,6 +3431,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <div className="text-xs">
                                   <span className="font-bold text-slate-900">{app.followers}</span> followers
                                   <p className="text-[11px] text-slate-500">{app.avgViews}</p>
+                                  {(app.monthlyOrders || app.monthlyAvgGmv) && (
+                                    <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+                                      {app.monthlyOrders && (
+                                        <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                          📦 {app.monthlyOrders.includes('đơn') ? app.monthlyOrders : `${app.monthlyOrders} đơn/th`}
+                                        </span>
+                                      )}
+                                      {app.monthlyAvgGmv && (
+                                        <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                          💰 {app.monthlyAvgGmv}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </td>
 
@@ -3791,6 +3805,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             <span className="inline-block mt-1 text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded">
                               {app.followers} • {app.avgViews}
                             </span>
+                            {(app.monthlyOrders || app.monthlyAvgGmv) && (
+                              <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+                                {app.monthlyOrders && (
+                                  <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                    📦 {app.monthlyOrders}
+                                  </span>
+                                )}
+                                {app.monthlyAvgGmv && (
+                                  <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                    💰 {app.monthlyAvgGmv}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             {/* Mẫu sản phẩm KOC đã đăng ký nhận */}
                             {(app.selectedSampleName || app.selectedSampleCode) && (
                               <div className="mt-1.5 flex items-center gap-1.5 p-1 rounded-lg bg-indigo-50 border border-indigo-100 max-w-[200px]">
@@ -4655,6 +4683,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <p className="text-xs text-slate-500 mt-1">
                     {selectedApp.followers} Followers • {selectedApp.avgViews}
                   </p>
+                  {(selectedApp.monthlyOrders || selectedApp.monthlyAvgGmv) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                      {selectedApp.monthlyOrders && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 font-medium text-amber-700 border border-amber-200">
+                          📦 {selectedApp.monthlyOrders.includes('đơn') ? selectedApp.monthlyOrders : `${selectedApp.monthlyOrders} đơn/tháng`}
+                        </span>
+                      )}
+                      {selectedApp.monthlyAvgGmv && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 border border-emerald-200">
+                          💰 GMV: {selectedApp.monthlyAvgGmv}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

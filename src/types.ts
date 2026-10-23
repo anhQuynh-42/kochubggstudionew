@@ -94,6 +94,8 @@ export interface KOCApplication {
   followers: string;
   followersCount: number;
   avgViews: string;
+  monthlyOrders?: string;
+  monthlyAvgGmv?: string;
   address: string;
   shippingCode: string;
   shippingStatus: 'Đã phát thành công' | 'Đang trung chuyển' | 'Chờ duyệt để sinh mã' | 'Không gửi mẫu';
@@ -146,6 +148,8 @@ export interface KOCUser {
   avgViews?: string;
   engagementRate?: string;
   gmv?: string;
+  monthlyOrders?: string;
+  monthlyAvgGmv?: string;
   channelLink?: string;
   instagramHandle?: string;
   youtubeHandle?: string;
