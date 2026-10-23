@@ -41,9 +41,9 @@ export interface Campaign {
   commissionRate?: string;
   productHeroImage: string;
   galleryImages: string[];
-  uspList: Array<{ title: string; desc: string; icon: string }>;
-  storySteps: StoryStep[];
-  hashtags: string[];
+  uspList?: Array<{ title: string; desc: string; icon: string }>;
+  storySteps?: StoryStep[];
+  hashtags?: string[];
   cartBrandName: string;
   tiktokUrl?: string;
   tiktokHandle?: string;
