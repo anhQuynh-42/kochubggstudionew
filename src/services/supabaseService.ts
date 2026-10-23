@@ -284,6 +284,65 @@ export function subscribeToCampaignsRealtime(
   };
 }
 
+// Danh sách các cột hợp lệ thực tế có trong bảng public.applications trên Supabase
+const VALID_APPLICATION_COLUMNS = new Set([
+  'id',
+  'code',
+  'kocId',
+  'kocName',
+  'avatar',
+  'phone',
+  'email',
+  'tiktokHandle',
+  'followers',
+  'followersCount',
+  'avgViews',
+  'address',
+  'shippingCode',
+  'shippingStatus',
+  'createdAtTime',
+  'createdAtDate',
+  'status',
+  'videoLink',
+  'videoViews',
+  'audience',
+  'contentConcept',
+  'campaignId',
+  'campaignName',
+  'verified',
+  'created_at',
+  'adminFeedback',
+  'videoSubmittedAt',
+]);
+
+/**
+ * Lọc payload application trước khi gửi lên Supabase để tránh lỗi PGRST204
+ */
+export function sanitizeApplicationForSupabase(app: Partial<KOCApplication>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(app)) {
+    if (VALID_APPLICATION_COLUMNS.has(key)) {
+      payload[key] = value;
+    }
+  }
+  return payload;
+}
+
+/**
+ * Phục hồi các trường mở rộng (selectedSampleCode, selectedSampleName) từ contentConcept
+ */
+export function parseApplicationFromSupabase(raw: Record<string, unknown>): KOCApplication {
+  const app = { ...raw } as unknown as KOCApplication;
+  if (!app.selectedSampleCode && app.contentConcept) {
+    const match = app.contentConcept.match(/\[Mẫu đăng ký:\s*([^\s-]+)\s*-\s*([^\]]+)\]/);
+    if (match) {
+      app.selectedSampleCode = match[1].trim();
+      app.selectedSampleName = match[2].trim();
+    }
+  }
+  return app;
+}
+
 // 3. Lấy danh sách hồ sơ KOC ứng tuyển từ Supabase
 export async function getApplicationsFromSupabase(): Promise<KOCApplication[] | null> {
   if (!isSupabaseConfigured()) return null;
@@ -299,7 +358,8 @@ export async function getApplicationsFromSupabase(): Promise<KOCApplication[] | 
       return null;
     }
 
-    return (data as unknown as KOCApplication[]) || [];
+    if (!data) return [];
+    return data.map((item) => parseApplicationFromSupabase(item as Record<string, unknown>));
   } catch (err) {
     console.error('Lỗi kết nối Supabase applications:', err);
     return null;
@@ -311,7 +371,8 @@ export async function submitApplicationToSupabase(application: KOCApplication): 
   if (!isSupabaseConfigured()) return false;
 
   try {
-    const { error } = await supabase.from('applications').insert([application]);
+    const payload = sanitizeApplicationForSupabase(application);
+    const { error } = await supabase.from('applications').insert([payload]);
     if (error) {
       console.error('Lỗi khi nộp đơn lên Supabase:', error.message);
       return false;
@@ -331,9 +392,10 @@ export async function updateApplicationStatusOnSupabase(
   if (!isSupabaseConfigured()) return false;
 
   try {
+    const payload = sanitizeApplicationForSupabase(updates);
     const { error } = await supabase
       .from('applications')
-      .update(updates)
+      .update(payload)
       .eq('id', applicationId);
 
     if (error) {
@@ -362,7 +424,7 @@ export function subscribeToApplicationsRealtime(
       { event: 'INSERT', schema: 'public', table: 'applications' },
       (payload) => {
         if (onInsert && payload.new) {
-          onInsert(payload.new as KOCApplication);
+          onInsert(parseApplicationFromSupabase(payload.new as Record<string, unknown>));
         }
       }
     )
@@ -371,7 +433,7 @@ export function subscribeToApplicationsRealtime(
       { event: 'UPDATE', schema: 'public', table: 'applications' },
       (payload) => {
         if (onUpdate && payload.new) {
-          onUpdate(payload.new as KOCApplication);
+          onUpdate(parseApplicationFromSupabase(payload.new as Record<string, unknown>));
         }
       }
     )

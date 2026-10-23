@@ -216,28 +216,39 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     getCampaignsFromSupabase().then((data) => {
       if (!data || data.length === 0) return;
-      // Hợp nhất với dữ liệu khởi tạo để giữ ảnh gốc & danh sách sản phẩm mẫu khi Supabase dùng ảnh placeholder
-      const base = new Map(INITIAL_CAMPAIGNS.map((c) => [c.id, c]));
-      const isPlaceholder = (url?: string) => !url || url.includes('images.unsplash.com');
-      data.forEach((remote) => {
-        const local = base.get(remote.id);
+
+      const baseMap = new Map(INITIAL_CAMPAIGNS.map((c) => [c.id, c]));
+      const isBadPlaceholder = (url?: string) =>
+        !url || url.includes('via.placeholder') || url === 'placeholder';
+
+      const mergedList: Campaign[] = data.map((remote) => {
+        const local = baseMap.get(remote.id);
         const daysLeft = calculateDaysLeft(remote.endDate, remote.daysLeft);
-        base.set(
-          remote.id,
-          local
-            ? {
-                ...remote,
-                daysLeft,
-                productHeroImage: isPlaceholder(remote.productHeroImage) ? local.productHeroImage : remote.productHeroImage,
-                galleryImages:
-                  remote.galleryImages?.length && !isPlaceholder(remote.galleryImages[0]) ? remote.galleryImages : local.galleryImages,
-                brandLogo: isPlaceholder(remote.brandLogo) ? local.brandLogo : remote.brandLogo,
-                sampleProducts: remote.sampleProducts || local.sampleProducts,
-              }
-            : { ...remote, daysLeft }
-        );
+        return {
+          ...(local || {}),
+          ...remote,
+          daysLeft,
+          productHeroImage: isBadPlaceholder(remote.productHeroImage)
+            ? local?.productHeroImage || remote.productHeroImage
+            : remote.productHeroImage,
+          brandLogo: isBadPlaceholder(remote.brandLogo)
+            ? local?.brandLogo || remote.brandLogo
+            : remote.brandLogo,
+          sampleProducts:
+            remote.sampleProducts && remote.sampleProducts.length > 0
+              ? remote.sampleProducts
+              : local?.sampleProducts || [],
+        };
       });
-      setCampaigns(Array.from(base.values()));
+
+      // Bổ sung các chiến dịch trong INITIAL_CAMPAIGNS nếu trên Supabase chưa có (giúp web luôn đủ dữ liệu phong phú)
+      INITIAL_CAMPAIGNS.forEach((initCamp) => {
+        if (!mergedList.some((c) => c.id === initCamp.id)) {
+          mergedList.push(initCamp);
+        }
+      });
+
+      setCampaigns(mergedList);
     });
 
     getApplicationsFromSupabase().then((data) => {
