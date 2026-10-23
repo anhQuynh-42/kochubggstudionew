@@ -287,24 +287,63 @@ const Footer: React.FC = () => (
   </footer>
 );
 
-/** Nút Zalo nổi góc dưới bên phải - Phương án 2: Floating & Diamond Shimmer kèm Chat Bubble */
+/** Nút Zalo nổi góc dưới bên phải - Quả cầu lửa rơi chéo biến thành Zalo xanh & hiện "Xin chào KOC mới!" */
 const ZaloFab: React.FC<{ raised: boolean }> = ({ raised }) => {
-  const [showBubble, setShowBubble] = useState(true);
+  // Trạng thái hiệu ứng: 'meteor' (rơi) -> 'impact' (chạm đất/lóe sáng/morph) -> 'settled' (hoàn thành)
+  const [animStage, setAnimStage] = useState<'meteor' | 'impact' | 'settled'>('meteor');
+  const [showBubble, setShowBubble] = useState(false);
+
+  useEffect(() => {
+    // 0 -> 700ms: Quả cầu lửa rơi chéo từ trên xuống góc dưới phải
+    const tImpact = setTimeout(() => {
+      setAnimStage('impact');
+    }, 700);
+
+    // 700ms -> 1250ms: Chạm đất, sóng xung kích tỏa ra, chuyển sang nút Zalo xanh
+    const tSettled = setTimeout(() => {
+      setAnimStage('settled');
+      setShowBubble(true);
+    }, 1250);
+
+    return () => {
+      clearTimeout(tImpact);
+      clearTimeout(tSettled);
+    };
+  }, []);
+
+  const isMeteor = animStage === 'meteor';
+  const isImpact = animStage === 'impact';
+  const isSettled = animStage === 'settled';
 
   return (
     <div
       className={cx(
-        'fixed right-4 z-40 flex flex-col items-end md:right-6 animate-fab-float select-none',
+        'fixed right-4 z-40 flex flex-col items-end md:right-6 select-none',
+        isSettled ? 'animate-fab-float' : isMeteor ? 'animate-meteor-fall pointer-events-none' : '',
         raised
           ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))]'
           : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6'
       )}
     >
-      {/* Bong bóng chào đón (Chat Bubble pop-up) */}
-      {showBubble && (
-        <div className="relative mb-2 flex items-center gap-1.5 rounded-2xl bg-white/95 px-3 py-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/5 backdrop-blur-md transition-all hover:bg-white">
-          <span className="text-sm">💬</span>
-          <span className="text-xs font-bold text-slate-800">Hỗ trợ nhận mẫu 0đ ngay!</span>
+      {/* Sóng xung kích tiếp đất khi chạm đích */}
+      {isImpact && (
+        <div className="absolute -inset-4 rounded-full border-4 border-amber-400 bg-amber-400/20 animate-shockwave pointer-events-none z-30" />
+      )}
+
+      {/* Tia sáng lóe lên khi tiếp đất */}
+      {isImpact && (
+        <>
+          <span className="absolute -top-4 -right-2 text-sm animate-ping pointer-events-none z-30">✨</span>
+          <span className="absolute -bottom-3 -left-3 text-sm animate-ping pointer-events-none z-30">⚡</span>
+          <span className="absolute -top-2 -left-4 text-xs animate-ping pointer-events-none z-30">💥</span>
+        </>
+      )}
+
+      {/* Bong bóng chào đón: "👋 Xin chào KOC mới!" */}
+      {showBubble && isSettled && (
+        <div className="relative mb-2.5 flex items-center gap-1.5 rounded-2xl bg-white/95 px-3.5 py-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/5 backdrop-blur-md animate-welcome-pop transition-all hover:bg-white">
+          <span className="text-sm">👋</span>
+          <span className="text-xs font-bold text-slate-800">Xin chào KOC mới!</span>
           <button
             type="button"
             onClick={(e) => {
@@ -322,42 +361,66 @@ const ZaloFab: React.FC<{ raised: boolean }> = ({ raised }) => {
         </div>
       )}
 
-      {/* Nút bấm Zalo chính với Shimmer Beam */}
+      {/* Nút bấm Zalo chính */}
       <a
         href={ZALO_GROUP_URL}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Hỗ trợ qua nhóm Zalo KOC"
-        className="group relative flex items-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-[#0068ff] via-[#007af8] to-[#008cff] p-1.5 pr-4 text-white shadow-xl shadow-blue-600/35 ring-1 ring-white/40 transition-all hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-[1.03] active:scale-[0.98]"
+        className={cx(
+          'group relative flex items-center overflow-hidden rounded-full p-1.5 transition-all duration-500 ease-out',
+          isMeteor
+            ? 'h-12 w-12 justify-center bg-gradient-to-tr from-[#ff1a00] via-[#ff7700] to-[#fff275] shadow-2xl shadow-orange-500/80 ring-2 ring-amber-300 animate-fireball-core'
+            : isImpact
+            ? 'h-12 w-12 justify-center bg-gradient-to-tr from-[#ff4500] via-[#0068ff] to-[#60a5fa] scale-110 shadow-2xl shadow-blue-500/80 ring-2 ring-white'
+            : 'gap-2.5 bg-gradient-to-r from-[#0068ff] via-[#007af8] to-[#008cff] pr-4 text-white shadow-xl shadow-blue-600/35 ring-1 ring-white/40 hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-[1.03] active:scale-[0.98]'
+        )}
       >
-        {/* Vệt sáng lướt qua (Shimmer Beam kim cương) */}
-        <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-full">
-          <div className="h-full w-14 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer-sweep" />
-        </div>
+        {/* Đuôi lửa khi quả cầu đang bay rơi */}
+        {isMeteor && (
+          <div className="pointer-events-none absolute -top-8 -left-8 h-14 w-14 -rotate-45 bg-gradient-to-t from-[#ff3700] via-[#ffa200]/70 to-transparent blur-[2px]" />
+        )}
 
-        {/* Đĩa tròn logo Zalo trắng tinh tế + Chấm Online Pulse */}
-        <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-md">
-          <span className="text-[14px] font-black tracking-tight text-[#0068ff]">Zalo</span>
-          {/* Chấm xanh online chuẩn góc trên bên phải, viền trắng mượt */}
-          <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
-          </span>
-        </span>
+        {/* Vệt sáng lướt qua khi đã biến thành nút Zalo */}
+        {isSettled && (
+          <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-full">
+            <div className="h-full w-14 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer-sweep" />
+          </div>
+        )}
 
-        {/* Chữ hiển thị */}
-        <div className="relative z-10 flex flex-col text-left">
-          <span className="text-[13px] font-bold leading-tight tracking-wide text-white drop-shadow-sm">
-            Hỗ trợ KOC
-          </span>
-          <span className="text-[10px] font-medium text-blue-100/90 leading-tight">
-            Phản hồi 24/7
-          </span>
-        </div>
+        {/* Nội dung bên trong: Biểu tượng lửa hoặc Đĩa tròn Zalo */}
+        {isMeteor ? (
+          <span className="relative z-10 text-xl animate-pulse">🔥</span>
+        ) : (
+          <>
+            {/* Đĩa tròn logo Zalo trắng tinh tế + Chấm Online Pulse */}
+            <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-md transition-transform duration-300 group-hover:scale-105">
+              <span className="text-[14px] font-black tracking-tight text-[#0068ff]">Zalo</span>
+              {/* Chấm xanh online chuẩn góc trên bên phải, viền trắng mượt */}
+              <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+              </span>
+            </span>
+
+            {/* Chữ hiển thị nở ra khi đã thành Zalo */}
+            {isSettled && (
+              <div className="relative z-10 flex flex-col text-left transition-opacity duration-300">
+                <span className="text-[13px] font-bold leading-tight tracking-wide text-white drop-shadow-sm whitespace-nowrap">
+                  Hỗ trợ KOC
+                </span>
+                <span className="text-[10px] font-medium text-blue-100/90 leading-tight whitespace-nowrap">
+                  Phản hồi 24/7
+                </span>
+              </div>
+            )}
+          </>
+        )}
       </a>
     </div>
   );
 };
+
 
 
 export const ToastHost: React.FC = () => {
