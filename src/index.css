@@ -127,12 +127,44 @@ body {
 @keyframes shine-sweep {
   to { transform: translateX(130%); }
 }
+
+/* Floating nhấp nhô êm ái biên độ 5px, nhịp 3s */
+@keyframes fab-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-fab-float {
+  animation: fab-float 3s ease-in-out infinite;
+}
+
+/* Vệt sáng lướt qua bề mặt nút định kỳ */
+@keyframes shimmer-sweep-periodic {
+  0%, 25% {
+    transform: translateX(-150%) skewX(-20deg);
+  }
+  55%, 100% {
+    transform: translateX(300%) skewX(-20deg);
+  }
+}
+
+.animate-shimmer-sweep {
+  animation: shimmer-sweep-periodic 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-fx,
   .card-fx img,
-  .btn-fx { transition: none; }
+  .btn-fx,
+  .animate-fab-float,
+  .animate-shimmer-sweep { transition: none; animation: none; }
   .card-fx:hover,
   .btn-fx:hover { transform: none; }
   .card-fx:hover::after,
   .btn-fx:hover::after { animation: none; }
 }
+

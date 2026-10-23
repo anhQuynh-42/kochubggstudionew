@@ -287,25 +287,78 @@ const Footer: React.FC = () => (
   </footer>
 );
 
-/** Nút Zalo nổi góc dưới bên phải (nằm trên thanh điều hướng/nút dính đáy khi dùng điện thoại) */
-const ZaloFab: React.FC<{ raised: boolean }> = ({ raised }) => (
-  <a
-    href={ZALO_GROUP_URL}
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Hỗ trợ qua nhóm Zalo KOC"
-    className={cx(
-      'group fixed right-4 z-40 flex items-center gap-2 rounded-full bg-[#0068ff] p-1.5 pr-1.5 text-white shadow-xl shadow-blue-600/30 ring-4 ring-white transition-all hover:pr-4 md:bottom-6 md:right-6',
-      raised ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))]' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6'
-    )}
-  >
-    <span className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[13px] font-black text-[#0068ff]">
-      Zalo
-      <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-[#0068ff]" />
-    </span>
-    <span className="hidden text-sm font-semibold md:inline">Hỗ trợ KOC</span>
-  </a>
-);
+/** Nút Zalo nổi góc dưới bên phải - Phương án 2: Floating & Diamond Shimmer kèm Chat Bubble */
+const ZaloFab: React.FC<{ raised: boolean }> = ({ raised }) => {
+  const [showBubble, setShowBubble] = useState(true);
+
+  return (
+    <div
+      className={cx(
+        'fixed right-4 z-40 flex flex-col items-end md:right-6 animate-fab-float select-none',
+        raised
+          ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))]'
+          : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6'
+      )}
+    >
+      {/* Bong bóng chào đón (Chat Bubble pop-up) */}
+      {showBubble && (
+        <div className="relative mb-2 flex items-center gap-1.5 rounded-2xl bg-white/95 px-3 py-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/5 backdrop-blur-md transition-all hover:bg-white">
+          <span className="text-sm">💬</span>
+          <span className="text-xs font-bold text-slate-800">Hỗ trợ nhận mẫu 0đ ngay!</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowBubble(false);
+            }}
+            className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+            title="Đóng lời nhắc"
+          >
+            ✕
+          </button>
+          {/* Mũi tên nhỏ trỏ xuống nút */}
+          <div className="absolute -bottom-1 right-6 h-2.5 w-2.5 rotate-45 bg-white border-r border-b border-slate-100/80" />
+        </div>
+      )}
+
+      {/* Nút bấm Zalo chính với Shimmer Beam */}
+      <a
+        href={ZALO_GROUP_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Hỗ trợ qua nhóm Zalo KOC"
+        className="group relative flex items-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-[#0068ff] via-[#007af8] to-[#008cff] p-1.5 pr-4 text-white shadow-xl shadow-blue-600/35 ring-1 ring-white/40 transition-all hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-[1.03] active:scale-[0.98]"
+      >
+        {/* Vệt sáng lướt qua (Shimmer Beam kim cương) */}
+        <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-full">
+          <div className="h-full w-14 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer-sweep" />
+        </div>
+
+        {/* Đĩa tròn logo Zalo trắng tinh tế + Chấm Online Pulse */}
+        <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-md">
+          <span className="text-[14px] font-black tracking-tight text-[#0068ff]">Zalo</span>
+          {/* Chấm xanh online chuẩn góc trên bên phải, viền trắng mượt */}
+          <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+          </span>
+        </span>
+
+        {/* Chữ hiển thị */}
+        <div className="relative z-10 flex flex-col text-left">
+          <span className="text-[13px] font-bold leading-tight tracking-wide text-white drop-shadow-sm">
+            Hỗ trợ KOC
+          </span>
+          <span className="text-[10px] font-medium text-blue-100/90 leading-tight">
+            Phản hồi 24/7
+          </span>
+        </div>
+      </a>
+    </div>
+  );
+};
+
 
 export const ToastHost: React.FC = () => {
   const { toast, dismissToast } = useAppData();
