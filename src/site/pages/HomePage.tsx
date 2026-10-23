@@ -526,23 +526,39 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Dải thành phố KOCity Silhouette (Phương án 3: 2 lớp + ánh đèn chuyển động + hỗ trợ chế độ đêm) */}
+        {/* Dải thành phố KOCity Silhouette (2 lớp + ánh đèn chuyển động + loang mượt chân trời) */}
         <div className="relative">
           <KocitySkyline isNight={isNight} className="-mb-[1px]" />
-          {isNight && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#0a0618]/70 to-transparent"
-            />
-          )}
         </div>
       </section>
 
-      {/* Phần còn lại của trang (nằm trong container max-w-6xl căn giữa) */}
-      <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6">
-        {(liveActivity.length > 0 || campaigns.length > 0) && (
-          <LiveTicker items={liveActivity} isNight={isNight} campaigns={campaigns} />
+      {/* ===== Không gian trưng bày Showroom (Phương án 1: Sàn trắng khói ánh tím pastel nhẹ nhàng #f8f7ff → #fcfbfe) ===== */}
+      <div
+        className={cx(
+          'relative w-full overflow-hidden transition-colors duration-700',
+          isNight
+            ? 'bg-gradient-to-b from-[#f8f7ff] via-[#faf8ff] to-[#fcfbfe]'
+            : 'bg-[#fafafc]'
         )}
+      >
+        {/* Ambient Glow Orbs (Phương án 1: 2 vệt sáng tròn mờ ảo blur 120px màu tím phấn và hồng pastel hai bên sườn) */}
+        {isNight && (
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden select-none">
+            {/* Vệt sáng tròn mờ ảo bên sườn trái (Tím phấn êm dịu) */}
+            <div className="absolute -left-48 top-28 h-[540px] w-[540px] rounded-full bg-violet-400/18 blur-[120px]" />
+            {/* Vệt sáng tròn mờ ảo bên sườn phải (Hồng pastel thoang thoảng) */}
+            <div className="absolute -right-48 top-[520px] h-[580px] w-[580px] rounded-full bg-pink-400/16 blur-[120px]" />
+            {/* Chiều sâu 3D lung linh khi cuộn chuột xuống các tầng dưới */}
+            <div className="absolute -left-36 top-[1400px] h-[540px] w-[540px] rounded-full bg-purple-300/14 blur-[130px]" />
+            <div className="absolute -right-36 top-[2100px] h-[560px] w-[560px] rounded-full bg-fuchsia-300/12 blur-[130px]" />
+          </div>
+        )}
+
+        {/* Phần còn lại của trang (nằm trong container max-w-6xl căn giữa) */}
+        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6">
+          {(liveActivity.length > 0 || campaigns.length > 0) && (
+            <LiveTicker items={liveActivity} isNight={isNight} campaigns={campaigns} />
+          )}
 
         {/* ===== Danh sách mẫu (đẩy lên ngay dưới Hero & LiveTicker) ===== */}
         <section className="pt-6 sm:pt-10">
@@ -559,8 +575,10 @@ export const HomePage: React.FC = () => {
                 className={cx(
                   'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
                   statusFilter === 'all'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 ring-1 ring-slate-200'
+                    ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-900'
+                    : isNight
+                      ? 'bg-white/95 text-slate-700 hover:bg-white ring-1 ring-violet-200/80 shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 ring-1 ring-slate-200'
                 )}
               >
                 <span>Tất cả</span>
@@ -576,7 +594,9 @@ export const HomePage: React.FC = () => {
                   'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
                   statusFilter === 'open'
                     ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                    : 'bg-white text-emerald-700 hover:bg-emerald-50 ring-1 ring-emerald-200'
+                    : isNight
+                      ? 'bg-white/95 text-emerald-700 hover:bg-emerald-50 ring-1 ring-emerald-200/80 shadow-xs'
+                      : 'bg-white text-emerald-700 hover:bg-emerald-50 ring-1 ring-emerald-200'
                 )}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -593,7 +613,9 @@ export const HomePage: React.FC = () => {
                   'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
                   statusFilter === 'full'
                     ? 'bg-rose-600 text-white shadow-sm shadow-rose-600/20'
-                    : 'bg-white text-rose-700 hover:bg-rose-50 ring-1 ring-rose-200'
+                    : isNight
+                      ? 'bg-white/95 text-rose-700 hover:bg-rose-50 ring-1 ring-rose-200/80 shadow-xs'
+                      : 'bg-white text-rose-700 hover:bg-rose-50 ring-1 ring-rose-200'
                 )}
               >
                 <span>⛔ Đã đủ 100/100</span>
@@ -604,7 +626,15 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sticky top-16 z-30 -mx-4 mt-3 bg-[#fafafc]/95 px-4 pb-3 pt-2 backdrop-blur-md sm:-mx-6 sm:px-6 border-b border-slate-100/60 shadow-xs">
+          {/* Thanh tìm kiếm & Bộ lọc (Phương án 1: Kính mờ phủ nhẹ ánh tím phớt hòa quyện dải màu loang) */}
+          <div
+            className={cx(
+              'sticky top-16 z-30 -mx-4 mt-3 px-4 pb-3 pt-2 backdrop-blur-md sm:-mx-6 sm:px-6 transition-all duration-300 shadow-xs',
+              isNight
+                ? 'bg-[#f8f7ff]/85 border-b border-violet-100/70 shadow-violet-500/5'
+                : 'bg-[#fafafc]/95 border-b border-slate-100/60'
+            )}
+          >
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <span className="sr-only">Tìm chiến dịch</span>
@@ -614,7 +644,12 @@ export const HomePage: React.FC = () => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Tìm brand, sản phẩm..."
-                  className="h-11 w-full rounded-2xl bg-white pl-10 pr-9 text-base text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm shadow-xs"
+                  className={cx(
+                    'h-11 w-full rounded-2xl pl-10 pr-9 text-base placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm shadow-xs transition-all',
+                    isNight
+                      ? 'bg-white/95 text-slate-900 ring-1 ring-violet-200/80 shadow-violet-500/5'
+                      : 'bg-white text-slate-900 ring-1 ring-slate-200'
+                  )}
                 />
                 {query && (
                   <button
@@ -631,7 +666,12 @@ export const HomePage: React.FC = () => {
                 type="button"
                 onClick={() => setFilterOpen(true)}
                 aria-haspopup="dialog"
-                className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white px-3.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:ring-violet-300 cursor-pointer shadow-xs active:scale-95 transition-all"
+                className={cx(
+                  'relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3.5 text-sm font-semibold cursor-pointer shadow-xs active:scale-95 transition-all',
+                  isNight
+                    ? 'bg-white/95 text-slate-800 ring-1 ring-violet-200/80 hover:ring-violet-400 hover:text-violet-900 shadow-violet-500/5'
+                    : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-violet-300'
+                )}
               >
                 <Icon name="tune" className="text-[20px] text-violet-600" />
                 <span className="text-xs sm:text-sm font-bold">Lọc</span>
@@ -724,6 +764,7 @@ export const HomePage: React.FC = () => {
                     hasApplied={applied}
                     onApply={() => (applied ? navigate(ROUTES.myApplications) : requestApply(c))}
                     onToggleBookmark={() => toggleBookmark(c)}
+                    isNight={isNight}
                   />
                 );
               })}
@@ -910,7 +951,29 @@ export const HomePage: React.FC = () => {
           </FilterGroup>
         </Sheet>
       </div>
+
+      {/* Nút chuyển đổi Ngày / Đêm dạng Floating Pill (Dễ dàng chuyển đổi khi đang cuộn xem sản phẩm) */}
+      <div className="fixed bottom-5 left-5 z-40 hidden sm:block">
+        <button
+          type="button"
+          onClick={toggleNight}
+          aria-label={isNight ? 'Bật đèn (Chế độ ban ngày)' : 'Tắt đèn (Chế độ Showroom tối)'}
+          className={cx(
+            'group flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition-all duration-300 shadow-lg backdrop-blur-md ring-1 cursor-pointer hover:scale-105 active:scale-95',
+            isNight
+              ? 'bg-[#1e1338]/90 text-amber-300 ring-amber-300/40 shadow-purple-950/40 hover:bg-[#281a4d]'
+              : 'bg-white/95 text-slate-700 ring-violet-200 hover:text-slate-950 shadow-violet-500/15'
+          )}
+        >
+          <Icon
+            name={isNight ? 'light_mode' : 'dark_mode'}
+            className={cx('text-[16px] transition-transform duration-300', isNight ? 'text-amber-300 rotate-45' : 'text-violet-600')}
+          />
+          <span>{isNight ? 'Bật đèn' : 'Tắt đèn'}</span>
+        </button>
+      </div>
     </div>
+  </div>
   );
 };
 
@@ -1052,7 +1115,7 @@ const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaig
       className={cx(
         'group mt-3.5 flex items-center overflow-hidden rounded-2xl py-2 px-1 transition-all duration-500 backdrop-blur-md shadow-xs ring-1 cursor-default',
         isNight
-          ? 'bg-[#0f0926]/80 text-slate-300 ring-violet-500/25 shadow-purple-950/30'
+          ? 'bg-white/85 text-slate-700 ring-violet-200/80 shadow-sm shadow-violet-500/5'
           : 'bg-white/90 text-slate-600 ring-violet-200/80 shadow-slate-100'
       )}
     >
@@ -1071,7 +1134,7 @@ const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaig
               <span
                 className={cx(
                   'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[12px] shadow-xs',
-                  isNight ? 'bg-white/10' : 'bg-violet-50'
+                  isNight ? 'bg-violet-100/70' : 'bg-violet-50'
                 )}
               >
                 {it.icon}
@@ -1079,22 +1142,22 @@ const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaig
 
               {it.type === 'activity' ? (
                 <span>
-                  <strong className={cx('font-semibold', isNight ? 'text-white' : 'text-slate-900')}>{it.displayName}</strong>
-                  {it.city && <span className={cx(isNight ? 'text-slate-400' : 'text-slate-400')}> · {it.city}</span>}{' '}
-                  <span className={isNight ? 'text-slate-300' : 'text-slate-600'}>{it.actionText}</span>{' '}
-                  <strong className={cx('font-bold', isNight ? 'text-fuchsia-300' : 'text-violet-700')}>{it.brandName}</strong>
+                  <strong className={cx('font-semibold', isNight ? 'text-slate-900' : 'text-slate-900')}>{it.displayName}</strong>
+                  {it.city && <span className="text-slate-400"> · {it.city}</span>}{' '}
+                  <span className="text-slate-600">{it.actionText}</span>{' '}
+                  <strong className={cx('font-bold', isNight ? 'text-violet-700' : 'text-violet-700')}>{it.brandName}</strong>
                   {it.dateLabel && <span className="ml-1 text-[11px] text-slate-400">({it.dateLabel})</span>}
                 </span>
               ) : (
                 <span>
-                  <span className={isNight ? 'text-slate-400' : 'text-slate-500'}>{it.prefix}: </span>
-                  <strong className={cx('font-bold', isNight ? 'text-amber-300' : 'text-violet-700')}>{it.highlight}</strong>{' '}
-                  <span className={isNight ? 'text-slate-300' : 'text-slate-600'}>{it.suffix}</span>
+                  <span className="text-slate-500">{it.prefix}: </span>
+                  <strong className={cx('font-bold', isNight ? 'text-violet-700' : 'text-violet-700')}>{it.highlight}</strong>{' '}
+                  <span className="text-slate-600">{it.suffix}</span>
                 </span>
               )}
 
               {/* Dấu phân cách tinh tế giữa các tin */}
-              <span className={cx('ml-6 select-none text-[11px]', isNight ? 'text-violet-400/40' : 'text-violet-200')}>
+              <span className={cx('ml-6 select-none text-[11px]', isNight ? 'text-violet-300' : 'text-violet-200')}>
                 ✦
               </span>
             </div>

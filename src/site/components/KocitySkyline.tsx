@@ -102,7 +102,7 @@ export const KocitySkyline: React.FC<{ className?: string; isNight?: boolean }> 
           <linearGradient id="kc-skyline-back" x1="720" y1="0" x2="720" y2="96" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor={isNight ? '#4c1d95' : '#a78bfa'} stopOpacity={isNight ? 0.95 : 0.45} />
             <stop offset="55%" stopColor={isNight ? '#3b0764' : '#c4b5fd'} stopOpacity={isNight ? 0.85 : 0.3} />
-            <stop offset="100%" stopColor="#fafafc" stopOpacity={isNight ? 0.05 : 0.15} />
+            <stop offset="100%" stopColor={isNight ? '#f8f7ff' : '#fafafc'} stopOpacity={isNight ? 0.05 : 0.15} />
           </linearGradient>
 
           {/* Lớp gần: tím hồng rực rỡ mang bản sắc KOCity */}
@@ -110,14 +110,15 @@ export const KocitySkyline: React.FC<{ className?: string; isNight?: boolean }> 
             <stop offset="0%" stopColor={isNight ? '#7c3aed' : '#8b5cf6'} stopOpacity={isNight ? 0.95 : 0.65} />
             <stop offset="35%" stopColor={isNight ? '#9333ea' : '#a855f7'} stopOpacity={isNight ? 0.9 : 0.55} />
             <stop offset="70%" stopColor={isNight ? '#c026d3' : '#ec4899'} stopOpacity={isNight ? 0.8 : 0.35} />
-            <stop offset="100%" stopColor="#fafafc" stopOpacity={0.95} />
+            <stop offset="100%" stopColor={isNight ? '#f8f7ff' : '#fafafc'} stopOpacity={0.95} />
           </linearGradient>
 
-          {/* Màn sương đáy làm mượt đường nối với nền trang */}
-          <linearGradient id="kc-skyline-fog" x1="720" y1="60" x2="720" y2="96" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#fafafc" stopOpacity="0" />
-            <stop offset="70%" stopColor="#fafafc" stopOpacity={isNight ? 0.8 : 0.65} />
-            <stop offset="100%" stopColor="#fafafc" stopOpacity="1" />
+          {/* Màn sương đáy làm mượt đường nối với nền trang (Phương án 1: Loang mềm mại từ Hero xuống #f8f7ff) */}
+          <linearGradient id="kc-skyline-fog" x1="720" y1="42" x2="720" y2="96" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor={isNight ? '#f8f7ff' : '#fafafc'} stopOpacity="0" />
+            <stop offset="50%" stopColor={isNight ? '#f8f7ff' : '#fafafc'} stopOpacity={isNight ? 0.6 : 0.45} />
+            <stop offset="85%" stopColor={isNight ? '#f8f7ff' : '#fafafc'} stopOpacity={isNight ? 0.95 : 0.85} />
+            <stop offset="100%" stopColor={isNight ? '#f8f7ff' : '#fafafc'} stopOpacity="1" />
           </linearGradient>
 
           {/* Gradient bảng đèn LED KOCity */}
@@ -409,7 +410,7 @@ export const KocitySkyline: React.FC<{ className?: string; isNight?: boolean }> 
         </g>
 
         {/* ===== MÀN SƯƠNG ĐÁY CHUYỂN TIẾP MƯỢT VÀO NỀN TRANG (BOTTOM FOG) ===== */}
-        <rect x="0" y="58" width="1440" height="39" fill="url(#kc-skyline-fog)" />
+        <rect x="0" y="42" width="1440" height="55" fill="url(#kc-skyline-fog)" />
       </svg>
     </div>
   );

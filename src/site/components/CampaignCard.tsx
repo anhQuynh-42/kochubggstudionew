@@ -12,10 +12,11 @@ interface CampaignCardProps {
   hasApplied: boolean;
   onApply: () => void;
   onToggleBookmark: () => void;
+  isNight?: boolean;
 }
 
 /** Thẻ chiến dịch chuẩn TikTok Shop (CLAUDE.md 8.2): Mẫu 0đ · % Hoa hồng · Yêu cầu kênh + độ khan hiếm + nút 1 chạm */
-export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookmarked, hasApplied, onApply, onToggleBookmark }) => {
+export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookmarked, hasApplied, onApply, onToggleBookmark, isNight = false }) => {
   const navigate = useNavigate();
   const scarcity = getScarcity(c);
   const commission = getCommissionLabel(c);
@@ -40,7 +41,12 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
   return (
     <article
       onClick={handleCardClick}
-      className="card-fx group flex flex-col rounded-[28px] bg-white ring-1 ring-slate-200/70 hover:ring-violet-300 hover:shadow-lg transition-all cursor-pointer"
+      className={cx(
+        'card-fx group flex flex-col rounded-[28px] transition-all duration-300 cursor-pointer',
+        isNight
+          ? 'bg-white/95 ring-1 ring-violet-200/80 shadow-md shadow-violet-500/5 hover:ring-violet-400 hover:shadow-xl hover:shadow-violet-500/10'
+          : 'bg-white ring-1 ring-slate-200/70 hover:ring-violet-300 hover:shadow-lg'
+      )}
     >
       <Link to={href} className="relative block aspect-[16/10] overflow-hidden bg-slate-100" aria-label={`Xem chi tiết ${c.brandName}`}>
         <img
