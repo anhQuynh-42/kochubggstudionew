@@ -777,9 +777,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       if (isInit || !initialDone) {
         initialDone = true;
         const isMobile = rect.width < 768;
-        const targetZ = Math.max(minZ, isMobile ? minZ * 1.15 : minZ);
-        const targetPanX = rect.width / 2 - 1400 * targetZ;
-        const targetPanY = rect.height / 2 - 850 * targetZ;
+        // Trên mobile, đặt targetZ = minZ để thấy góc nhìn rộng nhất, focus vào Cư Xá KOC & Cầu (x: 1050, y: 700)
+        const targetZ = isMobile ? minZ : minZ;
+        const initialFocusX = isMobile ? 1050 : 1400;
+        const initialFocusY = isMobile ? 700 : 850;
+        const targetPanX = rect.width / 2 - initialFocusX * targetZ;
+        const targetPanY = rect.height / 2 - initialFocusY * targetZ;
         const clamped = clampPan(targetPanX, targetPanY, targetZ, rect.width, rect.height);
         setZoom(targetZ);
         setPan(clamped);
@@ -815,6 +818,15 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
   // Modal chú thích bản đồ (chỉ mở khi bấm vào nút ℹ️)
   const [showLegendModal, setShowLegendModal] = useState<boolean>(false);
+
+  // Mẹo hướng dẫn vuốt trên điện thoại
+  const [showTouchHint, setShowTouchHint] = useState<boolean>(true);
+  useEffect(() => {
+    if (!open) return;
+    setShowTouchHint(true);
+    const hintTimer = setTimeout(() => setShowTouchHint(false), 4500);
+    return () => clearTimeout(hintTimer);
+  }, [open]);
 
   // ==================== CẤU HÌNH QUY HOẠCH ĐÔ THỊ ĐỘNG (ADMIN BUILDER) ====================
   const [stores, setStores] = useState<BrandStation[]>(() => {
@@ -1407,9 +1419,9 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
   const modalContent = (
     <div className="fixed inset-0 z-[100] flex flex-col bg-slate-950 text-white select-none overflow-hidden font-sans">
-      {/* ===== CỤM ĐIỀU KHIỂN NỔI GÓC TRÊN BÊN TRÁI (LOGO TINH TẾ) ===== */}
-      <div className="absolute top-4 left-4 z-40 pointer-events-none flex items-center gap-2">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md ring-1 ring-white/15 shadow-xl text-xs font-bold text-white/95">
+      {/* ===== CỤM ĐIỀU KHIỂN NỔI GÓC TRÊN BÊN TRÁI (LOGO TINH TẾ - CÓ SAFE AREA) ===== */}
+      <div className="absolute top-[calc(0.75rem+env(safe-area-inset-top))] left-3 sm:left-4 z-40 pointer-events-none flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md ring-1 ring-white/15 shadow-xl text-xs font-bold text-white/95">
           <span className="text-sm">🏙️</span>
           <span className="tracking-wider font-extrabold bg-gradient-to-r from-amber-300 via-pink-400 to-indigo-300 bg-clip-text text-transparent">
             KOCITY
@@ -1417,8 +1429,8 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         </div>
       </div>
 
-      {/* ===== CỤM ĐIỀU KHIỂN NỔI GÓC TRÊN BÊN PHẢI (THAY THẾ HEADER DÀY) ===== */}
-      <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+      {/* ===== CỤM ĐIỀU KHIỂN NỔI GÓC TRÊN BÊN PHẢI (CÓ SAFE AREA TRÁNH TAI THỎ) ===== */}
+      <div className="absolute top-[calc(0.75rem+env(safe-area-inset-top))] right-3 sm:right-4 z-40 flex items-center gap-1.5 sm:gap-2">
         {/* Nút Chế Độ Quy Hoạch Admin (chỉ hiện với admin) */}
         {isEffectiveAdmin && (
           <button
@@ -2280,7 +2292,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               onClick={() => setSelectedCitizen(c)}
             >
               {c.bubble && (
-                <div className="bg-white text-slate-900 px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-2xl ring-2 ring-pink-500 max-w-[170px] text-center mb-1 leading-snug whitespace-normal animate-bounce">
+                <div
+                  className={cx(
+                    'bg-white text-slate-900 px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-2xl ring-2 ring-pink-500 max-w-[170px] text-center mb-1 leading-snug whitespace-normal animate-bounce',
+                    c.isCurrentUser || selectedCitizen?.id === c.id ? 'block' : 'hidden md:block'
+                  )}
+                >
                   {c.bubble}
                 </div>
               )}
@@ -2320,20 +2337,29 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           ))}
         </div>
-        {/* ===== THANH DOCK NỔI BO TRÒN SIÊU MỎNG DƯỚI ĐÁY MÀN HÌNH (KIỂU IOS DOCK) ===== */}
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-2xl ring-1 ring-black/40 max-w-[94vw] overflow-x-auto no-scrollbar">
+        {/* ===== MẸO HƯỚNG DẪN VUỐT CẢM ỨNG TRÊN ĐIỆN THOẠI ===== */}
+        {showTouchHint && (
+          <div className="md:hidden absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-30 pointer-events-none flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 border border-white/20 shadow-xl text-[11px] font-medium text-amber-300 backdrop-blur-md animate-fade-in whitespace-nowrap">
+            <span>👆</span>
+            <span>Vuốt để khám phá · 2 ngón để phóng to</span>
+          </div>
+        )}
+
+        {/* ===== THANH DOCK NỔI BO TRÒN DƯỚI ĐÁY MÀN HÌNH (TỐI ƯU CẢ MOBILE LẪN DESKTOP) ===== */}
+        <div className="absolute bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-full bg-slate-900/90 backdrop-blur-xl border border-white/15 shadow-2xl ring-1 ring-black/40 max-w-[96vw] sm:max-w-[94vw] overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => flyTo(650, 450, 1.15)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
           >
             <span>🏠</span>
-            <span>Cư Xá KOC</span>
+            <span className="hidden sm:inline">Cư Xá KOC</span>
+            <span className="sm:hidden">Cư Xá</span>
           </button>
           <button
             type="button"
             onClick={() => flyTo(1400, 850, 1.25)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold text-amber-300 bg-white/10 hover:bg-white/20 active:scale-95 transition whitespace-nowrap ring-1 ring-amber-400/30 cursor-pointer"
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold text-amber-300 bg-white/10 hover:bg-white/20 active:scale-95 transition whitespace-nowrap ring-1 ring-amber-400/30 cursor-pointer"
           >
             <span>🌉</span>
             <span>Cầu KOCity</span>
@@ -2341,32 +2367,33 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           <button
             type="button"
             onClick={() => flyTo(1220, 960, 1.35)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
           >
             <span>👮</span>
-            <span className="hidden sm:inline">Bảo Vệ</span>
+            <span>Bảo Vệ</span>
           </button>
           <button
             type="button"
             onClick={() => flyTo(2150, 420, 1.15)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
           >
             <span>🏪</span>
-            <span>Store Brand</span>
+            <span className="hidden sm:inline">Store Brand</span>
+            <span className="sm:hidden">Store</span>
           </button>
           <button
             type="button"
             onClick={() => flyTo(2150, 1250, 1.15)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-amber-300/90 hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-amber-300/90 hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
           >
             <span>🚧</span>
-            <span className="hidden sm:inline">Đấu Thầu</span>
+            <span>Đấu Thầu</span>
           </button>
           <div className="w-[1px] h-4 bg-white/20 my-auto mx-0.5" />
           <button
             type="button"
             onClick={() => flyTo(1400, 850, 0)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-sky-300 hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold text-sky-300 hover:bg-white/15 active:scale-95 transition whitespace-nowrap cursor-pointer"
             title="Xem toàn cảnh tràn màn hình"
           >
             <span>🗺️</span>
@@ -2374,14 +2401,14 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           </button>
         </div>
 
-        {/* CỤM ĐIỀU KHIỂN NỔI GÓC DƯỚI BÊN PHẢI (ZOOM + RESET + CHÚ THÍCH ℹ️) */}
-        <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2">
-          <div className="flex flex-col rounded-2xl bg-slate-900/90 border border-white/20 p-1 shadow-2xl backdrop-blur-md ring-2 ring-black/40">
+        {/* CỤM ĐIỀU KHIỂN NỔI GÓC DƯỚI BÊN PHẢI (ĐẨY CAO TRÊN MOBILE ĐỂ KHÔNG ĐÈ LÊN DOCK) */}
+        <div className="absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 right-3 md:right-6 z-30 flex flex-col items-end gap-1.5 md:gap-2">
+          <div className="flex flex-col rounded-2xl bg-slate-900/90 border border-white/20 p-0.5 sm:p-1 shadow-2xl backdrop-blur-md ring-2 ring-black/40">
             <button
               type="button"
               onClick={() => zoomAtScreenCenter(1.22)}
               title="Phóng to (Zoom In)"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
+              className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-base md:text-lg border-b border-white/10"
             >
               +
             </button>
@@ -2389,7 +2416,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               type="button"
               onClick={() => zoomAtScreenCenter(0.82)}
               title="Thu nhỏ (Zoom Out)"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-lg border-b border-white/10"
+              className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-xl text-white hover:bg-white/15 active:scale-95 transition cursor-pointer font-black text-base md:text-lg border-b border-white/10"
             >
               −
             </button>
@@ -2397,7 +2424,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               type="button"
               onClick={() => flyTo(1400, 850, 1.15)}
               title="Về Trọng Tâm KOCity HQ & Chú Bảo Vệ"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-base border-b border-white/10"
+              className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-xl text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-sm md:text-base border-b border-white/10"
             >
               🎯
             </button>
@@ -2405,13 +2432,13 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               type="button"
               onClick={() => setShowLegendModal(true)}
               title="Xem chú thích ý nghĩa bản đồ"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-200 hover:text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-sm font-bold"
+              className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-xl text-slate-200 hover:text-amber-300 hover:bg-white/15 active:scale-95 transition cursor-pointer text-xs md:text-sm font-bold"
             >
               ℹ️
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-xl bg-slate-900/90 border border-white/15 px-2.5 py-1 text-[10px] text-slate-300 font-mono shadow-xl backdrop-blur-sm">
+          <div className="hidden md:flex items-center gap-1.5 rounded-xl bg-slate-900/90 border border-white/15 px-2.5 py-1 text-[10px] text-slate-300 font-mono shadow-xl backdrop-blur-sm">
             <span className="font-bold text-amber-300">{Math.round(zoom * 100)}%</span>
             <span>•</span>
             <div className="flex flex-col items-center">
