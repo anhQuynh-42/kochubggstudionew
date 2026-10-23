@@ -2044,107 +2044,123 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </div>
             </div>
 
-            {/* 4 THẺ KPI TĂNG TRƯỞNG & RỦI RO (BẢNG MÀU NGỮ NGHĨA CHUẨN SAAS) */}
+            {/* 4 THẺ KPI TĂNG TRƯỞNG & RỦI RO (CHUẨN MINIMALIST SAAS) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Card 1: KOC Mới Đăng Ký (INDIGO) */}
+              {/* Card 1: KOC Mới Đăng Ký */}
               <div
                 onClick={() => {
                   setStatusFilter('all');
                   setActiveAdminTab('applications');
                 }}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                className="group rounded-2xl bg-white p-5 border border-slate-200/80 shadow-2xs hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">KOC Mới Đăng Ký</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-2xl">group_add</span>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-slate-900">{metrics.totalApps}</span>
-                  <span className="inline-flex items-center text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md">
-                    <span className="material-symbols-outlined text-[14px]">arrow_upward</span> +18.4% MoM
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">KOC Mới Đăng Ký</span>
+                  <span className="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-indigo-600 transition-colors">
+                    group_add
                   </span>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2.5">
-                  <span>{metrics.uniqueKOCs} Creator • Tái tham gia: {metrics.retentionRate}%</span>
-                  <span className="font-semibold text-indigo-600 group-hover:underline flex items-center gap-0.5">
-                    Chi tiết <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                <div className="mt-3 flex items-baseline gap-2.5">
+                  <span className="text-3xl font-black text-slate-900 tracking-tight">{metrics.totalApps}</span>
+                  <span className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                    <span className="material-symbols-outlined text-[13px]">arrow_upward</span> +18.4%
+                  </span>
+                </div>
+                <div className="mt-3 text-xs text-slate-500 flex items-center justify-between">
+                  <span>{metrics.uniqueKOCs} Creator · Tái tham gia: <strong className="text-slate-700">{metrics.retentionRate}%</strong></span>
+                  <span className="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all">
+                    arrow_forward
                   </span>
                 </div>
               </div>
 
-              {/* Card 2: Tỷ Lệ Hoàn Thành Bài (EMERALD GREEN) */}
+              {/* Card 2: Tỷ Lệ Hoàn Thành Bài */}
               <div
                 onClick={() => setActiveAdminTab('content')}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer"
+                className="group rounded-2xl bg-white p-5 border border-slate-200/80 shadow-2xs hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tỷ Lệ Hoàn Thành Bài</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-2xl">verified</span>
-                  </div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tỷ Lệ Hoàn Thành Bài</span>
+                  <span className="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-emerald-600 transition-colors">
+                    verified
+                  </span>
                 </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-slate-900">
+                <div className="mt-3 flex items-baseline gap-2.5">
+                  <span className="text-3xl font-black text-slate-900 tracking-tight">
                     {metrics.totalApps > 0 ? Math.round((metrics.completedApps / metrics.totalApps) * 100) : 0}%
                   </span>
-                  <span className="text-xs text-emerald-600 font-semibold">({metrics.completedApps} video đạt duyệt)</span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    ({metrics.completedApps}/{metrics.totalApps} video duyệt)
+                  </span>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2.5">
-                  <span>Rớt hồ sơ: {metrics.dropOffRate}%</span>
-                  <span className="font-semibold text-emerald-600 group-hover:underline flex items-center gap-0.5">
-                    Nghiệm thu <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                <div className="mt-3 text-xs text-slate-500 flex items-center justify-between">
+                  <span>Rớt hồ sơ: <strong className="text-slate-700">{metrics.dropOffRate}%</strong></span>
+                  <span className="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all">
+                    arrow_forward
                   </span>
                 </div>
               </div>
 
-              {/* Card 3: Cảnh Báo Chậm Bài (AMBER / CẢNH BÁO NHẸ) */}
+              {/* Card 3: Cảnh Báo Chậm Bài */}
               <div
                 onClick={() => setDashboardSubTab('overdue')}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-amber-200 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer"
+                className={`group rounded-2xl bg-white p-5 border shadow-2xs transition-all cursor-pointer flex flex-col justify-between ${
+                  metrics.overdueAppsList.length > 0
+                    ? 'border-amber-200 hover:border-amber-400 hover:shadow-sm'
+                    : 'border-slate-200/80 hover:border-slate-300'
+                }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Cảnh Báo Chậm Bài</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-2xl">notifications_active</span>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-amber-600">{metrics.overdueAppsList.length}</span>
-                  <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                    Cần giục nộp link
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Cảnh Báo Chậm Bài</span>
+                  <span className={`material-symbols-outlined text-[20px] ${
+                    metrics.overdueAppsList.length > 0 ? 'text-amber-500' : 'text-slate-400'
+                  }`}>
+                    notifications_active
                   </span>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2.5">
+                <div className="mt-3 flex items-baseline gap-2.5">
+                  <span className={`text-3xl font-black tracking-tight ${
+                    metrics.overdueAppsList.length > 0 ? 'text-amber-600' : 'text-slate-900'
+                  }`}>
+                    {metrics.overdueAppsList.length}
+                  </span>
+                  <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-md ${
+                    metrics.overdueAppsList.length > 0
+                      ? 'bg-amber-50 text-amber-800 border border-amber-200/80'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {metrics.overdueAppsList.length > 0 ? 'Cần nhắc nộp link' : 'Đúng hạn'}
+                  </span>
+                </div>
+                <div className="mt-3 text-xs text-slate-500 flex items-center justify-between">
                   <span>Đã nhận mẫu &gt; 7 ngày</span>
-                  <span className="font-semibold text-amber-700 group-hover:underline flex items-center gap-0.5">
-                    Xử lý ngay <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  <span className="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all">
+                    arrow_forward
                   </span>
                 </div>
               </div>
 
-              {/* Card 4: Lượt Tiếp Cận (Reach) & CPV (VIOLET / TÍM ĐẲNG CẤP) */}
+              {/* Card 4: Lượt Tiếp Cận (Reach) & CPV */}
               <div
                 onClick={() => setIsMonthlyReportModalOpen(true)}
-                className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80 hover:border-violet-300 hover:shadow-md transition-all cursor-pointer"
+                className="group rounded-2xl bg-white p-5 border border-slate-200/80 shadow-2xs hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lượt Tiếp Cận (Reach)</span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-2xl">trending_up</span>
-                  </div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Lượt Tiếp Cận (Reach)</span>
+                  <span className="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-indigo-600 transition-colors">
+                    visibility
+                  </span>
                 </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-slate-900">
+                <div className="mt-3 flex items-baseline gap-2.5">
+                  <span className="text-3xl font-black text-slate-900 tracking-tight">
                     {(metrics.estimatedViews / 1000).toLocaleString('vi-VN')}K
                   </span>
-                  <span className="text-xs text-violet-600 font-semibold">views ước tính</span>
+                  <span className="text-xs font-semibold text-slate-500">views ước tính</span>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2.5">
-                  <span>Ngân sách mẫu: {(metrics.totalSampleBudget / 1000000).toFixed(1)}Tr</span>
-                  <span className="font-bold text-violet-700 bg-violet-50 border border-violet-200/80 px-2 py-0.5 rounded text-[11px]">
-                    ~{metrics.costPerView}đ / view
+                <div className="mt-3 text-xs text-slate-500 flex items-center justify-between">
+                  <span>Ngân sách: <strong className="text-slate-700">{(metrics.totalSampleBudget / 1000000).toFixed(1)}Tr</strong> (~{metrics.costPerView}đ/view)</span>
+                  <span className="material-symbols-outlined text-[16px] text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all">
+                    arrow_forward
                   </span>
                 </div>
               </div>
@@ -2819,102 +2835,98 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 {/* -------------------------------------------------------------
                     CỘT PHẢI (5 CỘT): BẢNG CHỈ SỐ VẬN HÀNH BOOKING (SLA & CHURN)
                     ------------------------------------------------------------- */}
-                <div className="lg:col-span-5 space-y-3.5">
-                  {/* Khối 1: Tốc Độ Xử Lý & Chu Kỳ Vận Hành (Booking SLA) */}
-                  <div className="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100 shadow-2xs">
-                    <div className="flex items-center justify-between pb-2.5 border-b border-indigo-100">
-                      <h4 className="text-xs font-extrabold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-indigo-600 text-[17px]">timelapse</span>
-                        Thời Gian Chu Kỳ Vận Hành (SLA)
+                <div className="lg:col-span-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs p-5 flex flex-col justify-between">
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[20px] text-indigo-600">health_and_safety</span>
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
+                        Sức Khỏe Vận Hành & SLA
                       </h4>
-                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
-                        Chuẩn SLA
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      Tự động tính
+                    </span>
+                  </div>
+
+                  {/* Section 1: Chu kỳ vận hành SLA dạng Pipeline tinh gọn */}
+                  <div className="py-4 border-b border-slate-100">
+                    <div className="flex items-center justify-between mb-2.5 text-xs">
+                      <span className="font-bold text-slate-700">Vòng đời hoàn tất (End-to-End):</span>
+                      <span className="font-mono font-black text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md">
+                        ~8.5 ngày
                       </span>
                     </div>
 
-                    <div className="mt-3 space-y-2.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-600 flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
-                          Nộp đơn ➔ Duyệt cấp mẫu
-                        </span>
-                        <span className="font-extrabold text-slate-900 font-mono">&lt; 24 giờ</span>
+                    {/* Timeline 3 chặng */}
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <span className="block text-[10px] text-slate-500 font-medium truncate">Duyệt cấp mẫu</span>
+                        <strong className="block text-xs font-extrabold text-slate-900 font-mono mt-0.5">&lt; 24h</strong>
                       </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-600 flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
-                          Đóng gói & Vận chuyển (GHTK)
-                        </span>
-                        <span className="font-extrabold text-slate-900 font-mono">2.5 ngày</span>
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <span className="block text-[10px] text-slate-500 font-medium truncate">Giao hàng GHTK</span>
+                        <strong className="block text-xs font-extrabold text-slate-900 font-mono mt-0.5">2.5 ngày</strong>
                       </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-600 flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-600"></span>
-                          Nhận hàng ➔ Đăng video TikTok
-                        </span>
-                        <span className="font-extrabold text-indigo-700 font-mono">5.2 ngày</span>
-                      </div>
-
-                      <div className="pt-2 border-t border-indigo-100 flex items-center justify-between text-xs font-bold text-indigo-950">
-                        <span>Tổng chu kỳ hoàn tất (End-to-End):</span>
-                        <span className="text-sm font-black text-indigo-700 bg-indigo-100/70 px-2.5 py-0.5 rounded">
-                          ~ 8.5 ngày
-                        </span>
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <span className="block text-[10px] text-slate-500 font-medium truncate">Lên video TikTok</span>
+                        <strong className="block text-xs font-extrabold text-indigo-600 font-mono mt-0.5">5.2 ngày</strong>
                       </div>
                     </div>
                   </div>
 
-                  {/* Khối 2: Cảnh Báo Rủi Ro Thất Thoát Mẫu */}
-                  <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-amber-500 text-[17px]">warning</span>
-                        Kiểm Soát Rủi Ro Mẫu Thử
-                      </h4>
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                        {metrics.overdueAppsList.length} ca trễ hạn
-                      </span>
-                    </div>
-
-                    <div className="mt-2.5 space-y-2 text-xs text-slate-600">
-                      <div className="flex items-center justify-between">
-                        <span>Tỷ lệ hồ sơ bị loại đầu vào:</span>
-                        <strong className="text-slate-900">{metrics.dropOffRate}%</strong>
-                      </div>
-                      <p className="text-[11px] text-slate-500">
-                        • Lọc kênh &lt; 1.000 followers hoặc sai tệp sản phẩm chiến dịch.
-                      </p>
-
-                      <div className="pt-1.5 flex items-center justify-between">
-                        <span>KOC nhận mẫu &gt; 7 ngày chưa lên bài:</span>
-                        <strong className="text-amber-700 font-mono font-extrabold">{metrics.overdueAppsList.length} KOC</strong>
+                  {/* Section 2: Kiểm soát rủi ro & KOC trễ hạn */}
+                  <div className="py-4 border-b border-slate-100">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${
+                            metrics.overdueAppsList.length > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+                          }`} />
+                          Trễ hạn nộp video (&gt; 7 ngày)
+                        </span>
+                        <span className="text-[11px] text-slate-400 mt-0.5 block">
+                          Tỷ lệ lọc loại đầu vào: <strong className="text-slate-600">{metrics.dropOffRate}%</strong> (kênh &lt; 1K follow)
+                        </span>
                       </div>
 
-                      <button
-                        onClick={() => setDashboardSubTab('overdue')}
-                        className="w-full mt-1.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">notifications_active</span>
-                        Mở danh sách giục nộp link ngay
-                      </button>
+                      {metrics.overdueAppsList.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setDashboardSubTab('overdue')}
+                          className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">send</span>
+                          Nhắc ngay ({metrics.overdueAppsList.length})
+                        </button>
+                      ) : (
+                        <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg shrink-0">
+                          0 ca trễ
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Khối 3: Tỷ Lệ Giữ Chân KOC (Creator Loyalty) */}
-                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                  {/* Section 3: Tỷ lệ KOC quay lại (Retention) */}
+                  <div className="pt-4 flex items-center justify-between">
                     <div>
-                      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        Tỷ Lệ KOC Quay Lại (Retention)
-                      </div>
-                      <div className="text-lg font-black text-slate-900 mt-0.5">
-                        {metrics.retentionRate}% <span className="text-xs font-semibold text-emerald-600">(Creator thân thiết)</span>
-                      </div>
-                      <div className="text-[10px] text-slate-400">Đã đăng ký từ 2 chiến dịch trở lên</div>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                        KOC Tái Tham Gia (Retention)
+                      </span>
+                      <span className="text-xs text-slate-500 mt-0.5 block">
+                        Đã tham gia từ 2 chiến dịch trở lên
+                      </span>
                     </div>
-                    <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-xl">favorite</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          style={{ width: `${Math.min(100, metrics.retentionRate)}%` }}
+                          className="h-full bg-indigo-600 rounded-full"
+                        />
+                      </div>
+                      <span className="text-sm font-black text-slate-900 font-mono">
+                        {metrics.retentionRate}%
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2994,80 +3006,112 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </div>
 
-              {/* CỘT 2: Top Chiến Dịch Thu Hút KOC Nhất (Thay Thế Khối Ghi Chú Tĩnh) */}
+              {/* CỘT 2: Top Chiến Dịch Thu Hút KOC Nhất (Chuẩn Minimalist SaaS Data List) */}
               <div className="rounded-2xl bg-white p-5 shadow-xs border border-slate-200/80 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                     <div>
                       <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-emerald-600 text-[18px]">workspace_premium</span>
+                        <span className="material-symbols-outlined text-indigo-600 text-[18px]">workspace_premium</span>
                         Top Chiến Dịch Hút KOC Nhất
                       </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">Xếp hạng theo số KOC đã đăng ký & tỷ lệ lấp đầy slot</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Xếp hạng theo số KOC đăng ký & tỷ lệ lấp đầy slot</p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setActiveAdminTab('campaigns')}
-                      className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 cursor-pointer transition-colors"
                     >
                       Tất cả <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
                     </button>
                   </div>
 
-                  <div className="mt-3.5 space-y-2.5">
-                    {topCampaigns.map((camp, idx) => (
-                      <div
-                        key={camp.id}
-                        className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/60 hover:bg-indigo-50/40 hover:border-indigo-200 transition-all flex items-center justify-between gap-3"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className={`h-6 w-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
-                            idx === 0 ? 'bg-amber-400 text-slate-900' : idx === 1 ? 'bg-slate-300 text-slate-800' : 'bg-slate-200 text-slate-700'
-                          }`}>
-                            #{idx + 1}
-                          </span>
-                          <img
-                            src={camp.productHeroImage || camp.brandLogo}
-                            alt={camp.title}
-                            className="h-10 w-10 rounded-lg object-cover border border-slate-200 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <h5 className="font-bold text-xs text-slate-900 truncate">{camp.title}</h5>
-                            <span className="text-[11px] text-slate-500 block truncate">{camp.brandName} • {camp.category}</span>
-                          </div>
-                        </div>
+                  <div className="mt-2 divide-y divide-slate-100">
+                    {topCampaigns.map((camp, idx) => {
+                      const rankBadges = [
+                        'text-amber-700 bg-amber-50 border-amber-200/80',
+                        'text-slate-700 bg-slate-100 border-slate-200',
+                        'text-amber-800 bg-amber-50/60 border-amber-200/50',
+                        'text-slate-500 bg-slate-50 border-slate-200/60',
+                      ];
 
-                        <div className="text-right shrink-0">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <span className="text-xs font-extrabold text-slate-900">
-                              {camp.realRegistered}/{camp.totalSpots} KOC
-                            </span>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              camp.fillRate >= 100
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      return (
+                        <div
+                          key={camp.id}
+                          className="py-2.5 px-2 -mx-2 rounded-xl hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3 group"
+                        >
+                          {/* Rank + Image + Info */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className={`h-6 w-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 border ${
+                              rankBadges[idx] || 'text-slate-500 bg-slate-50'
                             }`}>
-                              {camp.fillRate}%
+                              #{idx + 1}
                             </span>
+
+                            <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                              {camp.productHeroImage || camp.brandLogo ? (
+                                <img
+                                  src={camp.productHeroImage || camp.brandLogo}
+                                  alt={camp.title}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const parent = e.currentTarget.parentElement;
+                                    if (parent) {
+                                      parent.innerHTML = `<span class="text-xs font-bold text-indigo-600">${(camp.brandName || camp.title || 'K').slice(0, 2).toUpperCase()}</span>`;
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-xs font-bold text-indigo-600">
+                                  {(camp.brandName || camp.title || 'K').slice(0, 2).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <h5 className="font-bold text-xs text-slate-900 truncate group-hover:text-indigo-600 transition-colors">
+                                {camp.title}
+                              </h5>
+                              <span className="text-[11px] text-slate-500 block truncate">
+                                {camp.brandName} • {camp.category}
+                              </span>
+                            </div>
                           </div>
-                          {/* Mini Progress Bar */}
-                          <div className="h-1.5 w-24 bg-slate-200 rounded-full overflow-hidden mt-1 ml-auto">
-                            <div
-                              style={{ width: `${Math.min(100, camp.fillRate)}%` }}
-                              className={`h-full rounded-full ${
-                                camp.fillRate >= 100 ? 'bg-rose-500' : 'bg-emerald-500'
-                              }`}
-                            ></div>
+
+                          {/* Slot count & mini progress bar */}
+                          <div className="text-right shrink-0">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <span className="text-xs font-bold text-slate-900 font-mono">
+                                {camp.realRegistered}/{camp.totalSpots} KOC
+                              </span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                camp.fillRate >= 100
+                                  ? 'bg-rose-50 text-rose-700'
+                                  : 'bg-indigo-50 text-indigo-700'
+                              }`}>
+                                {camp.fillRate}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden mt-1 ml-auto">
+                              <div
+                                style={{ width: `${Math.min(100, camp.fillRate)}%` }}
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  camp.fillRate >= 100 ? 'bg-rose-500' : 'bg-indigo-600'
+                                }`}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span>Tổng số chiến dịch đang chạy: <strong>{metrics.totalActiveCampaigns}</strong></span>
-                  <span className="font-semibold text-indigo-600">
-                    Tổng slot đã cấp: <strong>{metrics.totalRegisteredSpots}/{metrics.totalSpots}</strong>
+                  <span>Tổng chiến dịch: <strong className="text-slate-800">{metrics.totalActiveCampaigns}</strong></span>
+                  <span>
+                    Tổng slot đã cấp: <strong className="text-indigo-600 font-mono">{metrics.totalRegisteredSpots}/{metrics.totalSpots}</strong>
                   </span>
                 </div>
               </div>
