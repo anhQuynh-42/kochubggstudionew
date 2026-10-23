@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Campaign } from '../../types';
 import { Icon, Button, cx } from '../ui';
 
@@ -1392,10 +1393,20 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     setPan(clampPan(newPanX, newPanY, finalZoom, rect.width, rect.height));
   };
 
+  // Khóa cuộn trang nền khi mở Thành Phố Cư Dân
+  useEffect(() => {
+    if (!open) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [open]);
+
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none overflow-hidden font-sans">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-950 text-white select-none overflow-hidden font-sans">
       {/* ===== CỤM ĐIỀU KHIỂN NỔI GÓC TRÊN BÊN TRÁI (LOGO TINH TẾ) ===== */}
       <div className="absolute top-4 left-4 z-40 pointer-events-none flex items-center gap-2">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md ring-1 ring-white/15 shadow-xl text-xs font-bold text-white/95">
@@ -2995,4 +3006,6 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
       )}
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };
