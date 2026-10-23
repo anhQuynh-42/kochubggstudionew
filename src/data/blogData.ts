@@ -33,7 +33,9 @@ export const INITIAL_BLOG_POSTS: BlogPost[] = [
 
 TikTok Shop Affiliate là hình thức tiếp thị liên kết, trong đó nhà sáng tạo nội dung (Creator) quảng bá sản phẩm của nhà bán hàng (Seller) thông qua video, livestream, trang trưng bày sản phẩm hoặc liên kết tiếp thị. Khi khách hàng mua hàng và đơn đáp ứng điều kiện ghi nhận hoa hồng, creator có thể nhận hoa hồng theo chính sách áp dụng.
 
-Khác với việc chỉ đăng video để tăng lượt xem, làm Affiliate đòi hỏi bạn quan tâm cả hành trình mua hàng: sản phẩm có được nhìn thấy không, người xem có nhấp vào sản phẩm không, có phát sinh đơn hàng không và hoa hồng thực nhận là bao nhiêu.
+![Mô hình kết nối KOC và Seller trên TikTok Shop Affiliate](https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1000&auto=format&fit=crop&q=80)
+
+> 💡 **Bí kíp KOCity:** Khác với việc chỉ đăng video để tăng lượt xem, làm Affiliate đòi hỏi bạn quan tâm cả hành trình mua hàng: sản phẩm có được nhìn thấy không, người xem có nhấp vào sản phẩm không, có phát sinh đơn hàng không và hoa hồng thực nhận là bao nhiêu.
 
 ---
 
@@ -103,7 +105,9 @@ Khác với việc chỉ đăng video để tăng lượt xem, làm Affiliate đ
 
 Trong cộng đồng Affiliate, **"sản phẩm win"** là sản phẩm đáp ứng hoàn hảo 3 yếu tố: nhu cầu thị trường cao, dễ tạo nội dung chuyển đổi và mang lại tỷ lệ hoa hồng xứng đáng cho Creator.
 
-Không có sản phẩm nào win với tất cả mọi người. Một cây son hot trend đang bán hàng nghìn đơn trên kênh làm đẹp sẽ không thể là sản phẩm win nếu bạn đăng lên một kênh chuyên công nghệ. Mục tiêu là tìm ra sản phẩm phù hợp nhất với tệp người xem của bạn.
+![Phân tích sản phẩm xu hướng và đánh giá dung lượng thị trường](https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1000&auto=format&fit=crop&q=80)
+
+> 💡 **Bí kíp KOCity:** Chọn đúng sản phẩm giúp bạn giảm 70% công sức làm video. Nếu sản phẩm không có nhu cầu hoặc chất lượng kém, dù video đạt hàng trăm nghìn lượt xem thì tỷ lệ chuyển đổi vẫn rất thấp.
 
 ---
 
@@ -152,6 +156,10 @@ Thay vì phải tự bỏ tiền túi ra mua sản phẩm về review với rủ
 
 Người tiêu dùng hiện nay rất thông minh. Một video chỉ toàn lời khen sáo rỗng hoặc đọc lại thông số kỹ thuật của nhà sản xuất sẽ bị lướt qua trong 1 giây. Người xem cần **trải nghiệm thực tế**, thấy được ưu điểm và cả nhược điểm của sản phẩm trước khi quyết định mở ví.
 
+![Quy trình setup góc quay và ánh sáng review sản phẩm chuyển đổi cao](https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=1000&auto=format&fit=crop&q=80)
+
+> 💡 **Bí kíp KOCity:** Không bao giờ mở đầu bằng lời chào rườm rà như "Xin chào các bạn, hôm nay mình lại review...". Hãy bắt đầu bằng vấn đề, tình huống éo le hoặc một kết quả bất ngờ để giữ chân người xem trong 3 giây đầu tiên!
+
 ---
 
 ### 1. Công thức kịch bản Review 3 phần chuẩn chuyển đổi
@@ -196,6 +204,10 @@ Người tiêu dùng hiện nay rất thông minh. Một video chỉ toàn lời
 
 Job KOC là cơ hội hợp tác giữa nhà sáng tạo nội dung và các thương hiệu. Tùy chiến dịch, bạn có thể nhận sản phẩm mẫu miễn phí để trải nghiệm, nhận hoa hồng theo từng đơn hàng bán ra (Affiliate), hoặc nhận thêm phí booking thù lao cố định (Fixed Fee).
 
+![Chiến lược đàm phán hoa hồng và chọn chiến dịch chất lượng](https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1000&auto=format&fit=crop&q=80)
+
+> 💡 **Bí kíp KOCity:** Một sản phẩm uy tín từ thương hiệu lớn với hoa hồng 15% trên giá trị 400.000đ sẽ mang lại cho bạn 60.000đ/đơn. Khi một video lên xu hướng bán được 200 đơn, bạn đã có ngay 12.000.000đ hoa hồng!
+
 ---
 
 ### 1. Đừng chỉ nhìn vào tỷ lệ phần trăm hoa hồng
@@ -238,7 +250,9 @@ Ngược lại, một sản phẩm uy tín từ thương hiệu lớn với hoa 
 
 Hồ sơ KOC là bản danh thiếp chuyên nghiệp giới thiệu năng lực của bạn với Brand. Một hồ sơ chuẩn chỉnh giúp bên tuyển dụng thấy ngay: bạn là ai, phong cách video của bạn ra sao, tệp khán giả của bạn có đúng đối tượng khách hàng mục tiêu của họ hay không.
 
-Kênh có ít follower vẫn có thể nhận được job lớn nếu hồ sơ thể hiện được sự chỉn chu, am hiểu ngành hàng và tỷ lệ tương tác chất lượng.
+![Mẫu Media Kit chuyên nghiệp chinh phục các nhãn hàng hàng đầu](https://images.unsplash.com/photo-1450133064473-71024230f91b?w=1000&auto=format&fit=crop&q=80)
+
+> 💡 **Bí kíp KOCity:** Khi tham gia KOCITY, bạn được hệ thống cấp sẵn một **Trang Media Kit công khai** độc quyền mang tên bạn, có mã QR và liên kết đẹp mắt để gửi thẳng cho nhãn hàng chỉ bằng một cú chạm!
 
 ---
 
@@ -258,10 +272,12 @@ Thay vì phải mất công thiết kế file PDF hay PowerPoint phức tạp, k
   }
 ];
 
+const STORAGE_KEY = 'kocity_blog_posts_v2';
+
 export const getStoredBlogPosts = (): BlogPost[] => {
   if (typeof window === 'undefined') return INITIAL_BLOG_POSTS;
   try {
-    const raw = localStorage.getItem('kocity_blog_posts_v1');
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('kocity_blog_posts_v1');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -277,9 +293,10 @@ export const getStoredBlogPosts = (): BlogPost[] => {
 export const saveStoredBlogPosts = (posts: BlogPost[]): void => {
   if (typeof window === 'undefined') return;
   try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
     localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(posts));
     window.dispatchEvent(new Event('kocity-blog-updated'));
   } catch (e) {
-    console.error('Error saving blog posts:', e);
+    console.warn('Error saving blog posts to storage:', e);
   }
 };

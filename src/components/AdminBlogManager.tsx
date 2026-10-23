@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { BlogPost, getStoredBlogPosts, saveStoredBlogPosts, INITIAL_BLOG_POSTS } from '../data/blogData';
+import { BlogContentRenderer } from '../site/components/BlogContentRenderer';
 
 interface AdminBlogManagerProps {
   onShowToast: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
 }
+
+const COLOR_PALETTE = [
+  { label: 'Đen than', hex: '#0f172a' },
+  { label: 'Tím Kocity', hex: '#7c3aed' },
+  { label: 'Xanh dương', hex: '#2563eb' },
+  { label: 'Xanh lục', hex: '#059669' },
+  { label: 'Cam cháy', hex: '#ea580c' },
+  { label: 'Đỏ nhấn', hex: '#dc2626' },
+  { label: 'Hồng sen', hex: '#db2777' },
+  { label: 'Xám ghi', hex: '#64748b' },
+];
 
 export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast }) => {
   const [posts, setPosts] = useState<BlogPost[]>(() => getStoredBlogPosts());
@@ -12,11 +24,55 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
 
   // Form state
   const [formData, setFormData] = useState<Partial<BlogPost>>({});
+  const [editorTab, setEditorTab] = useState<'edit' | 'preview'>('edit');
+
+  // Refs for in-article image & cover upload
+  const contentAreaRef = useRef<HTMLTextAreaElement>(null);
+  const inArticleFileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+
+  // In-browser lightweight image compression (max 1200px, 82% quality)
+  const compressImageFile = (file: File, callback: (compressedUrl: string) => void) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.82));
+        } else {
+          callback(dataUrl);
+        }
+      };
+      img.onerror = () => callback(dataUrl);
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleOpenEdit = (post: BlogPost) => {
     setEditingPost(post);
     setIsCreatingNew(false);
     setFormData({ ...post });
+    setEditorTab('edit');
   };
 
   const handleOpenCreate = () => {
@@ -39,6 +95,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     setEditingPost(newPost);
     setIsCreatingNew(true);
     setFormData(newPost);
+    setEditorTab('edit');
   };
 
   const handleToggleCloud = (postId: string) => {
@@ -52,6 +109,115 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     setPosts(updated);
     saveStoredBlogPosts(updated);
     onShowToast('Đã cập nhật trạng thái mây che!', 'Bài viết đã được cập nhật hiển thị ngoài trang chủ.', 'success');
+  };
+
+  // Helper to insert or wrap text at cursor position in textarea
+  const insertAtCursor = (before: string, after: string = '', defaultText: string = '') => {
+    const textarea = contentAreaRef.current;
+    if (!textarea) {
+      setFormData((prev) => ({
+        ...prev,
+        content: (prev.content || '') + before + defaultText + after,
+      }));
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+    const selectedText = currentText.substring(start, end) || defaultText;
+
+    const newText = currentText.substring(0, start) + before + selectedText + after + currentText.substring(end);
+    setFormData((prev) => ({ ...prev, content: newText }));
+
+    // Reset cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
+    }, 10);
+  };
+
+  // Upload in-article image from computer
+  const handleProcessInArticleImage = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      onShowToast('Tệp không hợp lệ', 'Vui lòng chọn hình ảnh (PNG, JPG, WEBP,...)', 'warning');
+      return;
+    }
+    compressImageFile(file, (optimizedUrl) => {
+      const caption = file.name.replace(/\.[^/.]+$/, '') || 'Hình ảnh minh họa';
+      insertAtCursor(`\n\n![${caption}](${optimizedUrl})\n\n`, '');
+      onShowToast('Đã chèn ảnh vào bài viết!', file.name, 'success');
+    });
+  };
+
+  // Upload cover image
+  const handleProcessCoverImage = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      onShowToast('Tệp không hợp lệ', 'Vui lòng chọn file hình ảnh', 'warning');
+      return;
+    }
+    compressImageFile(file, (optimizedUrl) => {
+      setFormData((prev) => ({ ...prev, coverImage: optimizedUrl }));
+      onShowToast('Đã cập nhật ảnh bìa!', file.name, 'success');
+    });
+  };
+
+  // Insert image URL
+  const handleInsertImageUrl = () => {
+    const url = prompt('Nhập đường dẫn hình ảnh (URL):', 'https://images.unsplash.com/...');
+    if (!url || !url.trim()) return;
+    const caption = prompt('Nhập mô tả / chú thích ảnh (tùy chọn):', 'Ảnh minh họa bài viết');
+    insertAtCursor(`\n\n![${caption?.trim() || 'Hình ảnh'}](${url.trim()})\n\n`, '');
+  };
+
+  // Quick color formatting
+  const handleColorClick = (colorHex: string) => {
+    insertAtCursor(`<span style="color: ${colorHex};">`, '</span>', 'Đoạn chữ đổi màu');
+  };
+
+  // Font family formatting
+  const handleFontFamilyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (!val) return;
+    insertAtCursor(`<span style="font-family: ${val};">`, '</span>', 'Đoạn văn bản');
+    e.target.value = '';
+  };
+
+  // Font size formatting
+  const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (!val) return;
+    if (val.startsWith('#')) {
+      insertAtCursor(`\n\n${val} `, '', 'Tiêu đề đề mục');
+    } else {
+      insertAtCursor(`<span style="font-size: ${val};">`, '</span>', 'Đoạn văn bản');
+    }
+    e.target.value = '';
+  };
+
+  // Drag & drop image into textarea
+  const handleTextareaDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      e.preventDefault();
+      handleProcessInArticleImage(file);
+    }
+  };
+
+  // Paste image directly into textarea
+  const handleTextareaPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          handleProcessInArticleImage(file);
+          break;
+        }
+      }
+    }
   };
 
   const handleSaveForm = (e: React.FormEvent) => {
@@ -103,47 +269,76 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
       const updated = posts.filter((p) => p.id !== postId);
       setPosts(updated);
       saveStoredBlogPosts(updated);
-      onShowToast('Đã xóa bài viết!', 'Danh sách cẩm nang đã được cập nhật.', 'info');
+      onShowToast('Đã xóa bài viết', 'Danh sách đã được làm mới.', 'info');
     }
   };
 
   const handleResetDefaults = () => {
-    if (window.confirm('Khôi phục 5 bài viết chuẩn SEO gốc từ tài liệu Google Docs? Các sửa đổi hiện tại sẽ được thay bằng dữ liệu chuẩn.')) {
+    if (window.confirm('Khôi phục lại 5 bài viết chuẩn SEO gốc theo tài liệu? Những thay đổi thủ công của bạn sẽ được thiết lập lại.')) {
       setPosts(INITIAL_BLOG_POSTS);
       saveStoredBlogPosts(INITIAL_BLOG_POSTS);
-      onShowToast('Đã khôi phục 5 bài viết gốc!', 'Toàn bộ dữ liệu chuẩn SEO đã được thiết lập lại.', 'success');
+      onShowToast('Đã khôi phục 5 bài gốc!', 'Toàn bộ nội dung chuẩn SEO đã được khôi phục.', 'success');
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Hidden file inputs */}
+      <input
+        type="file"
+        ref={inArticleFileInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleProcessInArticleImage(file);
+          e.target.value = '';
+        }}
+      />
+      <input
+        type="file"
+        ref={coverFileInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleProcessCoverImage(file);
+          e.target.value = '';
+        }}
+      />
+
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-6 shadow-xs border border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 p-6 text-white shadow-xl">
         <div>
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-purple-600 text-2xl">menu_book</span>
-            <h2 className="text-xl font-bold text-slate-900">Quản Lý Cẩm Nang & Bài Viết Chuẩn SEO</h2>
+            <span className="rounded-lg bg-purple-500/30 px-2.5 py-1 text-xs font-bold text-purple-200 backdrop-blur-xs">
+              CMS Cẩm Nang & SEO
+            </span>
+            <span className="text-xs text-purple-300">({posts.length} bài viết)</span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Chỉnh sửa 5 bài viết lên top Google, thay đổi ảnh bìa và cài đặt chế độ <strong>☁️ Mây che úp mở</strong> kích thích KOC khám phá.
+          <h2 className="text-xl sm:text-2xl font-black mt-1 font-display">
+            Quản Lý Bài Viết & Bí Kíp KOCity
+          </h2>
+          <p className="text-xs sm:text-sm text-purple-200/90 mt-1 max-w-xl">
+            Tự do thêm ảnh ở đầu, giữa bài, chỉnh phông chữ, cỡ chữ, màu sắc và bật/tắt hiệu ứng mây sương mù che úp mở ngoài trang chủ.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleResetDefaults}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-            title="Khôi phục lại 5 bài viết chuẩn SEO ban đầu"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-bold text-white hover:bg-white/20 transition cursor-pointer"
+            title="Khôi phục lại 5 bài viết chuẩn SEO mặc định"
           >
             <span className="material-symbols-outlined text-[16px]">restart_alt</span>
-            <span>Khôi phục bản gốc</span>
+            <span>Khôi phục gốc</span>
           </button>
 
           <button
             type="button"
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-purple-700 transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-xs font-bold text-white shadow-lg hover:from-purple-600 hover:to-pink-600 transition cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
             <span>Thêm bài viết mới</span>
@@ -245,29 +440,29 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
         ))}
       </div>
 
-      {/* MODAL SOẠN THẢO BÀI VIẾT */}
+      {/* MODAL SOẠN THẢO BÀI VIẾT NÂNG CAO */}
       {editingPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-3xl max-h-[90vh] rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-100 flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-5 animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl max-h-[92vh] rounded-3xl bg-white shadow-2xl overflow-hidden border border-slate-100 flex flex-col">
             {/* Modal header */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-purple-50/70">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-purple-50/70">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-purple-700">edit_document</span>
                 <h3 className="font-bold text-slate-900 text-base">
-                  {isCreatingNew ? 'Thêm Bài Viết SEO Mới' : 'Chỉnh Sửa Bài Viết Cẩm Nang'}
+                  {isCreatingNew ? 'Thêm Bài Viết SEO Mới' : 'Soạn Thảo Bài Viết & Chèn Ảnh'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingPost(null)}
-                className="rounded-lg p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                className="rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             {/* Modal Form body */}
-            <form onSubmit={handleSaveForm} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs sm:text-sm">
+            <form onSubmit={handleSaveForm} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs sm:text-sm">
               {/* Tiêu đề & Slug */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
@@ -279,7 +474,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
                   value={formData.title || ''}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Ví dụ: TikTok Shop Affiliate là gì?..."
-                  className="w-full rounded-xl border border-slate-300 p-2.5 text-slate-900 focus:border-purple-600 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-slate-900 font-semibold focus:border-purple-600 focus:outline-none"
                 />
               </div>
 
@@ -343,22 +538,31 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
                 />
               </div>
 
-              {/* Ảnh bìa */}
+              {/* Ảnh bìa (Cover Image) với nút Tải trực tiếp từ máy */}
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Đường dẫn Ảnh Bìa (Cover Image URL)</label>
-                <div className="flex gap-2">
+                <label className="block font-bold text-slate-700 mb-1">Ảnh Bìa Bài Viết (Cover Image)</label>
+                <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="url"
                     value={formData.coverImage || ''}
                     onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 rounded-xl border border-slate-300 p-2.5 text-slate-900 focus:border-purple-600 focus:outline-none"
+                    placeholder="Dán link ảnh https://... hoặc bấm nút bên phải để tải từ máy"
+                    className="flex-1 min-w-[200px] rounded-xl border border-slate-300 p-2.5 text-slate-900 focus:border-purple-600 focus:outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={() => coverFileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2.5 font-bold transition cursor-pointer"
+                    title="Tải ảnh bìa từ máy tính"
+                  >
+                    <span className="material-symbols-outlined text-[17px] text-purple-600">upload_file</span>
+                    <span>Tải ảnh bìa</span>
+                  </button>
                   {formData.coverImage && (
                     <img
                       src={formData.coverImage}
                       alt="Preview"
-                      className="h-10 w-16 rounded-lg object-cover border border-slate-200"
+                      className="h-10 w-16 rounded-lg object-cover border border-slate-200 shadow-2xs"
                     />
                   )}
                 </div>
@@ -414,19 +618,229 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
                 />
               </div>
 
-              {/* Nội dung chi tiết */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Nội dung chi tiết bài viết (Hỗ trợ tiêu đề ##, ###, danh sách gạch đầu dòng, bảng số liệu) <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={10}
-                  required
-                  value={formData.content || ''}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Nhập hoặc dán toàn bộ nội dung bài viết vào đây..."
-                  className="w-full rounded-xl border border-slate-300 p-3 text-slate-900 font-mono text-xs focus:border-purple-600 focus:outline-none leading-relaxed"
-                />
+              {/* KHUNG SOẠN THẢO CHI TIẾT & MINI STICKY TOOLBAR */}
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab('edit')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        editorTab === 'edit'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">edit</span>
+                      <span>Soạn thảo nội dung</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab('preview')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        editorTab === 'preview'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">visibility</span>
+                      <span>Xem trước bài viết (Live Preview)</span>
+                    </button>
+                  </div>
+
+                  <span className="text-[11px] text-slate-400 hidden sm:inline">
+                    💡 Kéo thả ảnh hoặc dán ảnh (Ctrl+V) trực tiếp vào bài
+                  </span>
+                </div>
+
+                {editorTab === 'preview' ? (
+                  /* LIVE PREVIEW */
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 max-h-[520px] overflow-y-auto space-y-4">
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+                      <div className="border-b border-slate-100 pb-4">
+                        <span className="rounded-full bg-violet-100 px-3 py-0.5 text-xs font-bold text-violet-700">
+                          {formData.tag || 'Cẩm nang KOC'}
+                        </span>
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-2 font-display">
+                          {formData.title || '(Chưa nhập tiêu đề bài viết)'}
+                        </h2>
+                        {formData.metaDescription && (
+                          <p className="text-xs text-slate-500 italic mt-2 border-l-2 border-violet-500 pl-3">
+                            {formData.metaDescription}
+                          </p>
+                        )}
+                      </div>
+
+                      {formData.coverImage && (
+                        <div className="rounded-xl overflow-hidden max-h-[320px] shadow-sm">
+                          <img
+                            src={formData.coverImage}
+                            alt="Cover Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+
+                      <BlogContentRenderer content={formData.content || ''} />
+                    </div>
+                  </div>
+                ) : (
+                  /* EDIT MODE WITH MINI STICKY TOOLBAR */
+                  <div className="space-y-2">
+                    {/* MINI STICKY TOOLBAR (Gọn gàng, 1 dòng, không che chữ) */}
+                    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/95 p-1.5 backdrop-blur-md shadow-2xs">
+                      {/* Group 1: Ảnh */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => inArticleFileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-300 transition-colors shadow-2xs cursor-pointer"
+                          title="Tải ảnh từ máy tính (tự động nén nhẹ không lo nặng trang)"
+                        >
+                          <span className="material-symbols-outlined text-[16px] text-violet-600">add_photo_alternate</span>
+                          <span>Tải ảnh</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleInsertImageUrl}
+                          className="rounded-lg bg-white border border-slate-200 p-1 text-slate-600 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-300 transition-colors shadow-2xs cursor-pointer"
+                          title="Chèn ảnh từ đường link URL"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">link</span>
+                        </button>
+                      </div>
+
+                      <span className="h-4 w-px bg-slate-200 mx-0.5"></span>
+
+                      {/* Group 2: Phông chữ & Kích thước */}
+                      <select
+                        onChange={handleFontFamilyChange}
+                        defaultValue=""
+                        className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-violet-500 cursor-pointer shadow-2xs"
+                        title="Đổi phông chữ cho đoạn văn bản bôi đen"
+                      >
+                        <option value="" disabled>Phông chữ</option>
+                        <option value="sans-serif">Mặc định (Sans)</option>
+                        <option value="Georgia, serif">Báo chí (Serif)</option>
+                        <option value="'Plus Jakarta Sans', sans-serif">Tiêu đề (Display)</option>
+                        <option value="monospace">Kịch bản (Mono)</option>
+                      </select>
+
+                      <select
+                        onChange={handleFontSizeChange}
+                        defaultValue=""
+                        className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-violet-500 cursor-pointer shadow-2xs"
+                        title="Đổi kích cỡ cho đoạn văn bản bôi đen"
+                      >
+                        <option value="" disabled>Cỡ chữ</option>
+                        <option value="##">Tiêu đề H2 (24px)</option>
+                        <option value="###">Đề mục H3 (20px)</option>
+                        <option value="1.125rem">Lớn (18px)</option>
+                        <option value="1rem">Chuẩn (16px)</option>
+                        <option value="0.8125rem">Nhỏ (13px)</option>
+                      </select>
+
+                      <span className="h-4 w-px bg-slate-200 mx-0.5"></span>
+
+                      {/* Group 3: Định dạng cơ bản */}
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => insertAtCursor('**', '**', 'chữ đậm')}
+                          className="h-7 w-7 rounded-lg bg-white border border-slate-200 font-bold text-slate-800 hover:bg-slate-100 transition shadow-2xs cursor-pointer flex items-center justify-center text-xs"
+                          title="In đậm (**text**)"
+                        >
+                          B
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertAtCursor('*', '*', 'chữ nghiêng')}
+                          className="h-7 w-7 rounded-lg bg-white border border-slate-200 italic font-serif text-slate-800 hover:bg-slate-100 transition shadow-2xs cursor-pointer flex items-center justify-center text-xs"
+                          title="In nghiêng (*text*)"
+                        >
+                          I
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertAtCursor('<u>', '</u>', 'chữ gạch chân')}
+                          className="h-7 w-7 rounded-lg bg-white border border-slate-200 underline text-slate-800 hover:bg-slate-100 transition shadow-2xs cursor-pointer flex items-center justify-center text-xs"
+                          title="Gạch chân (<u>text</u>)"
+                        >
+                          U
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertAtCursor('<div align="center">\n\n', '\n\n</div>', 'Đoạn văn bản căn giữa')}
+                          className="h-7 w-7 rounded-lg bg-white border border-slate-200 text-slate-800 hover:bg-slate-100 transition shadow-2xs cursor-pointer flex items-center justify-center text-xs"
+                          title="Căn giữa nội dung"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">format_align_center</span>
+                        </button>
+                      </div>
+
+                      <span className="h-4 w-px bg-slate-200 mx-0.5"></span>
+
+                      {/* Group 4: 8 Chấm màu (Quick Color Dots) */}
+                      <div className="flex items-center gap-1 px-1.5 bg-white border border-slate-200 rounded-lg h-7 shadow-2xs">
+                        {COLOR_PALETTE.map((c) => (
+                          <button
+                            key={c.hex}
+                            type="button"
+                            onClick={() => handleColorClick(c.hex)}
+                            className="h-3.5 w-3.5 rounded-full transition-transform hover:scale-135 cursor-pointer shadow-2xs border border-black/10 focus:outline-none"
+                            style={{ backgroundColor: c.hex }}
+                            title={`Đổi màu chữ: ${c.label}`}
+                          />
+                        ))}
+                      </div>
+
+                      <span className="h-4 w-px bg-slate-200 mx-0.5"></span>
+
+                      {/* Group 5: Tiện ích bài viết */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => insertAtCursor('\n\n> 💡 **Bí kíp KOCity:** ', '\n\n', 'Nhập mẹo hoặc lưu ý quan trọng tại đây...')}
+                          className="inline-flex items-center gap-1 rounded-lg bg-violet-100 hover:bg-violet-200 text-violet-800 px-2 py-1 text-xs font-bold transition shadow-2xs cursor-pointer"
+                          title="Chèn hộp lưu ý Bí kíp KOCity"
+                        >
+                          <span>💡</span>
+                          <span className="hidden sm:inline">Hộp mẹo</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertAtCursor('\n\n| Tiêu chí | Nội dung chi tiết |\n| --- | --- |\n| ', ' | Mô tả ví dụ |\n\n', 'Bước 1')}
+                          className="rounded-lg bg-white border border-slate-200 p-1 text-slate-700 hover:bg-slate-100 transition shadow-2xs cursor-pointer"
+                          title="Chèn bảng số liệu mẫu"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">table</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertAtCursor('[', '](https://kocity.io.vn)', 'Tên liên kết')}
+                          className="rounded-lg bg-white border border-slate-200 p-1 text-slate-700 hover:bg-slate-100 transition shadow-2xs cursor-pointer"
+                          title="Chèn liên kết đường dẫn"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">share</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* TEXTAREA SOẠN THẢO */}
+                    <textarea
+                      ref={contentAreaRef}
+                      rows={14}
+                      required
+                      value={formData.content || ''}
+                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                      onDrop={handleTextareaDrop}
+                      onPaste={handleTextareaPaste}
+                      placeholder="Nhập hoặc dán nội dung bài viết vào đây. Bạn có thể kéo thả ảnh hoặc dán ảnh (Ctrl+V) trực tiếp vào bất kỳ vị trí nào trong bài viết..."
+                      className="w-full rounded-2xl border border-slate-300 p-3.5 text-slate-900 font-mono text-xs focus:border-purple-600 focus:outline-none leading-relaxed transition-all"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}
