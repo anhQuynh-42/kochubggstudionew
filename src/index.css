@@ -70,7 +70,10 @@ body {
   animation: marquee-horizontal 40s linear infinite;
 }
 
-.animate-marquee-infinite:hover {
+.group:hover .animate-marquee-infinite,
+.group:active .animate-marquee-infinite,
+.animate-marquee-infinite:hover,
+.animate-marquee-infinite.is-paused {
   animation-play-state: paused;
 }
 

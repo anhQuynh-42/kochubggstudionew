@@ -16,15 +16,15 @@ const HeroImageSheet = React.lazy(() => import('../components/HeroImageSheet').t
 const KocityWorldModal = React.lazy(() => import('../components/KocityWorldModal').then(m => ({ default: m.KocityWorldModal })));
 
 type SortKey = 'popular' | 'commission' | 'spots' | 'ending';
+type StatusFilter = 'all' | 'open' | 'full';
 
 const CATEGORIES = [
   { id: 'all', label: 'Tất cả' },
-  { id: 'Mỹ phẩm', label: 'Mỹ phẩm' },
-  { id: 'Chăm sóc cá nhân', label: 'Chăm sóc cá nhân' },
-  { id: 'công nghệ', label: 'Công nghệ' },
-  { id: 'gia dụng', label: 'Gia dụng' },
-  { id: 'Thời trang', label: 'Thời trang' },
-  { id: 'F&B', label: 'Ăn uống' },
+  { id: 'Mỹ phẩm', label: 'Mỹ phẩm & Chăm sóc da' },
+  { id: 'Chăm sóc cá nhân', label: 'Chăm sóc cá nhân & Răng' },
+  { id: 'công nghệ', label: 'Đồ công nghệ & Setup' },
+  { id: 'Thời trang', label: 'Thời trang & Phụ kiện' },
+  { id: 'Nước hoa', label: 'Nước hoa cao cấp' },
 ];
 const SORTS: Array<{ id: SortKey; label: string }> = [
   { id: 'popular', label: 'Phổ biến' },
@@ -54,19 +54,58 @@ const FAQ = [
 ];
 
 const PERSONAS = [
-  { title: "Nano KOC (từ 1K followers)", desc: "Kênh nhỏ vẫn nhận được mẫu thật và có thêm thu nhập từ hoa hồng theo đơn." },
-  { title: "Micro KOC", desc: "Chọn chiến dịch đúng ngách, chủ động lịch lên video và theo dõi kết quả rõ ràng." },
-  { title: "Creator theo ngách", desc: "Làm đẹp, thời trang, công nghệ, gia dụng... — chọn Brand phù hợp phong cách của bạn." },
+  {
+    title: "Nano KOC (từ 1K followers)",
+    desc: "Kênh nhỏ vẫn nhận được mẫu thật và có thêm thu nhập từ hoa hồng theo đơn.",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+    tag: "Dễ duyệt mẫu"
+  },
+  {
+    title: "Micro KOC (từ 5K followers)",
+    desc: "Chọn chiến dịch đúng ngách, chủ động lịch lên video và theo dõi kết quả rõ ràng.",
+    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+    tag: "Hoa hồng cao"
+  },
+  {
+    title: "Creator theo ngách",
+    desc: "Làm đẹp, thời trang, công nghệ, phong cách sống... — chọn Brand phù hợp phong cách của bạn.",
+    image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80",
+    tag: "Tự do sáng tạo"
+  },
 ];
 
-// Chỉ dùng những gì website đang thực sự cung cấp
+// 6 Quyền lợi vượt trội có tiêu đề in đậm và icon nhận diện
 const REASONS = [
-  "Nhận mẫu sản phẩm 0đ, giao tận nhà.",
-  "Phần lớn chiến dịch chỉ cần kênh từ 1.000 followers.",
-  "Hoa hồng theo từng đơn, hiển thị rõ trên mỗi chiến dịch.",
-  "Theo dõi đơn như đơn hàng: Brand xem → gửi mẫu → lên bài.",
-  "Lưu thông tin một lần, lần sau nộp đơn chỉ 1 chạm.",
-  "Nhóm Zalo KOC hỗ trợ về brief, duyệt đơn và vận đơn.",
+  {
+    icon: 'inventory_2',
+    title: 'Mẫu 0đ gửi tận nhà',
+    desc: 'Nhận sản phẩm chính hãng 100% miễn phí, không cọc phí, có mã vận đơn theo dõi từng bước.',
+  },
+  {
+    icon: 'groups',
+    title: 'Kênh từ 1.000 Follower',
+    desc: 'Cơ hội rộng mở cho Nano & Micro KOC, kênh mới lập vẫn dễ dàng được các brand duyệt gửi mẫu.',
+  },
+  {
+    icon: 'payments',
+    title: 'Hoa hồng minh bạch 8% – 15%',
+    desc: 'Hoa hồng Affiliate hiển thị rõ ràng trên mỗi thẻ, tự động đối soát và cộng dồn theo từng đơn bán ra.',
+  },
+  {
+    icon: 'timeline',
+    title: 'Theo dõi tiến độ như đơn hàng',
+    desc: 'Lộ trình minh bạch: Brand xem hồ sơ → Duyệt gửi mẫu → Nhận hàng → Lên video nghiệm thu.',
+  },
+  {
+    icon: 'touch_app',
+    title: 'Điền 1 lần · Lần sau 1 chạm',
+    desc: 'Hệ thống tự động ghi nhớ thông tin kênh và địa chỉ nhận mẫu, đăng ký các chiến dịch tiếp theo chỉ mất 3 giây.',
+  },
+  {
+    icon: 'support_agent',
+    title: 'Nhóm Zalo hỗ trợ KOC 24/7',
+    desc: 'Đội ngũ Admin KOCity luôn túc trực hỗ trợ hướng dẫn kịch bản brief, kiểm tra vận đơn và giải đáp nhanh chóng.',
+  },
 ];
 
 /** Nhãn trắng nổi trên ảnh ở phần đầu trang */
@@ -93,6 +132,7 @@ export const HomePage: React.FC = () => {
   const [query, setQuery] = useState(searchParams.get('q') || '');
   // Từ khóa gõ ở thanh tìm kiếm trên cùng
   useEffect(() => setQuery(searchParams.get('q') || ''), [searchParams]);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState<SortKey>('popular');
   const [tier, setTier] = useState(0);
@@ -100,7 +140,7 @@ export const HomePage: React.FC = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [heroSheetOpen, setHeroSheetOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
-  const activeFilters = (sort !== 'popular' ? 1 : 0) + (tier ? 1 : 0) + (savedOnly ? 1 : 0);
+  const activeFilters = (sort !== 'popular' ? 1 : 0) + (tier ? 1 : 0) + (savedOnly ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
 
   // Chế độ Ngày / Đêm cho khối banner KOCity (lưu vào localStorage)
   const [isNight, setIsNight] = useState<boolean>(() => {
@@ -126,10 +166,22 @@ export const HomePage: React.FC = () => {
     if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView({ behavior: 'smooth' });
   }, [location.hash]);
 
+  const openCount = useMemo(
+    () => campaigns.filter((c) => !getScarcity(c).isFull && calculateDaysLeft(c.endDate, c.daysLeft) > 0).length,
+    [campaigns]
+  );
+  const fullCount = useMemo(
+    () => campaigns.filter((c) => getScarcity(c).isFull || calculateDaysLeft(c.endDate, c.daysLeft) <= 0).length,
+    [campaigns]
+  );
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return campaigns
       .filter((c) => {
+        const isFull = getScarcity(c).isFull || calculateDaysLeft(c.endDate, c.daysLeft) <= 0;
+        if (statusFilter === 'open' && isFull) return false;
+        if (statusFilter === 'full' && !isFull) return false;
         if (category !== 'all' && !c.category.toLowerCase().includes(category.toLowerCase())) return false;
         if (q && ![c.title, c.brandName, c.category].some((s) => s.toLowerCase().includes(q))) return false;
         if (tier && followerRequirementK(c) > tier) return false;
@@ -137,15 +189,24 @@ export const HomePage: React.FC = () => {
         return true;
       })
       .sort((a, b) => {
+        // 1. Luôn ưu tiên xếp các chiến dịch ĐANG MỞ / CÒN SUẤT lên trước các chiến dịch ĐÃ ĐỦ 100/100
+        const aFull = getScarcity(a).isFull || calculateDaysLeft(a.endDate, a.daysLeft) <= 0;
+        const bFull = getScarcity(b).isFull || calculateDaysLeft(b.endDate, b.daysLeft) <= 0;
+        if (aFull !== bFull) {
+          return aFull ? 1 : -1;
+        }
+
+        // 2. Tiếp theo sắp xếp theo tiêu chí người dùng lựa chọn
         if (sort === 'commission') return commissionNumber(b) - commissionNumber(a);
         if (sort === 'spots') return getScarcity(b).spotsLeft - getScarcity(a).spotsLeft;
         if (sort === 'ending') return calculateDaysLeft(a.endDate, a.daysLeft) - calculateDaysLeft(b.endDate, b.daysLeft);
         return 0;
       });
-  }, [campaigns, category, query, tier, savedOnly, bookmarkedIds, sort]);
+  }, [campaigns, statusFilter, category, query, tier, savedOnly, bookmarkedIds, sort]);
 
   const resetFilters = () => {
     setQuery('');
+    setStatusFilter('all');
     setCategory('all');
     setSort('popular');
     setTier(0);
@@ -155,14 +216,13 @@ export const HomePage: React.FC = () => {
   const pendingCount = myApplications.filter((a) => getApplicationProgress(a).selection === 'pending').length;
   // Ảnh & dòng hoạt động cho phần đầu trang — chỉ dùng dữ liệu thật
   const heroSideImage = campaigns[1]?.productHeroImage || heroImage;
-  const personaImages = [0, 1, 2].map((i) => campaigns[i + 2]?.productHeroImage || campaigns[i]?.productHeroImage || heroImage);
   const heroFeed = (liveActivity.length > 0
     ? liveActivity.slice(0, 3).map((a) => ({ key: a.id, title: a.displayName, sub: `${a.brandName} · ${a.dateLabel || "mới"}`, image: campaigns.find((c) => c.brandName === a.brandName)?.brandLogo || heroImage }))
     : campaigns.slice(0, 3).map((c) => ({ key: c.id, title: c.brandName, sub: `Còn ${getScarcity(c).spotsLeft} suất · ${getCommissionLabel(c) || "Mẫu 0đ"}`, image: c.brandLogo })));
   const heroStats = [
-    { value: String(campaigns.length), label: 'Chiến dịch đang mở' },
-    { value: campaigns.reduce((n, c) => n + getScarcity(c).spotsLeft, 0).toLocaleString('vi-VN'), label: 'Suất nhận mẫu còn lại' },
-    { value: String(new Set(campaigns.map((c) => c.brandName)).size), label: 'Brand đang tuyển KOC' },
+    { value: `${openCount} chiến dịch`, label: 'Đang mở nhận mẫu' },
+    { value: `${fullCount} chiến dịch`, label: 'Đã hoàn tất 100/100' },
+    { value: String(new Set(campaigns.map((c) => c.brandName)).size), label: 'Brand đồng hành' },
     { value: `${Math.max(0, ...campaigns.map(commissionNumber))}%`, label: 'Hoa hồng cao nhất' },
   ];
   const selectedCount = myApplications.filter((a) => {
@@ -467,7 +527,15 @@ export const HomePage: React.FC = () => {
         </div>
 
         {/* Dải thành phố KOCity Silhouette (Phương án 3: 2 lớp + ánh đèn chuyển động + hỗ trợ chế độ đêm) */}
-        <KocitySkyline isNight={isNight} className="-mb-[1px]" />
+        <div className="relative">
+          <KocitySkyline isNight={isNight} className="-mb-[1px]" />
+          {isNight && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#0a0618]/70 to-transparent"
+            />
+          )}
+        </div>
       </section>
 
       {/* Phần còn lại của trang (nằm trong container max-w-6xl căn giữa) */}
@@ -478,11 +546,67 @@ export const HomePage: React.FC = () => {
 
         {/* ===== Danh sách mẫu (đẩy lên ngay dưới Hero & LiveTicker) ===== */}
         <section className="pt-6 sm:pt-10">
-          <SectionTitle id="mau-dang-mo" title="Mẫu đang mở" subtitle={`${visible.length} chiến dịch`} />
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <SectionTitle id="mau-dang-mo" title="Khám phá mẫu chiến dịch" subtitle={`${visible.length} sản phẩm phù hợp`} />
+            </div>
 
-          <div className="sticky top-16 z-30 -mx-4 mt-3 bg-[#fafafc]/90 px-4 pb-3 pt-2 backdrop-blur-md sm:-mx-6 sm:px-6">
+            {/* 3 Tab lọc trạng thái nhanh */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className={cx(
+                  'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+                  statusFilter === 'all'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 ring-1 ring-slate-200'
+                )}
+              >
+                <span>Tất cả</span>
+                <span className={cx('rounded-md px-1.5 py-0.5 text-[10px]', statusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500')}>
+                  {campaigns.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('open')}
+                className={cx(
+                  'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+                  statusFilter === 'open'
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                    : 'bg-white text-emerald-700 hover:bg-emerald-50 ring-1 ring-emerald-200'
+                )}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Đang mở nhận mẫu</span>
+                <span className={cx('rounded-md px-1.5 py-0.5 text-[10px]', statusFilter === 'open' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800')}>
+                  {openCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('full')}
+                className={cx(
+                  'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+                  statusFilter === 'full'
+                    ? 'bg-rose-600 text-white shadow-sm shadow-rose-600/20'
+                    : 'bg-white text-rose-700 hover:bg-rose-50 ring-1 ring-rose-200'
+                )}
+              >
+                <span>⛔ Đã đủ 100/100</span>
+                <span className={cx('rounded-md px-1.5 py-0.5 text-[10px]', statusFilter === 'full' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800')}>
+                  {fullCount}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="sticky top-16 z-30 -mx-4 mt-3 bg-[#fafafc]/95 px-4 pb-3 pt-2 backdrop-blur-md sm:-mx-6 sm:px-6 border-b border-slate-100/60 shadow-xs">
             <div className="flex gap-2">
-              <label className="relative flex-1">
+              <div className="relative flex-1">
                 <span className="sr-only">Tìm chiến dịch</span>
                 <Icon name="search" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[20px] text-slate-400" />
                 <input
@@ -490,24 +614,86 @@ export const HomePage: React.FC = () => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Tìm brand, sản phẩm..."
-                  className="h-11 w-full rounded-2xl bg-white pl-10 pr-3 text-base text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm"
+                  className="h-11 w-full rounded-2xl bg-white pl-10 pr-9 text-base text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm shadow-xs"
                 />
-              </label>
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer p-1"
+                    title="Xóa tìm kiếm"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setFilterOpen(true)}
                 aria-haspopup="dialog"
-                className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white px-3.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:ring-violet-300 cursor-pointer"
+                className="relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-white px-3.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:ring-violet-300 cursor-pointer shadow-xs active:scale-95 transition-all"
               >
-                <Icon name="tune" className="text-[20px]" />
-                <span className="hidden sm:inline">Lọc & sắp xếp</span>
+                <Icon name="tune" className="text-[20px] text-violet-600" />
+                <span className="text-xs sm:text-sm font-bold">Lọc</span>
+                <span className="hidden sm:inline">& sắp xếp</span>
                 {activeFilters > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#8b5cf6] px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ec4899] px-1 text-[10px] font-bold text-white shadow">
                     {activeFilters}
                   </span>
                 )}
               </button>
             </div>
+
+            {/* Hàng chip các bộ lọc đang kích hoạt */}
+            {(activeFilters > 0 || statusFilter !== 'all' || category !== 'all' || query.trim()) && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs animate-in fade-in duration-200">
+                <span className="text-slate-400 font-medium">Đang lọc:</span>
+                {statusFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-bold text-violet-800 ring-1 ring-violet-200">
+                    {statusFilter === 'open' ? '🟢 Đang mở' : '⛔ Đã đủ 100/100'}
+                    <button type="button" onClick={() => setStatusFilter('all')} className="hover:text-violet-950 font-black cursor-pointer">✕</button>
+                  </span>
+                )}
+                {category !== 'all' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-bold text-violet-800 ring-1 ring-violet-200">
+                    {category}
+                    <button type="button" onClick={() => setCategory('all')} className="hover:text-violet-950 font-black cursor-pointer">✕</button>
+                  </span>
+                )}
+                {tier > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-bold text-violet-800 ring-1 ring-violet-200">
+                    Kênh từ {tier}K
+                    <button type="button" onClick={() => setTier(0)} className="hover:text-violet-950 font-black cursor-pointer">✕</button>
+                  </span>
+                )}
+                {sort !== 'popular' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-bold text-violet-800 ring-1 ring-violet-200">
+                    {SORTS.find((s) => s.id === sort)?.label}
+                    <button type="button" onClick={() => setSort('popular')} className="hover:text-violet-950 font-black cursor-pointer">✕</button>
+                  </span>
+                )}
+                {savedOnly && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 px-2.5 py-0.5 font-bold text-pink-700 ring-1 ring-pink-200">
+                    Đã lưu
+                    <button type="button" onClick={() => setSavedOnly(false)} className="hover:text-pink-900 font-black cursor-pointer">✕</button>
+                  </span>
+                )}
+                {query.trim() && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 font-bold text-slate-700 ring-1 ring-slate-200">
+                    &quot;{query.trim()}&quot;
+                    <button type="button" onClick={() => setQuery('')} className="hover:text-slate-950 font-black cursor-pointer">✕</button>
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="ml-auto text-xs font-semibold text-violet-600 hover:text-violet-800 underline cursor-pointer"
+                >
+                  Xóa tất cả
+                </button>
+              </div>
+            )}
+
             <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
               {CATEGORIES.map((c) => (
                 <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
@@ -604,13 +790,16 @@ export const HomePage: React.FC = () => {
             </Button>
           </div>
           <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
-            {PERSONAS.map((p, i) => (
-              <article key={p.title} className="card-fx relative aspect-[3/4] w-[75%] shrink-0 snap-center overflow-hidden rounded-[24px] sm:w-auto">
-                <img src={personaImages[i]} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-white/15 p-3.5 text-white ring-1 ring-white/30 backdrop-blur-md">
-                  <h3 className="font-bold">{p.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-white/85">{p.desc}</p>
+            {PERSONAS.map((p) => (
+              <article key={p.title} className="card-fx group relative aspect-[3/4] w-[78%] shrink-0 snap-center overflow-hidden rounded-[26px] sm:w-auto shadow-md">
+                <img src={p.image} alt={p.title} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+                <span className="absolute top-3.5 left-3.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-md ring-1 ring-white/30">
+                  {p.tag}
+                </span>
+                <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-white/15 p-4 text-white ring-1 ring-white/30 backdrop-blur-md">
+                  <h3 className="font-display text-base font-extrabold sm:text-lg">{p.title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-white/90">{p.desc}</p>
                 </div>
               </article>
             ))}
@@ -619,12 +808,24 @@ export const HomePage: React.FC = () => {
 
         {/* ===== Vì sao chọn KOCity ===== */}
         <section className="-mx-4 mt-20 bg-[linear-gradient(180deg,#f5f3ff_0%,#fdf2f8_100%)] px-4 py-14 sm:-mx-6 sm:rounded-[32px] sm:px-10">
-          <h2 className="text-center font-display text-xl font-bold text-slate-950 sm:text-2xl">Vì sao nên chọn KOCity</h2>
-          <ol className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-3">
+          <div className="text-center max-w-xl mx-auto">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-[#6d28d9]">
+              <Icon name="verified" className="text-[14px]" /> Quyền lợi vượt trội
+            </span>
+            <h2 className="mt-2 font-display text-2xl font-black text-slate-950 sm:text-3xl">Vì sao KOC tin chọn KOCity</h2>
+            <p className="mt-2 text-xs sm:text-sm text-slate-600">Nền tảng chuẩn hóa quy trình nhận mẫu và tối ưu hóa thu nhập bền vững cho Creator.</p>
+          </div>
+          <ol className="mx-auto mt-8 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {REASONS.map((r, i) => (
-              <li key={r} className="card-fx rounded-2xl bg-white p-5 ring-1 ring-violet-100">
-                <p className="font-display text-lg font-bold text-[#6d28d9]">0{i + 1}.</p>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{r}</p>
+              <li key={r.title} className="card-fx flex flex-col rounded-2xl bg-white p-5 ring-1 ring-violet-100/80 shadow-xs hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-[#7c3aed]">
+                    <Icon name={r.icon} className="text-[22px]" />
+                  </span>
+                  <span className="font-display text-sm font-black text-violet-400">0{i + 1}.</span>
+                </div>
+                <h3 className="mt-3 font-display text-base font-bold text-slate-900">{r.title}</h3>
+                <p className="mt-1.5 text-xs sm:text-[13px] leading-relaxed text-slate-600">{r.desc}</p>
               </li>
             ))}
           </ol>
@@ -748,6 +949,7 @@ type TickerItem =
 
 /** Dải hoạt động trực tiếp đa tầng (Glassmorphism + Icon + Xen kẽ thông số hệ thống tránh trùng lặp) */
 const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaigns = [] }) => {
+  const [isPaused, setIsPaused] = useState(false);
   const loop = useMemo(() => {
     // 1. Chuyển đổi hoạt động KOC thật
     const realList: TickerItem[] = items.map((it) => {
@@ -842,8 +1044,13 @@ const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaig
 
   return (
     <div
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => setIsPaused(false)}
+      title="Rê chuột hoặc chạm để tạm dừng đọc tin"
       className={cx(
-        'mt-3.5 flex items-center overflow-hidden rounded-2xl py-2 px-1 transition-all duration-500 backdrop-blur-md shadow-xs ring-1',
+        'group mt-3.5 flex items-center overflow-hidden rounded-2xl py-2 px-1 transition-all duration-500 backdrop-blur-md shadow-xs ring-1 cursor-default',
         isNight
           ? 'bg-[#0f0926]/80 text-slate-300 ring-violet-500/25 shadow-purple-950/30'
           : 'bg-white/90 text-slate-600 ring-violet-200/80 shadow-slate-100'
@@ -858,7 +1065,7 @@ const LiveTicker: React.FC<LiveTickerProps> = ({ items, isNight = false, campaig
       </div>
 
       <div className="min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_20px,black_calc(100%-20px),transparent)]">
-        <div className="animate-marquee-infinite items-center gap-6 py-0.5">
+        <div className={cx('animate-marquee-infinite items-center gap-6 py-0.5', isPaused && 'is-paused')}>
           {loop.map((it, idx) => (
             <div key={`${it.id}-${idx}`} className="inline-flex shrink-0 items-center gap-2 text-xs">
               <span

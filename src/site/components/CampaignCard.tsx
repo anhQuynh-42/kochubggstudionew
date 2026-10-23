@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Campaign } from '../../types';
 import { calculateDaysLeft } from '../../state/AppDataContext';
 import { formatFollowerRequirement, getCommissionLabel, getScarcity, hasFreeSample } from '../../lib/campaignDisplay';
@@ -16,6 +16,7 @@ interface CampaignCardProps {
 
 /** Thẻ chiến dịch chuẩn TikTok Shop (CLAUDE.md 8.2): Mẫu 0đ · % Hoa hồng · Yêu cầu kênh + độ khan hiếm + nút 1 chạm */
 export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookmarked, hasApplied, onApply, onToggleBookmark }) => {
+  const navigate = useNavigate();
   const scarcity = getScarcity(c);
   const commission = getCommissionLabel(c);
   const freeSample = hasFreeSample(c);
@@ -24,8 +25,23 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
   const daysLeft = calculateDaysLeft(c.endDate, c.daysLeft);
   const href = ROUTES.campaign(c.id);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a')) return;
+    navigate(href);
+  };
+
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleBookmark();
+  };
+
   return (
-    <article className="card-fx group flex flex-col rounded-[28px] bg-white ring-1 ring-slate-200/70 hover:ring-violet-200">
+    <article
+      onClick={handleCardClick}
+      className="card-fx group flex flex-col rounded-[28px] bg-white ring-1 ring-slate-200/70 hover:ring-violet-300 hover:shadow-lg transition-all cursor-pointer"
+    >
       <Link to={href} className="relative block aspect-[16/10] overflow-hidden bg-slate-100" aria-label={`Xem chi tiết ${c.brandName}`}>
         <img
           src={c.productHeroImage}
@@ -66,11 +82,11 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
 
       <button
         type="button"
-        onClick={onToggleBookmark}
+        onClick={handleBookmarkClick}
         aria-pressed={isBookmarked}
         aria-label={isBookmarked ? 'Bỏ lưu' : 'Lưu chiến dịch'}
         className={cx(
-          'absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full shadow backdrop-blur transition-colors cursor-pointer',
+          'absolute right-3 top-3 z-20 flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-full shadow-md backdrop-blur transition-all active:scale-90 cursor-pointer',
           isBookmarked ? 'bg-[#ec4899] text-white' : 'bg-white/90 text-slate-600 hover:text-[#ec4899]'
         )}
       >
