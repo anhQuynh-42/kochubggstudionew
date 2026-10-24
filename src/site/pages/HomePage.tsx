@@ -426,42 +426,39 @@ export const HomePage: React.FC = () => {
               isNight ? 'text-slate-300' : 'text-slate-600'
             )}
           >
-            Nền tảng kết nối <strong className={cx('font-semibold', isNight ? 'text-violet-300' : 'text-violet-900')}>Nano & Micro KOC TikTok</strong> với Brand. <strong className={cx('font-semibold', isNight ? 'text-fuchsia-300' : 'text-fuchsia-800')}>Nhận mẫu 0đ tận nhà</strong>, lên video theo brief và nhận <strong className={cx('font-semibold', isNight ? 'text-pink-300' : 'text-pink-800')}>hoa hồng minh bạch</strong> theo từng đơn.
+            Nền tảng kết nối KOC TikTok với các thương hiệu uy tín. Nhận sản phẩm trải nghiệm 0đ, sáng tạo nội dung theo brief và đối soát hoa hồng minh bạch.
           </p>
 
-          {/* 3 Chip cam kết quyền lợi KOC */}
+          {/* 3 Khung cam kết quyền lợi KOC - Tinh gọn, đồng nhất màu, không icon */}
           <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2 text-[11px] sm:gap-2.5 sm:text-xs">
             <span
               className={cx(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium backdrop-blur-md transition-all',
+                'inline-flex items-center rounded-full px-3.5 py-1 font-semibold backdrop-blur-md transition-all',
                 isNight
-                  ? 'bg-white/10 text-emerald-300 ring-1 ring-emerald-500/30'
-                  : 'bg-white/90 text-emerald-700 ring-1 ring-emerald-200 shadow-xs'
+                  ? 'bg-white/5 text-slate-200 ring-1 ring-white/15'
+                  : 'bg-white/80 text-slate-700 ring-1 ring-slate-200/90 shadow-xs'
               )}
             >
-              <Icon name="check_circle" className="text-[14px] text-emerald-500" />
-              100% Không cọc phí
+              100% không cọc phí
             </span>
             <span
               className={cx(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium backdrop-blur-md transition-all',
+                'inline-flex items-center rounded-full px-3.5 py-1 font-semibold backdrop-blur-md transition-all',
                 isNight
-                  ? 'bg-white/10 text-fuchsia-300 ring-1 ring-fuchsia-500/30'
-                  : 'bg-white/90 text-fuchsia-700 ring-1 ring-fuchsia-200 shadow-xs'
+                  ? 'bg-white/5 text-slate-200 ring-1 ring-white/15'
+                  : 'bg-white/80 text-slate-700 ring-1 ring-slate-200/90 shadow-xs'
               )}
             >
-              <Icon name="local_shipping" className="text-[14px] text-fuchsia-500" />
-              Nhận mẫu tận tay 0đ
+              Nhận mẫu 0đ tận tay
             </span>
             <span
               className={cx(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-medium backdrop-blur-md transition-all',
+                'inline-flex items-center rounded-full px-3.5 py-1 font-semibold backdrop-blur-md transition-all',
                 isNight
-                  ? 'bg-white/10 text-violet-300 ring-1 ring-violet-500/30'
-                  : 'bg-white/90 text-violet-700 ring-1 ring-violet-200 shadow-xs'
+                  ? 'bg-white/5 text-slate-200 ring-1 ring-white/15'
+                  : 'bg-white/80 text-slate-700 ring-1 ring-slate-200/90 shadow-xs'
               )}
             >
-              <Icon name="payments" className="text-[14px] text-violet-500" />
               Hoa hồng minh bạch
             </span>
           </div>
