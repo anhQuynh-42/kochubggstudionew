@@ -441,11 +441,19 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
                   </span>
                   Quyền lợi của KOC
                 </h4>
-                <ul className="list-disc pl-5 space-y-1 text-slate-600">
-                  <li>Nhận sản phẩm trải nghiệm mẫu miễn phí 0đ (Freecast) từ các thương hiệu chính hãng.</li>
-                  <li>Hưởng mức hoa hồng Affiliate hấp dẫn, tự động cập nhật và đối soát minh bạch.</li>
-                  <li>Toàn quyền sở hữu nội dung sáng tạo; bản quyền video thuộc về KOC.</li>
-                  <li>Được hệ thống ưu tiên đề xuất cho các Brand lớn khi đạt điểm tín nhiệm cao (⭐ 5 sao).</li>
+                <ul className="list-disc pl-5 space-y-1.5 text-slate-600">
+                  <li>
+                    <strong>Nhận mẫu miễn phí:</strong> Có cơ hội nhận sản phẩm trải nghiệm 0đ (Freecast) từ các thương hiệu uy tín.
+                  </li>
+                  <li>
+                    <strong>Hoa hồng Affiliate:</strong> Hưởng mức hoa hồng theo chính sách từng chiến dịch, được cập nhật và đối soát minh bạch.
+                  </li>
+                  <li>
+                    <strong>Quyền sở hữu nội dung:</strong> KOC giữ quyền sở hữu đối với video do mình sáng tạo, trừ trường hợp có thỏa thuận sử dụng nội dung riêng với nhãn hàng.
+                  </li>
+                  <li>
+                    <strong>Ưu tiên hợp tác:</strong> KOC đạt điểm tín nhiệm cao (⭐ 5 sao) được ưu tiên đề xuất tham gia các chiến dịch phù hợp từ những thương hiệu lớn.
+                  </li>
                 </ul>
               </section>
 
@@ -456,16 +464,16 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
                   </span>
                   Trách nhiệm &amp; Cam kết nhận mẫu
                 </h4>
-                <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                <ul className="list-disc pl-5 space-y-1.5 text-slate-600">
                   <li>
-                    <strong>Đúng hạn:</strong> Đăng tải video nghiệm thu chất lượng lên kênh TikTok đã đăng ký trong vòng{' '}
-                    <strong>5 – 7 ngày</strong> kể từ khi nhận được sản phẩm mẫu.
+                    <strong>Đúng hạn:</strong> Đăng tải video đáp ứng yêu cầu nghiệm thu lên kênh TikTok đã đăng ký trong vòng{' '}
+                    <strong>5–7 ngày</strong> kể từ khi nhận sản phẩm mẫu, trừ khi chiến dịch có quy định khác.
                   </li>
                   <li>
-                    <strong>Đúng brief:</strong> Gắn đúng link sản phẩm trong giỏ hàng (TikTok Shop) hoặc mã coupon độc quyền.
+                    <strong>Đúng brief:</strong> Sáng tạo nội dung theo yêu cầu của nhãn hàng, gắn đúng liên kết sản phẩm trên TikTok Shop hoặc mã ưu đãi được cung cấp (nếu có).
                   </li>
                   <li>
-                    <strong className="text-rose-600">Chống bùng mẫu:</strong> Tuyệt đối không nhận mẫu rồi bỏ ngang, không bán lại sản phẩm mẫu tài trợ. KOC vi phạm sẽ bị khóa tài khoản vĩnh viễn và bị công khai cảnh báo trong mạng lưới nhãn hàng.
+                    <strong>Cam kết nhận mẫu:</strong> Không nhận mẫu rồi tự ý bỏ ngang chiến dịch hoặc bán lại sản phẩm mẫu được tài trợ. Trường hợp vi phạm, KOCITY có quyền áp dụng biện pháp cảnh báo, hạn chế tham gia chiến dịch hoặc khóa tài khoản tùy theo mức độ vi phạm.
                   </li>
                 </ul>
               </section>
@@ -477,10 +485,19 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
                   </span>
                   Chính sách bảo mật dữ liệu (Privacy Policy)
                 </h4>
-                <ul className="list-disc pl-5 space-y-1 text-slate-600">
-                  <li>KOCITY cam kết mã hóa và bảo mật tuyệt đối số điện thoại, địa chỉ nhà riêng và thông tin cá nhân của KOC.</li>
-                  <li>Dữ liệu địa chỉ chỉ được cung cấp duy nhất cho nhãn hàng và đơn vị vận chuyển (Viettel Post / GHTK) nhằm phát mẫu.</li>
-                  <li>KOCITY không bao giờ bán hoặc chia sẻ thông tin người dùng cho bất kỳ bên thứ ba nào vì mục đích quảng cáo rác.</li>
+                <ul className="list-disc pl-5 space-y-1.5 text-slate-600">
+                  <li>
+                    <strong>Bảo vệ thông tin:</strong> KOCITY cam kết áp dụng các biện pháp bảo mật phù hợp nhằm bảo vệ dữ liệu cá nhân của KOC và ngăn chặn truy cập trái phép.
+                  </li>
+                  <li>
+                    <strong>Thông tin giao hàng:</strong> KOCITY không thu thập hoặc lưu trữ địa chỉ nhận hàng. KOC cung cấp thông tin giao hàng trực tiếp trên nền tảng TikTok khi đăng ký nhận sản phẩm mẫu.
+                  </li>
+                  <li>
+                    <strong>Mục đích sử dụng:</strong> Số điện thoại và thông tin liên hệ chỉ được sử dụng để trao đổi công việc, hỗ trợ KOC và phối hợp triển khai các chiến dịch hợp tác.
+                  </li>
+                  <li>
+                    <strong>Cam kết bảo mật:</strong> KOCITY không mua bán hoặc chia sẻ dữ liệu cá nhân của KOC cho bên thứ ba nhằm mục đích quảng cáo, tiếp thị trái phép.
+                  </li>
                 </ul>
               </section>
             </div>
