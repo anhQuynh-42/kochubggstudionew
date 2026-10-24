@@ -163,29 +163,49 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
           </div>
 
           {hasApplied ? (
-            <Button variant="soft" size="lg" block className="mt-4" onClick={onApply}>
-              <Icon name="check_circle" className="text-[18px]" /> Đã đăng ký · Xem đơn
-            </Button>
+            <div className="mt-4 flex gap-2">
+              <Link to={href} className="flex-1">
+                <Button variant="outline" size="lg" block className="text-slate-700 hover:text-slate-900">
+                  <Icon name="visibility" className="text-[18px]" /> Xem Brief
+                </Button>
+              </Link>
+              <Button variant="soft" size="lg" className="flex-1" onClick={onApply}>
+                <Icon name="check_circle" className="text-[18px]" /> Đã đăng ký
+              </Button>
+            </div>
           ) : (
-            <Button
-              variant={scarcity.isFull ? 'dark' : 'primary'}
-              size="lg"
-              block
-              className={cx('mt-4', scarcity.isFull && 'opacity-90 bg-slate-800 text-slate-200 border border-slate-700 cursor-not-allowed')}
-              disabled={scarcity.isFull || daysLeft <= 0}
-              onClick={onApply}
-            >
-              {scarcity.isFull ? (
-                <span className="flex items-center justify-center gap-1.5">
-                  <span className="text-sm">⛔</span>
-                  <span>Đã đủ 100/100 · Ngưng nhận KOC</span>
-                </span>
-              ) : daysLeft <= 0 ? (
-                'Đã hết hạn'
-              ) : (
-                'Nhận mẫu ngay'
-              )}
-            </Button>
+            <div className="mt-4 flex gap-2">
+              <Link to={href} className="flex-1">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  block
+                  className="border-slate-200 bg-slate-50/50 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <Icon name="menu_book" className="text-[18px]" /> Xem Brief
+                </Button>
+              </Link>
+              <Button
+                variant={scarcity.isFull ? 'dark' : 'primary'}
+                size="lg"
+                className={cx('flex-[1.3]', scarcity.isFull && 'opacity-90 bg-slate-800 text-slate-200 border border-slate-700 cursor-not-allowed')}
+                disabled={scarcity.isFull || daysLeft <= 0}
+                onClick={onApply}
+              >
+                {scarcity.isFull ? (
+                  <span className="flex items-center justify-center gap-1">
+                    <span>⛔ Đủ KOC</span>
+                  </span>
+                ) : daysLeft <= 0 ? (
+                  'Hết hạn'
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Icon name="redeem" className="text-[18px]" />
+                    <span>Nhận mẫu</span>
+                  </span>
+                )}
+              </Button>
+            </div>
           )}
         </div>
       </div>

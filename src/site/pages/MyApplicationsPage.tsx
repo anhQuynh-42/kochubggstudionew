@@ -180,6 +180,25 @@ const ApplicationCard: React.FC<{ app: KOCApplication; progress: ApplicationProg
         })}
       </ol>
 
+      {/* Hướng dẫn KOC lên TikTok nhận mẫu miễn phí khi vừa được duyệt */}
+      {selection === 'selected' && sample !== 'delivered' && (
+        <div className="mx-4 mb-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 p-3.5 text-xs text-slate-800 sm:mx-5 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white font-bold text-sm shadow-sm">
+              🎁
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-emerald-950 text-[13px]">
+                Brand đã duyệt đơn nhận mẫu của bạn!
+              </p>
+              <p className="mt-1 text-slate-600 leading-relaxed">
+                Vui lòng mở ứng dụng <b>TikTok</b> ➔ vào mục <b>TikTok Studio / Giỏ hàng</b> ➔ kiểm tra mục <b>&ldquo;Mẫu miễn phí&rdquo; (Free Sample)</b> để bấm xác nhận nhận sản phẩm ngay nhé!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selection === 'selected' && sample === 'delivered' && video === 'not_posted' && (
         <Notice tone="amber" icon="alarm">
           <b>Đã nhận mẫu — bắt đầu quay video nhé!</b> Hạn nộp 5–7 ngày từ khi nhận hàng.

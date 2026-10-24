@@ -5,6 +5,7 @@ import { useAppData } from '../../state/AppDataContext';
 import { getCommissionLabel, getScarcity, hasFreeSample } from '../../lib/campaignDisplay';
 import { copyTextToClipboard } from '../../lib/clipboard';
 import { normalizeHandle } from '../../services/authService';
+import { ROUTES } from '../../lib/constants';
 import { Badge, Button, Field, Icon, Sheet, TikTokHandleInput, cx, inputClass } from '../ui';
 
 type Step = 1 | 2;
@@ -321,7 +322,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
   return (
     <Sheet open onClose={onClose} title={header} label={`Nhận mẫu ${campaign.brandName}`} footer={footer}>
       {/* Thanh tiến trình 2 bước */}
-      <div className="mb-5">
+      <div className="mb-4">
         <div className="flex gap-1.5">
           {([1, 2] as Step[]).map((s) => (
             <span key={s} className={cx('h-1.5 flex-1 rounded-full transition-all duration-300', s <= step ? 'bg-gradient-to-r from-[#6366f1] to-[#ec4899]' : 'bg-slate-100')} />
@@ -330,6 +331,23 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
         <p className="mt-2 text-xs font-semibold text-slate-500">
           Bước {step}/2 · {STEP_LABELS[step]}
         </p>
+      </div>
+
+      {/* Banner xem nhanh Brief chiến dịch */}
+      <div className="mb-4 flex items-center justify-between rounded-xl bg-violet-50/80 border border-violet-100 p-2.5 text-xs text-violet-900">
+        <span className="flex items-center gap-1.5 min-w-0">
+          <Icon name="info" className="text-[17px] text-violet-600 shrink-0" />
+          <span className="truncate">Chưa nắm rõ yêu cầu & kịch bản?</span>
+        </span>
+        <a
+          href={ROUTES.campaign(campaign.id)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-bold text-violet-700 hover:text-violet-950 hover:underline shrink-0 ml-2"
+        >
+          <span>Xem Brief</span>
+          <Icon name="open_in_new" className="text-[13px]" />
+        </a>
       </div>
 
       {error && (
