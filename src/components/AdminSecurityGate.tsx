@@ -87,12 +87,12 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
       setAttempts(newAttempts);
       setPin('');
 
-      if (newAttempts >= 5) {
+      if (newAttempts >= 2) {
         setIsLocked(true);
-        setLockCountdown(30);
-        setErrorMsg('Nhập sai quá 5 lần. Tạm khóa 30 giây để bảo vệ!');
+        setLockCountdown(60);
+        setErrorMsg('Nhập sai quá 2 lần! Hệ thống tạm khóa 60 giây để chống dò mã.');
       } else {
-        setErrorMsg(`Mã PIN không chính xác! (Còn ${5 - newAttempts} lần thử)`);
+        setErrorMsg('Mã PIN không chính xác! CẢNH BÁO: Bạn chỉ còn 1 lần thử duy nhất.');
       }
     }
   };
