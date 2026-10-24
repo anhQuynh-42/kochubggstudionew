@@ -1981,6 +1981,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             <span>Quay lại trang KOC</span>
           </button>
+
+          <button
+            onClick={() => {
+              sessionStorage.removeItem('kocity_admin_auth_token');
+              window.location.reload();
+            }}
+            title="Đăng xuất và khóa bảo vệ quyền quản trị"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-600 hover:text-white transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">lock</span>
+            <span>Khóa bảo vệ Admin</span>
+          </button>
         </div>
       </aside>
 

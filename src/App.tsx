@@ -57,13 +57,14 @@ export const App: React.FC = () => (
   </BrowserRouter>
 );
 
-/** Trang quản trị cũ — chỉ tài khoản Admin vào được */
+import { AdminSecurityGate } from './components/AdminSecurityGate';
+
+/** Trang quản trị cũ — yêu cầu xác thực bằng mã PIN bảo mật */
 const AdminRoute: React.FC = () => {
   const data = useAppData();
   const navigate = useNavigate();
-  if (!data.isAdmin) return <Navigate to={ROUTES.home} replace />;
   return (
-    <>
+    <AdminSecurityGate>
       <AdminView
         campaigns={data.campaigns}
         onUpdateCampaigns={data.setCampaignsFromAdmin}
@@ -78,7 +79,7 @@ const AdminRoute: React.FC = () => {
         onClearInitialTab={() => data.setAdminTargetSubTab(undefined)}
       />
       <ToastHost />
-    </>
+    </AdminSecurityGate>
   );
 };
 

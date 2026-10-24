@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BlogPost, getStoredBlogPosts, saveStoredBlogPosts, INITIAL_BLOG_POSTS } from '../data/blogData';
 import { BlogContentRenderer } from '../site/components/BlogContentRenderer';
+import { sanitizeHtml } from '../lib/sanitizeHtml';
 
 interface AdminBlogManagerProps {
   onShowToast: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
@@ -399,7 +400,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
       isCloudCovered: Boolean(formData.isCloudCovered),
       cloudSecretLabel: formData.cloudSecretLabel?.trim() || '💎 BÍ KÍP ĐỘC QUYỀN',
       summary: formData.summary?.trim() || formData.title.trim(),
-      content: finalContent,
+      content: sanitizeHtml(finalContent),
       publishedAt: formData.publishedAt || new Date().toLocaleDateString('vi-VN'),
     };
 

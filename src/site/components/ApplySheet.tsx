@@ -19,12 +19,13 @@ interface ApplySheetProps {
 
 /** Form nhận mẫu 2 bước tối giản: Kênh & Số liệu bán hàng -> Chọn mẫu & Gửi đơn */
 export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onViewApplications }) => {
-  const { currentUser, submitApplication, rememberFromApplication } = useAppData();
+  const { currentUser, applications, submitApplication, rememberFromApplication } = useAppData();
 
   const [step, setStep] = useState<Step>(1);
   const [error, setError] = useState('');
   const [submittedCode, setSubmittedCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [handle, setHandle] = useState('');
   const [followers, setFollowers] = useState('');
@@ -44,6 +45,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     setStep(1);
     setError('');
     setSubmittedCode('');
+    setIsSubmitting(false);
     setHandle(u?.tiktokHandle || '');
     setFollowers(u?.followers || '');
     setAvgViews(u?.avgViews || '');
@@ -87,11 +89,34 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
   };
 
   const submit = () => {
+    if (isSubmitting) return;
+
     const e = validate(1) || validate(2);
     if (e) return setError(e);
     if (scarcity.isFull) return setError('Chiến dịch này đã hết suất.');
 
+    // Chống Spam: Rate Limiting 20s giữa các lần nộp đơn
+    const lastSubmit = Number(sessionStorage.getItem('kocity_last_apply_ts') || '0');
+    if (Date.now() - lastSubmit < 20000) {
+      return setError('Hệ thống đang xử lý, vui lòng chờ 20 giây trước khi gửi đơn tiếp theo!');
+    }
+
     const cleanHandle = normalizeHandle(handle);
+
+    // Chống gửi trùng lặp: Kiểm tra xem kênh này đã có đơn chờ duyệt cho chiến dịch này chưa
+    const alreadyApplied = applications.some(
+      (a) =>
+        a.campaignId === campaign.id &&
+        normalizeHandle(a.tiktokHandle) === cleanHandle &&
+        a.status !== 'Từ chối' &&
+        a.status !== 'Bị từ chối'
+    );
+    if (alreadyApplied) {
+      return setError(`Kênh @${cleanHandle} đã có đơn đăng ký cho chiến dịch này đang được xử lý!`);
+    }
+
+    setIsSubmitting(true);
+    sessionStorage.setItem('kocity_last_apply_ts', Date.now().toString());
     const followersLower = followers.toLowerCase();
     const num = parseFloat(followers.replace(',', '.'));
     const followersCount = followersLower.includes('m')
@@ -251,8 +276,17 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
           Tiếp tục sang chọn mẫu
         </Button>
       ) : (
-        <Button variant="primary" size="lg" block onClick={submit} disabled={scarcity.isFull}>
-          <Icon name="send" className="text-[18px]" /> Gửi đơn nhận mẫu
+        <Button variant="primary" size="lg" block onClick={submit} disabled={scarcity.isFull || isSubmitting}>
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              <span>Đang gửi hồ sơ...</span>
+            </span>
+          ) : (
+            <>
+              <Icon name="send" className="text-[18px]" /> Gửi đơn nhận mẫu
+            </>
+          )}
         </Button>
       )}
     </div>
