@@ -103,6 +103,32 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
 
     const cleanHandle = normalizeHandle(handle);
 
+    // Chặn Blacklist: Kiểm tra KOC vi phạm không trả video hoặc bị cấm nhận mẫu
+    if (currentUser?.isBlacklisted) {
+      return setError(
+        `⛔ BỊ CHẶN: Tài khoản của bạn đã bị tạm khoá quyền nhận mẫu (${currentUser.blacklistReason || 'Vi phạm điều khoản nhận mẫu nhưng không trả video nghiệm thu'}). Vui lòng liên hệ Admin để được hỗ trợ!`
+      );
+    }
+    try {
+      const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+      if (savedUsersStr) {
+        const list = JSON.parse(savedUsersStr);
+        const matched = list.find((u: any) => {
+          const h = (u.tiktokHandle || u.name || '').toLowerCase().replace(/[@\s]/g, '');
+          const p = (u.phone || '').replace(/\D/g, '');
+          const curP = (currentUser?.phone || '').replace(/\D/g, '');
+          return (h === cleanHandle.toLowerCase().replace(/[@\s]/g, '')) || (curP && p && curP === p);
+        });
+        if (matched && matched.isBlacklisted) {
+          return setError(
+            `⛔ BỊ CHẶN: Kênh @${cleanHandle} hoặc số điện thoại này đang nằm trong danh sách hạn chế nhận mẫu (${matched.blacklistReason || 'Vi phạm điều khoản nghiệm thu video'}). Vui lòng liên hệ Admin!`
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi kiểm tra blacklist:', e);
+    }
+
     // Chống gửi trùng lặp: Kiểm tra xem kênh này đã có đơn chờ duyệt cho chiến dịch này chưa
     const alreadyApplied = applications.some(
       (a) =>

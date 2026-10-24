@@ -150,6 +150,8 @@ export interface KOCUser {
   gmv?: string;
   monthlyOrders?: string;
   monthlyAvgGmv?: string;
+  isBlacklisted?: boolean;
+  blacklistReason?: string;
   channelLink?: string;
   instagramHandle?: string;
   youtubeHandle?: string;

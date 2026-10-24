@@ -6,6 +6,8 @@ import {
   updateCampaignOnSupabase,
   deleteCampaignOnSupabase,
   getAllRegisteredKOCsFromSupabase,
+  deleteKOCProfileFromSupabase,
+  toggleKOCBlacklistOnSupabase,
 } from '../services/supabaseService';
 import { APP_LOGOS } from '../data/mockData';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -86,7 +88,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Registered KOCs state for CRM (lấy toàn bộ KOC đã đăng ký trên web, kể cả chưa nộp đơn)
   const [registeredKOCs, setRegisteredKOCs] = useState<KOCUser[]>([]);
-  const [kocCrmFilter, setKocCrmFilter] = useState<'all' | 'unapplied' | 'applied'>('all');
+  const [kocCrmFilter, setKocCrmFilter] = useState<'all' | 'unapplied' | 'applied' | 'blacklisted'>('all');
   const [kocCrmSearch, setKocCrmSearch] = useState('');
   const [isLoadingKocs, setIsLoadingKocs] = useState(false);
 
@@ -121,6 +123,126 @@ export const AdminView: React.FC<AdminViewProps> = ({
         console.warn('Lỗi lấy KOC:', err);
         setIsLoadingKocs(false);
       });
+  };
+
+  // Xử lý Xoá tài khoản KOC vĩnh viễn (khỏi Supabase đám mây & localStorage)
+  const handleDeleteKocAccount = async (targetHandle: string, name: string) => {
+    const clean = targetHandle.toLowerCase().replace(/[@\s]/g, '');
+    if (!clean) return;
+
+    const confirmed = window.confirm(
+      `⚠️ CẢNH BÁO NGUY HIỂM:\nBạn có chắc chắn muốn XOÁ VĨNH VIỄN tài khoản KOC "${name}" (@${clean}) khỏi hệ thống không?\n\n• Toàn bộ hồ sơ của KOC trên máy chủ Supabase sẽ bị xóa.\n• Tài khoản sẽ không thể đăng nhập hoặc nhận mẫu.`
+    );
+    if (!confirmed) return;
+
+    setIsLoadingKocs(true);
+    try {
+      // 1. Xóa trên Supabase
+      await deleteKOCProfileFromSupabase(clean);
+
+      // 2. Dọn dẹp LocalStorage
+      try {
+        const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+        if (savedUsersStr) {
+          const list: KOCUser[] = JSON.parse(savedUsersStr);
+          const updated = list.filter(
+            (u) => (u.tiktokHandle || u.name || '').toLowerCase().replace(/[@\s]/g, '') !== clean
+          );
+          localStorage.setItem('koctrend_registered_users', JSON.stringify(updated));
+        }
+        localStorage.removeItem(`koc_user_profile_${clean}`);
+      } catch (e) {
+        console.warn('Lỗi dọn dẹp LocalStorage:', e);
+      }
+
+      // 3. Tải lại danh sách
+      fetchRegisteredKOCs();
+      alert(`Đã xoá vĩnh viễn tài khoản KOC @${clean}!`);
+    } catch (err) {
+      console.error('Lỗi khi xoá tài khoản KOC:', err);
+      alert('Có lỗi xảy ra khi xoá tài khoản. Vui lòng thử lại!');
+      setIsLoadingKocs(false);
+    }
+  };
+
+  // Xử lý Cấm nhận mẫu (Blacklist) / Gỡ cấm cho KOC bùng video hoặc vi phạm
+  const handleToggleBlacklist = async (targetHandle: string, currentBlacklisted: boolean, currentReason?: string) => {
+    const clean = targetHandle.toLowerCase().replace(/[@\s]/g, '');
+    if (!clean) return;
+
+    if (currentBlacklisted) {
+      // Gỡ cấm
+      const confirmed = window.confirm(
+        `Bạn có muốn GỠ CẤM NHẬN MẪU cho KOC @${clean} không?\n\nSau khi gỡ, KOC này có thể tiếp tục nộp đơn nhận sản phẩm mẫu trên hệ thống.`
+      );
+      if (!confirmed) return;
+
+      setIsLoadingKocs(true);
+      try {
+        await toggleKOCBlacklistOnSupabase(clean, false);
+
+        // Update local storage
+        try {
+          const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+          if (savedUsersStr) {
+            const list: KOCUser[] = JSON.parse(savedUsersStr);
+            const updated = list.map((u) => {
+              if ((u.tiktokHandle || u.name || '').toLowerCase().replace(/[@\s]/g, '') === clean) {
+                return { ...u, isBlacklisted: false, blacklistReason: undefined };
+              }
+              return u;
+            });
+            localStorage.setItem('koctrend_registered_users', JSON.stringify(updated));
+          }
+        } catch (e) {
+          console.warn('Lỗi update local storage:', e);
+        }
+
+        fetchRegisteredKOCs();
+        alert(`Đã gỡ cấm nhận mẫu cho KOC @${clean}!`);
+      } catch (err) {
+        console.error('Lỗi gỡ cấm KOC:', err);
+        alert('Có lỗi xảy ra. Vui lòng thử lại!');
+        setIsLoadingKocs(false);
+      }
+    } else {
+      // Đưa vào Blacklist
+      const reason = window.prompt(
+        `⛔ CẤM NHẬN MẪU KOC @${clean}:\nVui lòng nhập lý do cấm (KOC sẽ nhìn thấy lý do này khi cố gửi đơn nhận mẫu):`,
+        'Nhận sản phẩm mẫu 0đ nhưng không trả video nghiệm thu đúng hạn'
+      );
+      if (reason === null) return; // Người dùng bấm Hủy
+      const finalReason = reason.trim() || 'Nhận sản phẩm mẫu 0đ nhưng không trả video nghiệm thu đúng hạn';
+
+      setIsLoadingKocs(true);
+      try {
+        await toggleKOCBlacklistOnSupabase(clean, true, finalReason);
+
+        // Update local storage
+        try {
+          const savedUsersStr = localStorage.getItem('koctrend_registered_users');
+          if (savedUsersStr) {
+            const list: KOCUser[] = JSON.parse(savedUsersStr);
+            const updated = list.map((u) => {
+              if ((u.tiktokHandle || u.name || '').toLowerCase().replace(/[@\s]/g, '') === clean) {
+                return { ...u, isBlacklisted: true, blacklistReason: finalReason };
+              }
+              return u;
+            });
+            localStorage.setItem('koctrend_registered_users', JSON.stringify(updated));
+          }
+        } catch (e) {
+          console.warn('Lỗi update local storage:', e);
+        }
+
+        fetchRegisteredKOCs();
+        alert(`Đã đưa KOC @${clean} vào Danh sách đen (Blacklist)! KOC này sẽ bị chặn khi gửi đơn nhận mẫu.`);
+      } catch (err) {
+        console.error('Lỗi cấm KOC:', err);
+        alert('Có lỗi xảy ra. Vui lòng thử lại!');
+        setIsLoadingKocs(false);
+      }
+    }
   };
 
   useEffect(() => {
@@ -4314,6 +4436,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
               totalApplications: number;
               completedApplications: number;
               hasApplied: boolean;
+              isBlacklisted?: boolean;
+              blacklistReason?: string;
             }
           >();
 
@@ -4345,6 +4469,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
               totalApplications: userApps.length,
               completedApplications: userApps.filter((a) => a.status === 'Đã lên bài').length,
               hasApplied: userApps.length > 0,
+              isBlacklisted: !!u.isBlacklisted,
+              blacklistReason: u.blacklistReason || '',
             });
           });
 
@@ -4389,6 +4515,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 totalApplications: userApps.length,
                 completedApplications: userApps.filter((a) => a.status === 'Đã lên bài').length,
                 hasApplied: true,
+                isBlacklisted: false,
+                blacklistReason: '',
               });
             }
           });
@@ -4399,6 +4527,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           const filteredKOCs = allKOCs.filter((koc) => {
             if (kocCrmFilter === 'unapplied' && koc.hasApplied) return false;
             if (kocCrmFilter === 'applied' && !koc.hasApplied) return false;
+            if (kocCrmFilter === 'blacklisted' && !koc.isBlacklisted) return false;
 
             if (kocCrmSearch.trim()) {
               const q = kocCrmSearch.toLowerCase().trim();
@@ -4414,6 +4543,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
           const unappliedCount = allKOCs.filter((k) => !k.hasApplied).length;
           const appliedCount = allKOCs.filter((k) => k.hasApplied).length;
+          const blacklistedCount = allKOCs.filter((k) => k.isBlacklisted).length;
 
           return (
             <div className="space-y-4">
@@ -4428,7 +4558,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </h3>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Theo dõi toàn bộ KOC đã đăng ký tài khoản trên web (kể cả KOC mới tạo tài khoản chưa nộp đơn nào) và KOC đang chạy chiến dịch.
+                      Theo dõi toàn bộ KOC đã đăng ký, quản lý quyền nhận mẫu, phát hiện KOC bùng video và xoá tài khoản ảo/rác.
                     </p>
                   </div>
                   <button
@@ -4445,19 +4575,23 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </button>
                 </div>
 
-                {/* 3 Thẻ thống kê số lượng */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
+                {/* 4 Thẻ thống kê số lượng */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
                   <div className="rounded-xl bg-purple-50/70 border border-purple-100 p-3">
-                    <p className="text-[11px] font-semibold text-purple-700">Tổng KOC trong hệ thống</p>
+                    <p className="text-[11px] font-semibold text-purple-700">Tổng KOC hệ thống</p>
                     <p className="text-xl font-extrabold text-purple-900 mt-0.5">{allKOCs.length} KOC</p>
                   </div>
                   <div className="rounded-xl bg-amber-50/70 border border-amber-100 p-3">
-                    <p className="text-[11px] font-semibold text-amber-700">⚡ Mới tạo tài khoản (Chưa nộp đơn)</p>
+                    <p className="text-[11px] font-semibold text-amber-700">⚡ Mới tạo (Chưa nộp)</p>
                     <p className="text-xl font-extrabold text-amber-900 mt-0.5">{unappliedCount} KOC</p>
                   </div>
                   <div className="rounded-xl bg-emerald-50/70 border border-emerald-100 p-3">
-                    <p className="text-[11px] font-semibold text-emerald-700">🎯 Đã tham gia chiến dịch</p>
+                    <p className="text-[11px] font-semibold text-emerald-700">🎯 Đã nộp đơn</p>
                     <p className="text-xl font-extrabold text-emerald-900 mt-0.5">{appliedCount} KOC</p>
+                  </div>
+                  <div className="rounded-xl bg-red-50/70 border border-red-100 p-3">
+                    <p className="text-[11px] font-semibold text-red-700">⛔ Cấm nhận mẫu</p>
+                    <p className="text-xl font-extrabold text-red-900 mt-0.5">{blacklistedCount} KOC</p>
                   </div>
                 </div>
 
@@ -4473,7 +4607,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      Tất cả KOC ({allKOCs.length})
+                      Tất cả ({allKOCs.length})
                     </button>
                     <button
                       type="button"
@@ -4484,7 +4618,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      ⚡ Mới tạo tài khoản ({unappliedCount})
+                      ⚡ Mới tạo ({unappliedCount})
                     </button>
                     <button
                       type="button"
@@ -4496,6 +4630,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       }`}
                     >
                       🎯 Đã nộp đơn ({appliedCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKocCrmFilter('blacklisted')}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        kocCrmFilter === 'blacklisted'
+                          ? 'bg-red-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      ⛔ Bị cấm nhận mẫu ({blacklistedCount})
                     </button>
                   </div>
 
@@ -4553,16 +4698,23 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 </span>
                               )}
                             </h4>
-                            {koc.hasApplied ? (
-                              <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 shrink-0 border border-emerald-200">
-                                Đã nộp ({koc.totalApplications})
-                              </span>
-                            ) : (
-                              <span className="rounded bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 shrink-0 border border-amber-200 flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[12px]">bolt</span>
-                                <span>Chưa nộp đơn</span>
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {koc.isBlacklisted && (
+                                <span className="rounded bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 border border-red-200">
+                                  ⛔ Cấm mẫu
+                                </span>
+                              )}
+                              {koc.hasApplied ? (
+                                <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 border border-emerald-200">
+                                  Đã nộp ({koc.totalApplications})
+                                </span>
+                              ) : (
+                                <span className="rounded bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 border border-amber-200 flex items-center gap-0.5">
+                                  <span className="material-symbols-outlined text-[12px]">bolt</span>
+                                  <span>Chưa nộp đơn</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <a
                             href={`https://tiktok.com/@${koc.tiktokHandle.replace('@', '')}`}
@@ -4589,6 +4741,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           )}
                         </div>
                       </div>
+
+                      {/* Cảnh báo nếu KOC nằm trong danh sách đen / cấm nhận mẫu */}
+                      {koc.isBlacklisted && (
+                        <div className="rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-700 flex items-start gap-2">
+                          <span className="material-symbols-outlined text-[18px] text-red-600 shrink-0">block</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-red-800">⛔ Đang bị cấm nhận mẫu</p>
+                            <p className="text-[11px] text-red-600 mt-0.5 break-words">
+                              {koc.blacklistReason || 'Vi phạm điều khoản nhận mẫu nhưng không trả video nghiệm thu.'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Thông tin liên hệ */}
                       <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1.5 border border-slate-100">
@@ -4648,6 +4813,35 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             Kênh TikTok
                           </a>
                         )}
+                      </div>
+
+                      {/* Bảng thao tác Quản trị viên: Cấm nhận mẫu & Xóa tài khoản */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-dashed border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleBlacklist(koc.tiktokHandle, !!koc.isBlacklisted, koc.blacklistReason)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            koc.isBlacklisted
+                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                          }`}
+                          title={koc.isBlacklisted ? 'Gỡ cấm nhận mẫu cho KOC này' : 'Chặn KOC không cho nhận mẫu 0đ (KOC bùng video)'}
+                        >
+                          <span className="material-symbols-outlined text-[15px]">
+                            {koc.isBlacklisted ? 'lock_open' : 'do_not_disturb_on'}
+                          </span>
+                          <span>{koc.isBlacklisted ? 'Gỡ cấm' : 'Cấm nhận mẫu'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteKocAccount(koc.tiktokHandle, koc.name)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 transition-all cursor-pointer"
+                          title="Xóa vĩnh viễn tài khoản KOC khỏi hệ thống và máy chủ Supabase"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">delete_forever</span>
+                          <span>Xoá KOC</span>
+                        </button>
                       </div>
                     </div>
                   ))}

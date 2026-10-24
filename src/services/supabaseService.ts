@@ -659,6 +659,59 @@ export async function getAllRegisteredKOCsFromSupabase(): Promise<KOCUser[]> {
   }
 }
 
+// 13b. Xoá hồ sơ KOC vĩnh viễn khỏi Supabase đám mây
+export async function deleteKOCProfileFromSupabase(targetHandle: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const cleanHandle = (targetHandle || '').toLowerCase().replace(/[@\s]/g, '');
+    if (!cleanHandle) return false;
+
+    const { error } = await supabase
+      .from('campaigns')
+      .delete()
+      .eq('id', `__KOC_PROFILE__${cleanHandle}`);
+
+    if (error) {
+      console.warn('Lỗi khi xoá hồ sơ KOC khỏi Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Lỗi xoá hồ sơ KOC:', err);
+    return false;
+  }
+}
+
+// 13c. Cập nhật trạng thái Blacklist (Cấm nhận mẫu / Gỡ cấm) của KOC trên Supabase đám mây
+export async function toggleKOCBlacklistOnSupabase(
+  targetHandle: string,
+  isBlacklisted: boolean,
+  reason?: string
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const cleanHandle = (targetHandle || '').toLowerCase().replace(/[@\s]/g, '');
+    if (!cleanHandle) return false;
+
+    // Lấy profile hiện tại từ Supabase
+    const existing = await getKOCProfileFromSupabase(cleanHandle);
+    if (!existing) return false;
+
+    const updatedProfile: KOCUser = {
+      ...existing,
+      isBlacklisted,
+      blacklistReason: isBlacklisted ? (reason || 'Vi phạm điều khoản nhận mẫu nhưng không trả video') : undefined,
+    };
+
+    return await saveKOCProfileToSupabase(updatedProfile);
+  } catch (err) {
+    console.warn('Lỗi cập nhật trạng thái Blacklist KOC trên Supabase:', err);
+    return false;
+  }
+}
+
 // 14. Lưu danh sách bài viết Blog (Cẩm nang KOC) lên Supabase đám mây
 export async function saveBlogPostsToSupabase(posts: BlogPost[]): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
