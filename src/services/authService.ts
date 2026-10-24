@@ -17,9 +17,8 @@ const PROFILE_KEY = 'koctrend_koc_profile';
 const REMEMBERED_KEY = 'koctrend_remembered_account';
 const REMEMBER_PREF_KEY = 'koctrend_remember_me';
 
-// BẢO MẬT: Tài khoản Quản trị viên chỉ lưu định danh và chữ ký băm một chiều SHA-256
-const ADMIN_HANDLE = '@adminwebkocity1235';
-const ADMIN_PASSWORD_HASH = 'f7c0aa9daf16999550d80b328d97381e17e7ad728bc2ac525d9d9b0969ccd360';
+// Form đăng nhập ngoài trang chủ dành riêng 100% cho KOC Thành viên.
+// Quản trị viên chỉ truy cập độc quyền qua cổng bảo mật riêng biệt tại /admin.
 
 export const normalizeHandle = (h: string) => {
   const clean = h.trim().replace(/^@+/, '').replace(/\s+/g, '').toLowerCase();
@@ -87,28 +86,8 @@ export async function login(params: {
   const password = params.password.trim();
   if (!password) return { ok: false, error: 'Vui lòng nhập mật khẩu.' };
 
-  // 1. Kiểm tra tài khoản Quản trị viên tối cao (Bảo mật bằng chuỗi băm SHA-256)
-  if (params.method === 'tiktok' && handle === ADMIN_HANDLE) {
-    const passHash = await hashStringSHA256(password);
-    if (passHash !== ADMIN_PASSWORD_HASH) {
-      return { ok: false, error: 'Mật khẩu quản trị viên không chính xác.' };
-    }
-    const admin: KOCUser = {
-      id: 'admin-kocity-root',
-      name: 'Quản Trị Viên KOCITY',
-      role: 'admin',
-      avatar: '',
-      tiktokHandle: ADMIN_HANDLE,
-      followers: 'Quản Trị Viên',
-      phone: '',
-      email: 'admin@kocity.vn',
-      verified: true,
-    };
-    persistRemembered(admin, params.remember);
-    return { ok: true, user: admin };
-  }
-
-  // 2. Xác thực bằng Supabase Auth (Chuẩn mã hóa Argon2id/Bcrypt)
+  // BẢO MẬT: Form ngoài trang chủ dành riêng 100% cho KOC.
+  // Quản trị viên chỉ truy cập qua Cổng bảo mật riêng tại đường dẫn /admin.
   const authIdentifier = params.method === 'tiktok' ? handle : params.phone;
   const authEmail = formatHandleToAuthEmail(authIdentifier);
 
@@ -264,7 +243,9 @@ export async function register(params: {
     return { ok: false, error: 'Vui lòng đồng ý với Điều khoản dịch vụ & Chính sách bảo mật để tiếp tục.' };
   }
 
-  if (handle === ADMIN_HANDLE) return { ok: false, error: 'ID TikTok này không dùng được.' };
+  if (handle.toLowerCase().includes('admin')) {
+    return { ok: false, error: 'ID TikTok này chứa từ khóa bị hạn chế.' };
+  }
 
   const users = readUsers();
   if (users.some((u) => handleKey(u.tiktokHandle) === handleKey(handle))) {
@@ -354,8 +335,8 @@ export async function resetPassword(params: {
   if (!inputPhone) return { ok: false, error: 'Vui lòng nhập số điện thoại đã dùng khi đăng ký tài khoản.' };
   if (newPassword.length < 6) return { ok: false, error: 'Mật khẩu mới cần ít nhất 6 ký tự.' };
   if (newPassword !== params.confirmPassword.trim()) return { ok: false, error: 'Hai mật khẩu chưa khớp nhau.' };
-  if (handle === ADMIN_HANDLE) {
-    return { ok: false, error: 'Tài khoản quản trị không đặt lại mật khẩu tại đây. Vui lòng liên hệ quản lý hệ thống.' };
+  if (handle.toLowerCase().includes('admin')) {
+    return { ok: false, error: 'Không thể đặt lại mật khẩu cho ID TikTok này.' };
   }
 
   const users = readUsers();
