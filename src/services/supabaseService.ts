@@ -110,7 +110,7 @@ export async function getCampaignsFromSupabase(): Promise<Campaign[] | null> {
     const { data, error } = await supabase
       .from('campaigns')
       .select('*')
-      .neq('id', '__SITE_CONFIG__')
+      .not('id', 'like', '__%')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -386,6 +386,31 @@ export async function getApplicationsFromSupabase(): Promise<KOCApplication[] | 
   }
 }
 
+// 3b. BẢO MẬT: KOC chỉ tải danh sách đơn ứng tuyển của chính mình (Data Isolation)
+export async function getMyApplicationsFromSupabase(cleanHandle: string): Promise<KOCApplication[] | null> {
+  if (!isSupabaseConfigured() || !cleanHandle) return null;
+
+  try {
+    const handle = cleanHandle.toLowerCase().replace(/[@\s]/g, '');
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .ilike('tiktokHandle', `%${handle}%`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Lỗi khi lấy đơn ứng tuyển cá nhân từ Supabase:', error.message);
+      return null;
+    }
+
+    if (!data) return [];
+    return data.map((item) => parseApplicationFromSupabase(item as Record<string, unknown>));
+  } catch (err) {
+    console.error('Lỗi lấy đơn cá nhân:', err);
+    return null;
+  }
+}
+
 // 4. KOC gửi đơn nộp xin mẫu mới lên Supabase
 export async function submitApplicationToSupabase(application: KOCApplication): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
@@ -566,6 +591,9 @@ export async function saveKOCProfileToSupabase(profile: KOCUser): Promise<boolea
 
     // Chuẩn bị payload hồ sơ an toàn
     const safeProfile = { ...profile };
+    // BẢO MẬT CHÍ MẠNG: Tuyệt đối không bao giờ lưu trường password lên Supabase
+    delete (safeProfile as Record<string, unknown>).password;
+
     // Nếu avatar là data URL quá lớn (>100KB), lược bỏ chuỗi base64 để không gây nghẽn payload
     if (safeProfile.avatar && safeProfile.avatar.startsWith('data:') && safeProfile.avatar.length > 100000) {
       safeProfile.avatar = '';

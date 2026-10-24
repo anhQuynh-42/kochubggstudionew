@@ -8,6 +8,7 @@ import kocityHeroStudio from '../assets/images/kocity_hero_studio.jpg';
 import {
   deleteHeroBannerFromSupabase,
   getApplicationsFromSupabase,
+  getMyApplicationsFromSupabase,
   getCampaignsFromSupabase,
   getHeroBannerFromSupabase,
   getKOCProfileFromSupabase,
@@ -23,6 +24,7 @@ import {
   getBlogPostsFromSupabase,
   subscribeToBlogPostsRealtime,
 } from '../services/supabaseService';
+import { logout } from '../services/authService';
 
 /**
  * Nguồn dữ liệu chung cho cả website KOC mới và trang Admin cũ.
@@ -263,14 +265,26 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setCampaigns(mergedList);
     });
 
-    getApplicationsFromSupabase().then((data) => {
-      if (!data || data.length === 0) return;
-      setApplications((prev) => {
-        const map = new Map(prev.map((a) => [a.id, a]));
-        data.forEach((a) => map.set(a.id, { ...(map.get(a.id) || {}), ...a }));
-        return Array.from(map.values());
+    // BẢO MẬT: Data Isolation — Chỉ tải đơn khi là Admin hoặc KOC chính chủ
+    if (currentUser?.role === 'admin') {
+      getApplicationsFromSupabase().then((data) => {
+        if (!data || data.length === 0) return;
+        setApplications((prev) => {
+          const map = new Map(prev.map((a) => [a.id, a]));
+          data.forEach((a) => map.set(a.id, { ...(map.get(a.id) || {}), ...a }));
+          return Array.from(map.values());
+        });
       });
-    });
+    } else if (currentUser?.tiktokHandle) {
+      getMyApplicationsFromSupabase(currentUser.tiktokHandle).then((data) => {
+        if (!data || data.length === 0) return;
+        setApplications((prev) => {
+          const map = new Map(prev.map((a) => [a.id, a]));
+          data.forEach((a) => map.set(a.id, { ...(map.get(a.id) || {}), ...a }));
+          return Array.from(map.values());
+        });
+      });
+    }
 
     getHeroBannerFromSupabase().then((banner) => {
       if (!banner) return;
@@ -424,6 +438,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const signOut = useCallback(() => {
+    logout().catch((e) => console.warn(e));
     persistUser(null);
     showToast('Đã đăng xuất', undefined, 'info');
   }, [showToast]);

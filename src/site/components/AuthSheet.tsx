@@ -66,7 +66,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
     setConfirmPassword('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (mode === 'register') {
@@ -105,10 +105,10 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
 
     const result =
       mode === 'login'
-        ? login({ method: loginMethod, handle, phone, password, remember: rememberMe })
+        ? await login({ method: loginMethod, handle, phone, password, remember: rememberMe })
         : mode === 'register'
-        ? register({ name, handle, phone, followers, category, password, confirmPassword, remember: rememberMe, agreedTerms })
-        : resetPassword({ handle, phone, newPassword: password, confirmPassword });
+        ? await register({ name, handle, phone, followers, category, password, confirmPassword, remember: rememberMe, agreedTerms })
+        : await resetPassword({ handle, phone, newPassword: password, confirmPassword });
 
     if ('error' in result) {
       setError(result.error);

@@ -140,8 +140,8 @@ export interface KOCUser {
   tiktokHandle: string;
   followers: string;
   phone: string;
-  email: string;
-  password?: string;
+  /** @deprecated BẢO MẬT: Mật khẩu được quản lý hoàn toàn bởi Supabase Auth, không lưu plaintext */
+  passwordHash?: string;
   verified: boolean;
   bio?: string;
   categories?: string[];

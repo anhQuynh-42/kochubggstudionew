@@ -1,20 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../lib/constants';
+import { hashStringSHA256 } from '../lib/authHelpers';
 
 interface AdminSecurityGateProps {
   children: React.ReactNode;
 }
 
-const DEFAULT_ADMIN_PIN = '202688'; // Mã PIN bảo mật mặc định
+// BẢO MẬT: Không lưu mã PIN dạng chữ rõ. Lưu trữ bằng chữ ký băm mã hóa một chiều SHA-256
+const DEFAULT_ADMIN_PIN_HASH = '1322cccdbc5c56294cd17b34846dfc2331311bba5293106846f5c077cfc06c42';
 const SESSION_AUTH_KEY = 'kocity_admin_auth_token';
-const CUSTOM_PIN_KEY = 'kocity_admin_custom_pin';
+const CUSTOM_PIN_HASH_KEY = 'kocity_admin_custom_pin_hash';
 
 export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }) => {
   const navigate = useNavigate();
   const [pin, setPin] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
+    try {
+      const tokenStr = sessionStorage.getItem(SESSION_AUTH_KEY);
+      if (!tokenStr) return false;
+      const parsed = JSON.parse(tokenStr);
+      if (parsed && parsed.expiresAt && Date.now() < parsed.expiresAt) {
+        return true;
+      }
+      sessionStorage.removeItem(SESSION_AUTH_KEY);
+      return false;
+    } catch {
+      return false;
+    }
   });
   const [errorMsg, setErrorMsg] = useState('');
   const [attempts, setAttempts] = useState(0);
@@ -22,11 +35,11 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
   const [lockCountdown, setLockCountdown] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
 
-  // Lấy mã PIN quản trị hiện tại (ưu tiên mã tùy chỉnh trong localStorage hoặc biến môi trường)
-  const currentPin =
-    localStorage.getItem(CUSTOM_PIN_KEY) ||
-    import.meta.env.VITE_ADMIN_PIN ||
-    DEFAULT_ADMIN_PIN;
+  // Lấy chữ ký băm SHA-256 của mã PIN quản trị
+  const currentPinHash =
+    localStorage.getItem(CUSTOM_PIN_HASH_KEY) ||
+    import.meta.env.VITE_ADMIN_PIN_HASH ||
+    DEFAULT_ADMIN_PIN_HASH;
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -57,9 +70,14 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
     setErrorMsg('');
   };
 
-  const validatePin = (inputPin: string) => {
-    if (inputPin === currentPin) {
-      sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+  const validatePin = async (inputPin: string) => {
+    const inputHash = await hashStringSHA256(inputPin);
+    if (inputHash === currentPinHash) {
+      const sessionPayload = {
+        authenticatedAt: Date.now(),
+        expiresAt: Date.now() + 2 * 3600 * 1000, // Tự động hết hạn sau 2 giờ để bảo vệ phiên
+      };
+      sessionStorage.setItem(SESSION_AUTH_KEY, JSON.stringify(sessionPayload));
       setIsAuthenticated(true);
       setErrorMsg('');
     } else {
@@ -182,7 +200,10 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>
             Về Trang chủ
           </button>
-          <span className="text-[11px] text-slate-500">Mã PIN: 202688</span>
+          <span className="text-[11px] text-slate-600 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">lock</span>
+            Bảo vệ 2 lớp
+          </span>
         </div>
       </div>
     </div>
