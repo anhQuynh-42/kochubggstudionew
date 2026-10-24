@@ -4,6 +4,7 @@ import { useAppData } from '../state/AppDataContext';
 import { BRAND_CONTACT, ROUTES, SOCIAL_LINKS, ZALO_GROUP_URL } from '../lib/constants';
 import { useSiteUI } from './SiteUI';
 import { Avatar, Button, Icon, cx } from './ui';
+import { DeliveryDroneAssistant } from './components/DeliveryDroneAssistant';
 
 const NAV = [
   { to: ROUTES.home, label: 'Khám phá', icon: 'explore', end: true },
@@ -32,6 +33,7 @@ export const SiteLayout: React.FC = () => {
       </main>
       <Footer />
       {!isCampaignPage && <BottomNav />}
+      <DeliveryDroneAssistant />
       <ZaloFab raised={!isCampaignPage} />
       <ToastHost />
     </div>
