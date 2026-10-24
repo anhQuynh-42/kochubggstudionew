@@ -284,7 +284,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Đồng bộ bài viết Blog (Cẩm nang KOC) từ Supabase đám mây
     getBlogPostsFromSupabase().then((cloudPosts) => {
-      if (cloudPosts && cloudPosts.length > 0) {
+      if (cloudPosts && cloudPosts.length >= 5) {
         try {
           localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(cloudPosts));
           localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(cloudPosts));
@@ -350,7 +350,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 
     const unsubBlog = subscribeToBlogPostsRealtime((cloudPosts) => {
-      if (cloudPosts && cloudPosts.length > 0) {
+      if (cloudPosts && cloudPosts.length >= 5) {
         try {
           localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(cloudPosts));
           localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(cloudPosts));

@@ -282,13 +282,14 @@ export const getStoredBlogPosts = (): BlogPost[] => {
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('kocity_blog_posts_v1');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed) && parsed.length >= 5) {
         return parsed;
       }
     }
   } catch (e) {
     console.warn('Error reading blog posts from storage:', e);
   }
+  // Mặc định luôn có đủ 5 bài viết chuẩn SEO
   return INITIAL_BLOG_POSTS;
 };
 
