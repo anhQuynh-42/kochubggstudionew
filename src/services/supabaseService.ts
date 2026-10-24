@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Campaign, KOCApplication, KOCUser } from '../types';
+import type { BlogPost } from '../data/blogData';
 
 /**
  * Service giao tiếp với cơ sở dữ liệu Supabase đám mây cho Kocity
@@ -133,6 +134,9 @@ export async function createCampaignOnSupabase(campaign: Campaign): Promise<bool
 
   try {
     const payload = sanitizeCampaignForSupabase(campaign);
+    if (!payload.code) {
+      payload.code = `CAMP-${Date.now().toString().slice(-6)}`;
+    }
     const { error } = await supabase.from('campaigns').insert([payload]);
     if (error) {
       console.error('Lỗi khi thêm chiến dịch lên Supabase:', error.message);
@@ -145,7 +149,7 @@ export async function createCampaignOnSupabase(campaign: Campaign): Promise<bool
   }
 }
 
-// 2.1 Cập nhật chiến dịch trên Supabase
+// 2.1 Cập nhật chiến dịch trên Supabase (Dùng update tránh lỗi constraint NOT NULL)
 export async function updateCampaignOnSupabase(
   campaignId: string,
   updatedData: Partial<Campaign>
@@ -154,14 +158,30 @@ export async function updateCampaignOnSupabase(
 
   try {
     const payload = sanitizeCampaignForSupabase(updatedData);
-    payload.id = campaignId;
+    delete payload.id; // Không update trường id
 
-    const { error } = await supabase
+    // 1. Thử lệnh UPDATE trước (chỉ cập nhật các trường thay đổi, an toàn tuyệt đối)
+    const { error: updateError, data } = await supabase
+      .from('campaigns')
+      .update(payload)
+      .eq('id', campaignId)
+      .select('id');
+
+    if (!updateError && data && data.length > 0) {
+      return true;
+    }
+
+    // 2. Nếu dòng đó chưa có trên Supabase (record tạo offline), fallback sang insert/upsert kèm code hợp lệ
+    payload.id = campaignId;
+    if (!payload.code) {
+      payload.code = (updatedData.code as string) || `CAMP-${Date.now().toString().slice(-6)}`;
+    }
+    const { error: upsertError } = await supabase
       .from('campaigns')
       .upsert(payload, { onConflict: 'id' });
 
-    if (error) {
-      console.error('Lỗi khi cập nhật chiến dịch trên Supabase:', error.message);
+    if (upsertError) {
+      console.error('Lỗi khi upsert chiến dịch trên Supabase:', upsertError.message);
       return false;
     }
     return true;
@@ -637,4 +657,88 @@ export async function getAllRegisteredKOCsFromSupabase(): Promise<KOCUser[]> {
     console.warn('Lỗi tải danh sách KOC từ Supabase:', err);
     return [];
   }
+}
+
+// 14. Lưu danh sách bài viết Blog (Cẩm nang KOC) lên Supabase đám mây
+export async function saveBlogPostsToSupabase(posts: BlogPost[]): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+
+  try {
+    const payload = {
+      id: '__BLOG_POSTS_STORAGE__',
+      code: 'SYS_BLOG',
+      title: 'Hệ thống bài viết Cẩm nang KOC KOCity',
+      brandName: 'KOCity Editorial',
+      category: 'BLOG_STORAGE',
+      description: JSON.stringify(posts),
+    };
+
+    const { error } = await supabase.from('campaigns').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      console.warn('Lỗi khi lưu Blog lên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Lỗi lưu Blog lên Supabase:', err);
+    return false;
+  }
+}
+
+// 15. Tải danh sách bài viết Blog từ Supabase
+export async function getBlogPostsFromSupabase(): Promise<BlogPost[] | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('description')
+      .eq('id', '__BLOG_POSTS_STORAGE__')
+      .single();
+
+    if (error || !data || !data.description) return null;
+
+    const parsed = JSON.parse(data.description) as BlogPost[];
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Lỗi tải Blog từ Supabase:', err);
+    return null;
+  }
+}
+
+// 16. Lắng nghe cập nhật Blog theo thời gian thực (Realtime)
+export function subscribeToBlogPostsRealtime(onUpdate: (posts: BlogPost[]) => void) {
+  if (!isSupabaseConfigured()) return () => {};
+
+  const channel = supabase
+    .channel('realtime_blog_posts_channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'campaigns',
+        filter: 'id=eq.__BLOG_POSTS_STORAGE__',
+      },
+      (payload) => {
+        if (payload.new && (payload.new as { description?: string }).description) {
+          try {
+            const parsed = JSON.parse((payload.new as { description: string }).description) as BlogPost[];
+            if (Array.isArray(parsed)) {
+              onUpdate(parsed);
+            }
+          } catch (e) {
+            console.warn('Lỗi parse Realtime Blog:', e);
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

@@ -20,6 +20,8 @@ import {
   subscribeToHeroBannerRealtime,
   updateApplicationStatusOnSupabase,
   updateCampaignOnSupabase,
+  getBlogPostsFromSupabase,
+  subscribeToBlogPostsRealtime,
 } from '../services/supabaseService';
 
 /**
@@ -217,7 +219,12 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getCampaignsFromSupabase().then((data) => {
       if (!data || data.length === 0) return;
 
-      const baseMap = new Map(INITIAL_CAMPAIGNS.map((c) => [c.id, c]));
+      // Ưu tiên kết hợp dữ liệu đã chỉnh sửa từ localStorage để không bị đè mất
+      const localSaved = readJSON<Campaign[]>('koctrend_campaigns', INITIAL_CAMPAIGNS);
+      const baseMap = new Map<string, Campaign>();
+      INITIAL_CAMPAIGNS.forEach((c) => baseMap.set(c.id, c));
+      localSaved.forEach((c) => baseMap.set(c.id, c));
+
       const isBadPlaceholder = (url?: string) =>
         !url || url.includes('via.placeholder') || url === 'placeholder';
 
@@ -241,7 +248,12 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
       });
 
-      // Bổ sung các chiến dịch trong INITIAL_CAMPAIGNS nếu trên Supabase chưa có (giúp web luôn đủ dữ liệu phong phú)
+      // Bổ sung các chiến dịch có trong local hoặc initial nếu trên Supabase chưa có (bảo toàn 100% dữ liệu)
+      localSaved.forEach((localCamp) => {
+        if (!mergedList.some((c) => c.id === localCamp.id)) {
+          mergedList.push(localCamp);
+        }
+      });
       INITIAL_CAMPAIGNS.forEach((initCamp) => {
         if (!mergedList.some((c) => c.id === initCamp.id)) {
           mergedList.push(initCamp);
@@ -267,6 +279,19 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         localStorage.setItem('kocity_custom_hero_image', banner);
       } catch (e) {
         console.warn(e);
+      }
+    });
+
+    // Đồng bộ bài viết Blog (Cẩm nang KOC) từ Supabase đám mây
+    getBlogPostsFromSupabase().then((cloudPosts) => {
+      if (cloudPosts && cloudPosts.length > 0) {
+        try {
+          localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(cloudPosts));
+          localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(cloudPosts));
+          window.dispatchEvent(new Event('kocity-blog-updated'));
+        } catch (e) {
+          console.warn('Lỗi lưu cloud blog vào storage:', e);
+        }
       }
     });
 
@@ -324,10 +349,23 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       (id) => setCampaigns((prev) => prev.filter((x) => x.id !== id))
     );
 
+    const unsubBlog = subscribeToBlogPostsRealtime((cloudPosts) => {
+      if (cloudPosts && cloudPosts.length > 0) {
+        try {
+          localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(cloudPosts));
+          localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(cloudPosts));
+          window.dispatchEvent(new Event('kocity-blog-updated'));
+        } catch (e) {
+          console.warn('Lỗi lưu realtime blog vào storage:', e);
+        }
+      }
+    });
+
     return () => {
       unsubApps();
       unsubHero();
       unsubCampaigns();
+      unsubBlog();
     };
   }, [pushNotification, showToast]);
 

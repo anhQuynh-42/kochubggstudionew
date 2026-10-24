@@ -1222,7 +1222,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
     };
 
     onUpdateCampaigns([newCamp, ...campaigns]);
-    createCampaignOnSupabase(newCamp);
+    createCampaignOnSupabase(newCamp).then((ok) => {
+      if (ok) {
+        onShowToast('Đã lưu lên Đám mây (Cloud)!', `Chiến dịch "${newCamp.title}" đã đồng bộ thành công lên Supabase.`, 'success');
+      } else {
+        onShowToast('Đã lưu trên máy này!', `Chiến dịch "${newCamp.title}" đã lưu ở trình duyệt, chưa kết nối được tới Cloud.`, 'info');
+      }
+    });
     setIsAddCampaignModalOpen(false);
     setIsPreviewDraftOpen(false);
     setNewCampaignData({
@@ -1240,8 +1246,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
       productHeroImage: '',
     });
     setNewCampaignSamples([{ code: 'M01', name: '', image: '', shortDesc: '' }]);
-
-    onShowToast('Tạo chiến dịch mới thành công!', `Chiến dịch "${newCamp.title}" cùng ${newCamp.sampleProducts?.length || 1} mẫu sản phẩm đã được hiển thị lên trang chủ KOC.`, 'success');
   };
 
   // Action: Open Edit Campaign Modal
@@ -1365,13 +1369,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
     onUpdateCampaigns(updatedList);
 
     // Đồng bộ lên Supabase nếu có kết nối
-    updateCampaignOnSupabase(finalEditedCamp.id, finalEditedCamp);
+    updateCampaignOnSupabase(finalEditedCamp.id, finalEditedCamp).then((ok) => {
+      if (ok) {
+        onShowToast(
+          'Đã lưu lên Đám mây (Cloud)!',
+          `Chiến dịch "${finalEditedCamp.brandName}" đã cập nhật thành công trên Supabase và toàn hệ thống.`,
+          'success'
+        );
+      } else {
+        onShowToast(
+          'Đã lưu trên máy này!',
+          `Chiến dịch "${finalEditedCamp.brandName}" đã lưu tạm ở trình duyệt, chưa kết nối được tới Cloud.`,
+          'info'
+        );
+      }
+    });
 
-    onShowToast(
-      'Cập nhật chiến dịch thành công!',
-      `Đã lưu thay đổi cho chiến dịch "${finalEditedCamp.brandName}" (Thời hạn còn ${finalEditedCamp.daysLeft} ngày).`,
-      'success'
-    );
     setIsEditCampaignModalOpen(false);
     setEditingCampaign(null);
   };

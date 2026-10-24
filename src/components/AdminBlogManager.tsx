@@ -65,12 +65,16 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
 
   // Synchronize visual editor DOM when editing post changes or tab switches to visual
   useEffect(() => {
-    if (editingPost && visualEditorRef.current && editorTab === 'visual') {
-      const targetHtml = markdownToVisualHtml(formData.content || '');
-      if (visualEditorRef.current.innerHTML !== targetHtml) {
-        visualEditorRef.current.innerHTML = targetHtml;
+    if (!editingPost || editorTab !== 'visual') return;
+    const timer = setTimeout(() => {
+      if (visualEditorRef.current) {
+        const targetHtml = markdownToVisualHtml(formData.content || '');
+        if (visualEditorRef.current.innerHTML !== targetHtml) {
+          visualEditorRef.current.innerHTML = targetHtml;
+        }
       }
-    }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [editingPost?.id, editorTab]);
 
   // In-browser lightweight image compression (max 1200px, 82% quality)
@@ -115,6 +119,11 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     setIsCreatingNew(false);
     setFormData({ ...post });
     setEditorTab('visual');
+    setTimeout(() => {
+      if (visualEditorRef.current) {
+        visualEditorRef.current.innerHTML = markdownToVisualHtml(post.content || '');
+      }
+    }, 60);
   };
 
   const handleOpenCreate = () => {
@@ -407,7 +416,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     setIsCreatingNew(false);
     onShowToast(
       isCreatingNew ? 'Đã thêm bài viết mới!' : 'Đã lưu bài viết thành công!',
-      'Nội dung đã được cập nhật trực tiếp lên trang chủ KOCITY.',
+      'Nội dung đã được lưu vĩnh viễn lên Đám mây (Cloud) và cập nhật ra Trang chủ.',
       'success'
     );
   };

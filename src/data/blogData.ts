@@ -272,6 +272,8 @@ Thay vì phải mất công thiết kế file PDF hay PowerPoint phức tạp, k
   }
 ];
 
+import { saveBlogPostsToSupabase } from '../services/supabaseService';
+
 const STORAGE_KEY = 'kocity_blog_posts_v2';
 
 export const getStoredBlogPosts = (): BlogPost[] => {
@@ -296,6 +298,8 @@ export const saveStoredBlogPosts = (posts: BlogPost[]): void => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
     localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(posts));
     window.dispatchEvent(new Event('kocity-blog-updated'));
+    // Tự động đồng bộ lên Đám mây Supabase để mọi thiết bị đều nhận được
+    saveBlogPostsToSupabase(posts).catch((err) => console.warn('Lỗi đồng bộ Blog lên Cloud:', err));
   } catch (e) {
     console.warn('Error saving blog posts to storage:', e);
   }
