@@ -89,8 +89,8 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
 
       if (newAttempts >= 2) {
         setIsLocked(true);
-        setLockCountdown(60);
-        setErrorMsg('Nhập sai quá 2 lần! Hệ thống tạm khóa 60 giây để chống dò mã.');
+        setLockCountdown(300); // 5 phút = 300 giây
+        setErrorMsg('Nhập sai quá 2 lần! Hệ thống tạm khóa 5 phút để chống dò mã.');
       } else {
         setErrorMsg('Mã PIN không chính xác! CẢNH BÁO: Bạn chỉ còn 1 lần thử duy nhất.');
       }
@@ -146,7 +146,9 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
           <div className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400 border border-red-500/20">
             <span className="material-symbols-outlined text-[16px]">lock</span>
             <span>
-              {isLocked ? `Đang khóa an toàn (${lockCountdown}s)` : errorMsg}
+              {isLocked
+                ? `Đang tạm khóa an toàn (${Math.floor(lockCountdown / 60)}p ${String(lockCountdown % 60).padStart(2, '0')}s)`
+                : errorMsg}
             </span>
           </div>
         )}
