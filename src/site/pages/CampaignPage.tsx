@@ -291,26 +291,11 @@ const Gallery: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
             <img
               src={src}
               alt={i === 0 ? campaign.brandName : ''}
-              className={cx('aspect-[4/3] w-full bg-slate-100 object-cover', s.isFull && 'grayscale-[25%] contrast-[95%]')}
+              className="aspect-[4/3] w-full bg-slate-100 object-cover"
             />
-            {s.isFull && i === 0 && (
-              <span className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]" />
-            )}
           </div>
         ))}
       </div>
-
-      {/* Đóng con dấu / Badge đỏ rực: [ ⛔ FULL 100/100 · NGƯNG NHẬN KOC ] */}
-      {s.isFull && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
-          <div className="rotate-[-6deg] rounded-2xl border-2 border-dashed border-white/95 bg-rose-600/95 px-5 py-2.5 text-center text-white shadow-2xl backdrop-blur-md ring-4 ring-rose-500/40">
-            <p className="flex items-center justify-center gap-2 text-sm sm:text-base font-black uppercase tracking-wider drop-shadow-md whitespace-nowrap">
-              <span className="text-lg">⛔</span>
-              <span>FULL 100/100 · NGƯNG NHẬN KOC</span>
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -345,18 +330,17 @@ const ScarcityBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
       <div className="flex items-center justify-between text-sm">
         <span className="font-semibold text-slate-700">
           {s.isFull ? (
-            <span className="font-bold text-rose-600 flex items-center gap-1.5">
-              <span>⛔</span>
-              100/100 KOC đã nhận mẫu (FULL 100%)
-            </span>
+            <>
+              Đã nhận <b className="text-slate-900">{s.totalSpots}/{s.totalSpots}</b> suất nhận mẫu
+            </>
           ) : (
             <>
               Còn <b className={s.isAlmostFull ? 'text-[#ec4899]' : 'text-slate-900'}>{s.spotsLeft}</b>/{s.totalSpots} suất nhận mẫu
             </>
           )}
         </span>
-        <span className={cx('text-xs font-bold', s.isFull ? 'text-rose-600' : s.isAlmostFull ? 'text-[#ec4899]' : 'text-slate-500')}>
-          {s.isFull ? 'Ngưng nhận KOC' : s.isAlmostFull ? 'Sắp hết' : 'Đang tuyển KOC'}
+        <span className={cx('text-xs font-bold', s.isFull ? 'text-slate-500' : s.isAlmostFull ? 'text-[#ec4899]' : 'text-slate-500')}>
+          {s.isFull ? 'Đã đủ suất' : s.isAlmostFull ? 'Sắp hết' : 'Đang tuyển KOC'}
         </span>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -364,7 +348,7 @@ const ScarcityBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
           className={cx(
             'h-full rounded-full transition-all',
             s.isFull
-              ? 'bg-gradient-to-r from-rose-500 to-rose-600 w-full'
+              ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] w-full'
               : s.isAlmostFull
               ? 'bg-[#ec4899]'
               : 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6]'
@@ -378,6 +362,7 @@ const ScarcityBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
 
 const ApplyButton: React.FC<{ campaign: Campaign; className?: string }> = ({ campaign, className }) => {
   const { requestApply, getExistingApplication } = useSiteUI();
+  const { showToast } = useAppData();
   const navigate = useNavigate();
   const applied = getExistingApplication(campaign.id);
   const s = getScarcity(campaign);
@@ -389,18 +374,31 @@ const ApplyButton: React.FC<{ campaign: Campaign; className?: string }> = ({ cam
       </Button>
     );
   }
+
+  const handleApply = () => {
+    if (s.isFull) {
+      showToast(
+        'Chiến dịch đã đủ số lượng KOC (100/100)',
+        'Chiến dịch này đã nhận đủ suất. Bạn hãy khám phá các chiến dịch hấp dẫn khác đang mở nhé!',
+        'info'
+      );
+      return;
+    }
+    requestApply(campaign);
+  };
+
   return (
     <Button
-      variant={s.isFull ? 'dark' : 'primary'}
+      variant={s.isFull ? 'soft' : 'primary'}
       size="lg"
-      className={cx(className, s.isFull && 'opacity-90 bg-slate-800 text-slate-200 border border-slate-700 cursor-not-allowed')}
-      disabled={s.isFull || expired}
-      onClick={() => requestApply(campaign)}
+      className={cx(className, s.isFull && 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200')}
+      disabled={expired}
+      onClick={handleApply}
     >
       {s.isFull ? (
         <span className="flex items-center justify-center gap-1.5">
-          <span className="text-sm">⛔</span>
-          <span>Đã đủ 100/100 · Ngưng nhận KOC</span>
+          <Icon name="check_circle" className="text-[18px] text-emerald-600" />
+          <span>Đã đủ suất (100/100)</span>
         </span>
       ) : expired ? (
         'Đã hết hạn'

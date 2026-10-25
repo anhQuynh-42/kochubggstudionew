@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Campaign } from '../../types';
-import { calculateDaysLeft } from '../../state/AppDataContext';
+import { calculateDaysLeft, useAppData } from '../../state/AppDataContext';
 import { formatFollowerRequirement, getCommissionLabel, getScarcity, hasFreeSample } from '../../lib/campaignDisplay';
 import { ROUTES } from '../../lib/constants';
 import { Button, Icon, cx } from '../ui';
@@ -18,6 +18,7 @@ interface CampaignCardProps {
 /** Thẻ chiến dịch chuẩn TikTok Shop (CLAUDE.md 8.2): Mẫu 0đ · % Hoa hồng · Yêu cầu kênh + độ khan hiếm + nút 1 chạm */
 export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookmarked, hasApplied, onApply, onToggleBookmark, isNight = false }) => {
   const navigate = useNavigate();
+  const { showToast } = useAppData();
   const scarcity = getScarcity(c);
   const commission = getCommissionLabel(c);
   const freeSample = hasFreeSample(c);
@@ -38,6 +39,19 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
     onToggleBookmark();
   };
 
+  const handleApplyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (scarcity.isFull) {
+      showToast(
+        'Chiến dịch đã đủ số lượng KOC (100/100)',
+        'Chiến dịch này đã nhận đủ suất. Bạn hãy khám phá các chiến dịch hấp dẫn khác đang mở nhé!',
+        'info'
+      );
+      return;
+    }
+    onApply();
+  };
+
   return (
     <article
       onClick={handleCardClick}
@@ -53,35 +67,15 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
           src={c.productHeroImage}
           alt=""
           loading="lazy"
-          className={cx(
-            'h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]',
-            scarcity.isFull && 'grayscale-[25%] contrast-[95%]'
-          )}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
-
-        {/* Lớp phủ ảnh: Mờ nhẹ sang trọng tạo cảm giác "cháy hàng" */}
-        {scarcity.isFull && (
-          <span className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px] z-[5]" />
-        )}
-
-        {/* Đóng con dấu / Badge đỏ rực: [ ⛔ FULL 100/100 · NGƯNG NHẬN KOC ] */}
-        {scarcity.isFull && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center p-3 pointer-events-none">
-            <div className="rotate-[-6deg] rounded-xl border-2 border-dashed border-white/95 bg-rose-600/95 px-3 py-1.5 text-center text-white shadow-2xl backdrop-blur-md ring-4 ring-rose-500/40">
-              <p className="flex items-center justify-center gap-1.5 text-xs sm:text-[13px] font-black uppercase tracking-wider drop-shadow-md whitespace-nowrap">
-                <span>⛔</span>
-                <span>FULL 100/100 · NGƯNG NHẬN KOC</span>
-              </p>
-            </div>
-          </div>
-        )}
 
         <span className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent z-[6]" />
         <span className="absolute bottom-3 left-3 flex items-center gap-2 z-[7]">
           <img src={c.brandLogo} alt="" className="h-7 w-7 rounded-lg bg-white object-contain p-0.5 shadow" />
           <span className="text-sm font-bold text-white drop-shadow">{c.brandName}</span>
         </span>
-        {freeSample && !scarcity.isFull && (
+        {freeSample && (
           <span className="absolute left-3 top-3 rounded-full bg-emerald-400 px-2.5 py-1 text-[11px] font-black tracking-wide text-emerald-950 shadow z-[7]">MẪU 0Đ</span>
         )}
       </Link>
@@ -125,26 +119,25 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium text-slate-500">
               {scarcity.isFull ? (
-                <span className="font-bold text-rose-600 flex items-center gap-1">
-                  <span>⛔</span>
-                  100/100 KOC đã nhận mẫu (FULL 100%)
-                </span>
+                <>
+                  Đã nhận <b className="text-slate-900">{scarcity.totalSpots}/{scarcity.totalSpots}</b> suất
+                </>
               ) : (
                 <>
                   Còn <b className={scarcity.isAlmostFull ? 'text-[#ec4899]' : 'text-slate-900'}>{scarcity.spotsLeft}</b>/{scarcity.totalSpots} suất
                 </>
               )}
             </span>
-            <span className={cx('font-medium', scarcity.isFull ? 'font-bold text-rose-500' : daysLeft <= 3 ? 'font-bold text-[#ec4899]' : 'text-slate-400')}>
-              {scarcity.isFull ? 'Ngưng nhận KOC' : daysLeft > 0 ? `Còn ${daysLeft} ngày` : 'Hết hạn'}
+            <span className={cx('font-medium', scarcity.isFull ? 'text-slate-500 font-semibold' : daysLeft <= 3 ? 'font-bold text-[#ec4899]' : 'text-slate-400')}>
+              {scarcity.isFull ? 'Đã đủ suất' : daysLeft > 0 ? `Còn ${daysLeft} ngày` : 'Hết hạn'}
             </span>
           </div>
 
-          {/* Thanh tiến độ: Kéo kịch kim 100/100 KOC đã nhận mẫu (FULL 100%) */}
+          {/* Thanh tiến độ */}
           <div
             className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"
             role="progressbar"
-            aria-label="Số suất còn lại"
+            aria-label="Số suất"
             aria-valuemin={0}
             aria-valuemax={scarcity.totalSpots}
             aria-valuenow={scarcity.isFull ? scarcity.totalSpots : scarcity.spotsLeft}
@@ -153,7 +146,7 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
               className={cx(
                 'h-full rounded-full transition-all',
                 scarcity.isFull
-                  ? 'bg-gradient-to-r from-rose-500 to-rose-600 w-full'
+                  ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] w-full'
                   : scarcity.isAlmostFull
                   ? 'bg-[#ec4899]'
                   : 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6]'
@@ -186,15 +179,16 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
                 </Button>
               </Link>
               <Button
-                variant={scarcity.isFull ? 'dark' : 'primary'}
+                variant={scarcity.isFull ? 'soft' : 'primary'}
                 size="lg"
-                className={cx('flex-[1.3]', scarcity.isFull && 'opacity-90 bg-slate-800 text-slate-200 border border-slate-700 cursor-not-allowed')}
-                disabled={scarcity.isFull || daysLeft <= 0}
-                onClick={onApply}
+                className={cx('flex-[1.3]', scarcity.isFull && 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200')}
+                disabled={daysLeft <= 0}
+                onClick={handleApplyClick}
               >
                 {scarcity.isFull ? (
-                  <span className="flex items-center justify-center gap-1">
-                    <span>⛔ Đủ KOC</span>
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Icon name="check_circle" className="text-[18px] text-emerald-600" />
+                    <span>Đã đủ suất</span>
                   </span>
                 ) : daysLeft <= 0 ? (
                   'Hết hạn'
