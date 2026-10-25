@@ -9,9 +9,9 @@ export const SOCIAL_LINKS = [
 ];
 
 export const BRAND_CONTACT = {
-  hotline: '098.888.9999',
-  hotlineHref: 'tel:0988889999',
-  email: 'brand@kocity.vn',
+  hotline: '098 395 62 43',
+  hotlineHref: 'tel:0983956243',
+  email: 'kocityvn@gmail.com',
 };
 
 /** Đường dẫn các trang phía KOC */
