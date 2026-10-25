@@ -5,6 +5,8 @@ import { Campaign } from '../../types';
 import { Icon, Button, cx } from '../ui';
 import { ROUTES, ZALO_GROUP_URL, BRAND_CONTACT } from '../../lib/constants';
 import { useSiteUI } from '../SiteUI';
+import { useAppData } from '../../state/AppDataContext';
+import { copyTextToClipboard } from '../../lib/clipboard';
 
 export interface BrandStation {
   id: string;
@@ -28,7 +30,7 @@ export const DEFAULT_BRAND_STATIONS: BrandStation[] = [
     sampleCount: 35,
     icon: 'spa',
     badgeBg: 'bg-emerald-600',
-    tagline: 'Kho tổng xuất mẫu từ Hà Nội · Miễn 100% cọc phí',
+    tagline: 'Kho tổng xuất mẫu Hà Nội · Miễn 100% cọc phí',
     desc: 'Tài trợ son dưỡng gạo, bọt rửa mặt trà xanh, serum rau má 0đ tận nhà cho KOC lên video trải nghiệm.',
     commission: '18% - 20%',
   },
@@ -68,18 +70,6 @@ export const DEFAULT_BRAND_STATIONS: BrandStation[] = [
     desc: 'Bộ sưu tập áo bra đúc không gọng, set nội y cao cấp hỗ trợ đẩy đơn cực tốt trên TikTok Shop.',
     commission: '20%',
   },
-  {
-    id: 'store-lysmile',
-    name: 'Lysmile Go',
-    brandName: 'LYSMILE GO',
-    category: 'Chăm sóc nụ cười thông minh',
-    sampleCount: 30,
-    icon: 'dentistry',
-    badgeBg: 'bg-sky-600',
-    tagline: 'Máy tăm nước mini & Bàn chải điện sóng âm',
-    desc: 'Sản phẩm hot-trend chăm sóc cá nhân, tệp người xem rộng, tỷ lệ chuyển đổi đơn cao.',
-    commission: '18%',
-  },
 ];
 
 interface KocityWorldModalProps {
@@ -92,62 +82,85 @@ interface KocityWorldModalProps {
   onSelectCampaign?: (campaignId: string) => void;
 }
 
-// Danh sách KOC cư dân tiêu biểu trong tháng
-const TOP_CREATORS = [
+// Danh sách KOC vinh danh - BẢO MẬT 100% THÔNG TIN CÁ NHÂN (Ẩn danh, không lộ họ tên, không lộ doanh thu tiền mặt)
+const ANONYMOUS_HONOR_ROLL = [
   {
-    name: 'Lê Mai Anh',
-    tiktokId: '@maianh.beauty',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    category: 'Mỹ phẩm & Skincare',
-    gmv: '185.000.000đ',
-    jobs: 12,
-    rating: '5.0',
-    badge: 'Top 1 Doanh Thu',
     rank: 1,
+    maskedName: 'KOC @m***h',
+    category: 'Làm Đẹp & Skincare',
+    avatarLetter: 'M',
+    avatarGradient: 'from-pink-500 to-rose-600',
+    milestone: 'Top 1 Tăng Trưởng',
+    achievement: 'Cán mốc 1.500+ đơn hàng',
+    rating: '5.0',
+    onTimeRate: '100% Đúng hạn',
+    tone: 'text-amber-500 bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/50',
   },
   {
-    name: 'Trần Quốc Huy',
-    tiktokId: '@huytech.koc',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-    category: 'Công nghệ & Phụ kiện',
-    gmv: '142.000.000đ',
-    jobs: 9,
-    rating: '5.0',
-    badge: 'Top Tăng Trưởng',
     rank: 2,
-  },
-  {
-    name: 'Đỗ Phương Thảo',
-    tiktokId: '@thaovisecret',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80',
-    category: 'Thời trang & Nội y',
-    gmv: '118.000.000đ',
-    jobs: 14,
+    maskedName: 'KOC @h***y',
+    category: 'Công Nghệ & Tiện Ích',
+    avatarLetter: 'H',
+    avatarGradient: 'from-violet-600 to-indigo-700',
+    milestone: 'Tỷ Lệ Giữ Chân Cao',
+    achievement: 'Cán mốc 1.200+ đơn hàng',
     rating: '5.0',
-    badge: 'KOC Chăm Chỉ Nhất',
-    rank: 3,
+    onTimeRate: '100% Đúng hạn',
+    tone: 'text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700',
   },
   {
-    name: 'Hoàng Bảo Nam',
-    tiktokId: '@namfmcg',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-    category: 'Tiêu dùng & Thực phẩm',
-    gmv: '96.000.000đ',
-    jobs: 8,
-    rating: '4.9',
-    badge: 'Tân Binh Xuất Sắc',
+    rank: 3,
+    maskedName: 'KOC @t***o',
+    category: 'Thời Trang & Phong Cách',
+    avatarLetter: 'T',
+    avatarGradient: 'from-fuchsia-500 to-purple-600',
+    milestone: 'Chăm Chỉ Nhất Tuần',
+    achievement: '14 chiến dịch liên tiếp đạt 5 sao',
+    rating: '5.0',
+    onTimeRate: '100% Đúng hạn',
+    tone: 'text-amber-700 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800/40',
+  },
+  {
     rank: 4,
+    maskedName: 'KOC @n***m',
+    category: 'Tiêu Dùng & Đời Sống',
+    avatarLetter: 'N',
+    avatarGradient: 'from-emerald-500 to-teal-600',
+    milestone: 'Tân Binh Tiêu Biểu',
+    achievement: 'Hoàn thành 8 chiến dịch đầu tiên',
+    rating: '4.9',
+    onTimeRate: '100% Đúng hạn',
+    tone: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/50',
   },
 ];
 
-// Danh sách hoạt động thời gian thực
+// Danh sách hoạt động thời gian thực (Đã ẩn danh hóa)
 const LIVE_ACTIVITIES = [
-  '⚡ KOC @nguyen.mai vừa nhận mẫu Set Chăm Sóc Da Cỏ Mềm 0đ',
-  '🚀 KOC @duc.review vừa chốt 230 đơn từ video củ sạc Tranyoo',
-  '💎 KOC @thanhhang vừa hoàn thành video nghiệm thu đạt 5 sao',
+  '⚡ KOC @m***a vừa nhận mẫu Set Chăm Sóc Da Cỏ Mềm 0đ',
+  '🚀 KOC @h***y vừa cán mốc 1.000 đơn từ video củ sạc Tranyoo',
+  '💎 KOC @t***o vừa hoàn thành video nghiệm thu đạt 5 sao',
   '📦 Trạm Bielenda vừa xuất 15 kiện serum gửi về Hà Nội & TP.HCM',
-  '🎉 KOC @minhthu vừa gia nhập cư dân KOCity nhận mẫu đầu tiên',
+  '🎉 KOC @n***m vừa gia nhập cư dân KOCity nhận mẫu đầu tiên',
   '🔥 Brand ViSecret nâng mức hoa hồng lên 20% cho đợt chiến dịch mới',
+];
+
+// Kịch bản mẫu hữu dụng cho KOC
+const HOOK_SCRIPTS = [
+  {
+    title: 'Hook Đập Hộp 0đ Tò Mò',
+    purpose: 'Giữ chân 3 giây đầu cực mạnh',
+    text: 'Vừa nhận được bưu phẩm 0đ từ KOCity gửi tận nhà, cùng mình đập hộp xem có gì mà đợt này các bạn KOC đang rần rần săn nhé!',
+  },
+  {
+    title: 'Hook Kiểm Chứng Chân Thực',
+    purpose: 'Tăng tỷ lệ tin cậy và chốt đơn',
+    text: 'Nghe bảo mẫu này đang hot rần rần trên TikTok Shop, mình đã dùng thử liên tục 5 ngày qua và đây là cảm nhận chân thực nhất của mình!',
+  },
+  {
+    title: 'Hook Trải Nghiệm Đời Thực',
+    purpose: 'Né bóp tương tác khi gắn giỏ hàng',
+    text: 'Có một món đồ nhỏ xíu này thôi nhưng đã cứu nguy cho góc làm việc/quy trình skincare của mình suốt cả tuần nay...',
+  },
 ];
 
 export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
@@ -160,8 +173,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const { openAuth } = useSiteUI();
-  const [activeTab, setActiveTab] = useState<'card' | 'hall' | 'brands' | 'lab'>('card');
+  const { showToast } = useAppData();
+  const [activeTab, setActiveTab] = useState<'card' | 'hall' | 'brands' | 'tools'>('card');
   const [tickerIndex, setTickerIndex] = useState(0);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   // Khóa cuộn trang nền khi mở modal
   useEffect(() => {
@@ -185,9 +200,18 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     if (!open) return;
     const interval = setInterval(() => {
       setTickerIndex((prev) => (prev + 1) % LIVE_ACTIVITIES.length);
-    }, 3800);
+    }, 4000);
     return () => clearInterval(interval);
   }, [open]);
+
+  const handleCopyScript = async (text: string, index: number) => {
+    const success = await copyTextToClipboard(text);
+    if (success) {
+      setCopiedIndex(index);
+      showToast('Đã sao chép kịch bản', 'Bạn có thể dán vào kịch bản quay video ngay!', 'success');
+      setTimeout(() => setCopiedIndex(null), 2500);
+    }
+  };
 
   if (!open) return null;
 
@@ -203,29 +227,29 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
     >
       <div
         className={cx(
-          'relative flex flex-col w-full max-w-4xl max-h-[92vh] rounded-[32px] shadow-2xl overflow-hidden border transition-all duration-300',
+          'relative flex flex-col w-full max-w-3xl max-h-[90vh] rounded-[28px] shadow-2xl overflow-hidden border transition-all duration-300',
           isNightDefault
             ? 'bg-slate-900 text-white border-violet-500/20 shadow-purple-950/60'
             : 'bg-white text-slate-800 border-slate-200 shadow-violet-500/10'
         )}
       >
         {/* HEADER CỦA PORTAL */}
-        <div className="flex items-center justify-between px-5 sm:px-7 py-4.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/90 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#7c3aed] to-[#ec4899] text-white shadow-md shadow-violet-500/20">
-              <Icon name="verified_user" className="text-[22px]" />
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/90 backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-[#7c3aed] to-[#ec4899] text-white shadow-sm">
+              <Icon name="verified_user" className="text-[19px]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
                   Không Gian Cư Dân KOCity
                 </h2>
-                <span className="hidden sm:inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-950/80 px-2.5 py-0.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/50">
-                  Creator Network
+                <span className="inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-950/80 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/40">
+                  Creator Hub
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Mạng lưới Nano & Micro KOC kết nối Brand nhận mẫu 0đ chính hãng
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Mạng lưới kết nối KOC & Brand chính hãng · 100% Không cọc phí
               </p>
             </div>
           </div>
@@ -234,106 +258,101 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
           >
-            <Icon name="close" className="text-[18px]" />
+            <Icon name="close" className="text-[17px]" />
           </button>
         </div>
 
         {/* BẢNG TIN HOẠT ĐỘNG TRỰC TIẾP (LIVE TICKER) */}
-        <div className="flex items-center gap-2 px-5 sm:px-7 py-2 bg-gradient-to-r from-violet-50 via-pink-50 to-amber-50 dark:from-violet-950/40 dark:via-purple-950/30 dark:to-slate-900 border-b border-violet-100/60 dark:border-violet-900/30 text-xs">
+        <div className="flex items-center gap-2 px-5 sm:px-6 py-1.5 bg-violet-50/50 dark:bg-violet-950/20 border-b border-violet-100/50 dark:border-violet-900/20 text-xs">
           <span className="flex h-2 w-2 relative shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
-          <span className="font-bold text-violet-700 dark:text-violet-300 shrink-0">Trực tiếp:</span>
-          <span className="truncate font-medium text-slate-700 dark:text-slate-300 transition-all duration-300">
+          <span className="font-bold text-violet-700 dark:text-violet-300 shrink-0 text-[11px]">Trực tiếp:</span>
+          <span className="truncate text-[11px] font-medium text-slate-600 dark:text-slate-300 transition-all duration-300">
             {LIVE_ACTIVITIES[tickerIndex]}
           </span>
         </div>
 
-        {/* THANH ĐIỀU HƯỚNG TABS */}
-        <div className="flex border-b border-slate-100 dark:border-slate-800 px-4 sm:px-7 gap-1 sm:gap-2 overflow-x-auto no-scrollbar pt-2 bg-white dark:bg-slate-900">
+        {/* THANH ĐIỀU HƯỚNG TABS TINH GỌN */}
+        <div className="flex border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 gap-1 sm:gap-2 overflow-x-auto no-scrollbar pt-1.5 bg-white dark:bg-slate-900">
           {[
-            { id: 'card', label: 'Thẻ Cư Dân & Đặc Quyền', icon: 'badge' },
-            { id: 'hall', label: 'Bảng Vinh Danh KOC', icon: 'military_tech' },
-            { id: 'brands', label: 'Trạm Brand & Kho Mẫu', icon: 'storefront' },
-            { id: 'lab', label: 'Phòng Lab Sáng Tạo', icon: 'lightbulb' },
+            { id: 'card', label: 'Thẻ Cư Dân', icon: 'badge' },
+            { id: 'hall', label: 'Bảng Vinh Danh', icon: 'military_tech' },
+            { id: 'brands', label: 'Trạm Brand', icon: 'storefront' },
+            { id: 'tools', label: 'Kịch Bản & Hỗ Trợ', icon: 'lightbulb' },
           ].map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setActiveTab(t.id as any)}
               className={cx(
-                'flex items-center gap-1.5 px-3.5 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer rounded-t-xl',
+                'flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer rounded-t-lg',
                 activeTab === t.id
-                  ? 'border-[#7c3aed] text-[#7c3aed] dark:text-violet-300 bg-violet-50/60 dark:bg-violet-950/30'
+                  ? 'border-[#7c3aed] text-[#7c3aed] dark:text-violet-300 bg-violet-50/50 dark:bg-violet-950/30'
                   : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               )}
             >
-              <Icon name={t.icon} className="text-[17px]" />
+              <Icon name={t.icon} className="text-[16px]" />
               <span>{t.label}</span>
             </button>
           ))}
         </div>
 
         {/* NỘI DUNG TỪNG TAB */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
           {/* TAB 1: THẺ CƯ DÂN & ĐẶC QUYỀN */}
           {activeTab === 'card' && (
-            <div className="space-y-6">
-              {/* Thẻ Cư Dân KOCity Holographic VIP Card */}
-              <div className="relative mx-auto max-w-lg overflow-hidden rounded-[26px] bg-gradient-to-br from-slate-950 via-violet-950 to-indigo-950 p-6 text-white shadow-2xl ring-1 ring-amber-400/40">
-                {/* Hoa văn chìm */}
-                <div className="absolute top-0 right-0 -mr-10 -mt-10 h-44 w-44 rounded-full bg-gradient-to-bl from-pink-500/20 to-violet-500/0 blur-2xl pointer-events-none" />
-                <div className="absolute bottom-0 left-0 -ml-10 -mb-10 h-44 w-44 rounded-full bg-gradient-to-tr from-violet-600/25 to-transparent blur-2xl pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col justify-between min-h-[200px]">
-                  {/* Top thẻ: Logo & Chip */}
+            <div className="space-y-5">
+              {/* Thẻ Cư Dân KOCity Digital VIP Pass - Gọn gàng thanh lịch */}
+              <div className="relative mx-auto max-w-sm overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 p-5 text-white shadow-xl ring-1 ring-violet-400/30">
+                <div className="relative z-10 flex flex-col justify-between min-h-[160px]">
+                  {/* Top thẻ */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] flex items-center justify-center font-black text-xs text-white">
+                      <div className="h-6 w-6 rounded-md bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] flex items-center justify-center font-black text-[11px] text-white">
                         K
                       </div>
-                      <span className="font-display font-black tracking-wider text-sm bg-gradient-to-r from-white via-slate-100 to-violet-200 bg-clip-text text-transparent">
+                      <span className="font-display font-black tracking-wider text-xs text-slate-200">
                         KOCITY RESIDENT PASS
                       </span>
                     </div>
 
-                    {/* Chip thẻ mạ vàng */}
-                    <div className="h-7 w-9 rounded-md bg-gradient-to-tr from-amber-300 via-amber-400 to-yellow-200 border border-amber-500/50 shadow-inner flex flex-col justify-around p-1 opacity-90">
-                      <div className="h-[1px] bg-amber-700/40 w-full" />
-                      <div className="h-[1px] bg-amber-700/40 w-full" />
+                    {/* Chip mạ vàng */}
+                    <div className="h-5 w-7 rounded bg-gradient-to-tr from-amber-300 via-amber-400 to-yellow-200 border border-amber-500/40 shadow-inner flex flex-col justify-around p-0.5 opacity-90">
+                      <div className="h-[1px] bg-amber-800/40 w-full" />
+                      <div className="h-[1px] bg-amber-800/40 w-full" />
                     </div>
                   </div>
 
-                  {/* Middle thẻ: Tên & ID TikTok */}
-                  <div className="my-5">
-                    <p className="text-[11px] font-medium uppercase tracking-widest text-slate-400">
-                      {currentUser ? 'Cư Dân Chính Thức · TikTok Creator' : 'Thành Viên Khách Mời · KOC Tiềm Năng'}
+                  {/* Giữa thẻ: Tên KOC */}
+                  <div className="my-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                      {currentUser ? 'Cư Dân Chính Thức · TikTok Creator' : 'Thành Viên Khách Mời'}
                     </p>
-                    <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-0.5">
+                    <h3 className="text-lg font-black tracking-tight text-white">
                       {currentUser?.name || 'Khách Tham Quan KOCity'}
                     </h3>
-                    <p className="text-sm font-mono text-violet-300 mt-0.5">
+                    <p className="text-xs font-mono text-violet-300">
                       {currentUser?.tiktokId ? `@${currentUser.tiktokId}` : '@koc.resident'}
                     </p>
                   </div>
 
-                  {/* Bottom thẻ: Mã ID cư dân & Điểm tín nhiệm */}
-                  <div className="flex items-center justify-between border-t border-white/10 pt-3 text-xs">
+                  {/* Dưới thẻ: Mã định danh & Điểm tín nhiệm */}
+                  <div className="flex items-center justify-between border-t border-white/10 pt-2.5 text-[11px]">
                     <div>
-                      <p className="text-[10px] text-slate-400">MÃ ĐỊNH DANH</p>
-                      <p className="font-mono font-bold tracking-widest text-amber-300">
+                      <p className="text-[9px] text-slate-400">MÃ ĐỊNH DANH</p>
+                      <p className="font-mono font-bold tracking-wider text-amber-300">
                         KOC-88{currentUser ? (currentUser.id || '9921').slice(-4).toUpperCase() : '2026'}
                       </p>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-[10px] text-slate-400">ĐIỂM TÍN NHIỆM</p>
-                      <p className="font-bold text-emerald-400 flex items-center justify-end gap-1">
-                        <span>⭐ 5.0</span>
-                        <span className="text-[10px] text-slate-300">(Ưu tiên duyệt mẫu)</span>
+                      <p className="text-[9px] text-slate-400">TÍN NHIỆM</p>
+                      <p className="font-bold text-emerald-400">
+                        ⭐ 5.0 (Ưu tiên duyệt)
                       </p>
                     </div>
                   </div>
@@ -341,74 +360,70 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </div>
 
               {/* Nút thao tác dưới thẻ */}
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-center">
                 {currentUser ? (
                   <Button
                     variant="primary"
                     size="md"
-                    className="rounded-full px-6 font-bold"
+                    className="rounded-full px-5 text-xs font-bold"
                     onClick={() => {
                       onClose();
                       navigate(ROUTES.profile);
                     }}
                   >
-                    <Icon name="person" className="text-[18px]" />
+                    <Icon name="person" className="text-[16px]" />
                     <span>Xem Hồ Sơ & Media Kit của tôi</span>
                   </Button>
                 ) : (
                   <Button
                     variant="primary"
                     size="md"
-                    className="rounded-full px-6 font-bold bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
+                    className="rounded-full px-5 text-xs font-bold bg-gradient-to-r from-[#ec4899] to-[#8b5cf6]"
                     onClick={() => {
                       onClose();
                       openAuth('register', 'Đăng ký nhận thẻ cư dân KOCity để nhận mẫu 0đ');
                     }}
                   >
-                    <Icon name="badge" className="text-[18px]" />
-                    <span>Đăng Ký Nhận Thẻ Cư Dân KOC 0đ</span>
+                    <Icon name="badge" className="text-[16px]" />
+                    <span>Đăng Ký Nhận Thẻ Cư Dân 0đ</span>
                   </Button>
                 )}
               </div>
 
-              {/* 4 Trụ Cột Đặc Quyền Cư Dân */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              {/* 4 Trụ Cột Đặc Quyền Cư Dân - Trực quan, dễ đọc */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                 {[
                   {
                     icon: 'redeem',
                     title: '100% Không Cọc Phí',
-                    desc: 'Mẫu thử được gửi tận nhà hoàn toàn miễn phí, Brand chịu 100% chi phí vận chuyển.',
-                    tone: 'from-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-400',
+                    desc: 'Mẫu thử gửi tận tay miễn phí, Brand chịu 100% chi phí vận chuyển.',
                   },
                   {
                     icon: 'handshake',
-                    title: 'Ưu Tiên Kết Nối Brand Lớn',
-                    desc: 'KOC đạt tín nhiệm 5 sao được ưu tiên ghép cặp các chiến dịch hoa hồng cao từ nhãn hàng uy tín.',
-                    tone: 'from-violet-500/10 to-transparent text-violet-600 dark:text-violet-400',
+                    title: 'Ưu Tiên Ghép Brand Lớn',
+                    desc: 'KOC đạt tín nhiệm 5 sao được ưu tiên nhận lời mời chiến dịch độc quyền.',
                   },
                   {
                     icon: 'payments',
-                    title: 'Hoa Hồng Đối Soát Minh Bạch',
-                    desc: 'Nhận hoa hồng affiliate theo từng đơn hàng phát sinh, báo cáo rõ ràng không cắt xén.',
-                    tone: 'from-pink-500/10 to-transparent text-pink-600 dark:text-pink-400',
+                    title: 'Hoa Hồng Minh Bạch',
+                    desc: 'Đối soát affiliate rõ ràng theo từng đơn hàng phát sinh từ video.',
                   },
                   {
                     icon: 'copyright',
-                    title: 'Bảo Toàn Quyền Sáng Tạo',
-                    desc: 'KOC giữ toàn quyền sở hữu đối với nội dung video do mình sản xuất theo brief.',
-                    tone: 'from-amber-500/10 to-transparent text-amber-600 dark:text-amber-400',
+                    title: 'Bảo Toàn Quyền Video',
+                    desc: 'KOC giữ toàn bộ quyền sở hữu đối với nội dung video do mình sáng tạo.',
                   },
                 ].map((perk) => (
                   <div
                     key={perk.title}
-                    className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4 bg-slate-50/60 dark:bg-slate-800/40 flex items-start gap-3.5"
+                    className="rounded-xl border border-slate-100 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-800/40 flex items-start gap-2.5"
                   >
-                    <div className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br', perk.tone)}>
-                      <Icon name={perk.icon} className="text-[20px]" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-950 text-[#7c3aed] dark:text-violet-300">
+                      <Icon name={perk.icon} className="text-[17px]" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">{perk.title}</h4>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{perk.desc}</p>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">{perk.title}</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{perk.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -416,73 +431,65 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: BẢNG VINH DANH KOC */}
+          {/* TAB 2: BẢNG VINH DANH (ẨN DANH & BẢO MẬT 100%) */}
           {activeTab === 'hall' && (
             <div className="space-y-4">
-              <div className="text-center max-w-lg mx-auto mb-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                  Bảng Vinh Danh Cư Dân KOC Xuất Sắc
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Vinh danh các Creator có tỷ lệ trả bài đúng hạn, chuyển đổi đơn cao và được Brand đánh giá 5 sao.
+              <div className="rounded-xl bg-violet-50/70 dark:bg-violet-950/30 p-3 border border-violet-100 dark:border-violet-900/30 text-xs flex items-start gap-2">
+                <Icon name="lock" className="text-[18px] text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
+                <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
+                  <b className="text-violet-700 dark:text-violet-300">Cam kết bảo mật dữ liệu:</b> KOCity ẩn danh thông tin cá nhân và doanh số chi tiết nhằm bảo vệ sự riêng tư của Creator, chỉ vinh danh cột mốc cống hiến và tỷ lệ uy tín.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {TOP_CREATORS.map((koc) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {ANONYMOUS_HONOR_ROLL.map((koc) => (
                   <div
-                    key={koc.tiktokId}
-                    className="relative overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-4 shadow-sm hover:shadow-md transition"
+                    key={koc.maskedName}
+                    className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-3.5 shadow-sm"
                   >
-                    {/* Rank Badge */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">
-                      <span>#{koc.rank}</span>
-                      <span>{koc.badge}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {/* Avatar chữ cái nghệ thuật thay vì ảnh mặt thật */}
+                        <div
+                          className={cx(
+                            'h-9 w-9 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-sm bg-gradient-to-tr',
+                            koc.avatarGradient
+                          )}
+                        >
+                          {koc.avatarLetter}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">{koc.maskedName}</h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{koc.category}</p>
+                        </div>
+                      </div>
+
+                      <span className={cx('px-2 py-0.5 rounded-full text-[10px] font-black border', koc.tone)}>
+                        #{koc.rank} {koc.milestone}
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-3.5">
-                      <img
-                        src={koc.avatar}
-                        alt={koc.name}
-                        className="h-13 w-13 rounded-2xl object-cover ring-2 ring-violet-200 dark:ring-violet-800"
-                      />
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">{koc.name}</h4>
-                        <p className="text-xs font-mono text-violet-600 dark:text-violet-400">{koc.tiktokId}</p>
-                        <span className="inline-block mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-md">
-                          {koc.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-3.5 grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-700/60 rounded-xl bg-slate-50 dark:bg-slate-900/50 py-2 text-center text-xs">
-                      <div>
-                        <p className="text-[10px] text-slate-400">Doanh thu GMV</p>
-                        <p className="font-bold text-violet-600 dark:text-violet-400 mt-0.5">{koc.gmv}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400">Job hoàn thành</p>
-                        <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{koc.jobs} chiến dịch</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400">Đánh giá Brand</p>
-                        <p className="font-bold text-amber-500 mt-0.5">⭐ {koc.rating}</p>
-                      </div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        {koc.achievement}
+                      </span>
+                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        ⭐ {koc.rating} ({koc.onTimeRate})
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Tiêu chí xét duyệt */}
-              <div className="rounded-2xl border border-violet-100 dark:border-violet-900/40 bg-violet-50/50 dark:bg-violet-950/20 p-4 text-xs text-slate-600 dark:text-slate-400">
-                <p className="font-bold text-violet-800 dark:text-violet-300 flex items-center gap-1.5 mb-1">
-                  <Icon name="verified" className="text-[16px]" />
-                  <span>Cách để lọt vào Bảng Vinh Danh KOCity:</span>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50 dark:bg-slate-800/30 text-xs text-slate-600 dark:text-slate-400">
+                <p className="font-bold text-slate-800 dark:text-slate-200 mb-1">
+                  Tiêu chuẩn xét chọn danh hiệu KOCity:
                 </p>
-                <ul className="list-disc list-inside space-y-1 pl-1">
-                  <li>Trả video nghiệm thu đúng hạn trong vòng 5–7 ngày kể từ khi nhận mẫu.</li>
-                  <li>Video đạt chất lượng ánh sáng, âm thanh tốt và tuân thủ brief nhãn hàng.</li>
-                  <li>Duy trì điểm đánh giá 5 sao từ Brand để mở khóa các chiến dịch booking độc quyền.</li>
+                <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
+                  <li>Nghiệm thu video đúng hạn 5–7 ngày kể từ khi nhận mẫu 0đ.</li>
+                  <li>Video đạt chuẩn kịch bản, âm thanh rõ ràng và gắn đúng giỏ hàng TikTok Shop.</li>
+                  <li>Duy trì điểm đánh giá 5 sao từ Brand để giữ vững vị trí danh dự.</li>
                 </ul>
               </div>
             </div>
@@ -490,53 +497,46 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
 
           {/* TAB 3: TRẠM BRAND & KHO MẪU */}
           {activeTab === 'brands' && (
-            <div className="space-y-4">
-              <div className="text-center max-w-lg mx-auto mb-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                  Trạm Thương Hiệu & Kho Mẫu Đang Cấp
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Các Brand chính hãng tài trợ 100% sản phẩm trải nghiệm và hoa hồng trực tiếp cho KOCity.
-                </p>
-              </div>
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                Các Brand đối tác uy tín đang cấp mẫu trải nghiệm 0đ trên KOCity:
+              </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {DEFAULT_BRAND_STATIONS.map((station) => (
                   <div
                     key={station.id}
-                    className="flex flex-col justify-between rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-4 shadow-sm hover:border-violet-300 transition"
+                    className="flex flex-col justify-between rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-3.5 shadow-sm"
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black tracking-wider uppercase text-violet-600 dark:text-violet-400">
+                        <span className="text-[11px] font-black tracking-wider uppercase text-violet-600 dark:text-violet-400">
                           {station.brandName}
                         </span>
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
-                          <span>Mẫu 0đ: Còn {station.sampleCount} suất</span>
+                        <span className="rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                          Còn {station.sampleCount} suất 0đ
                         </span>
                       </div>
 
-                      <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
                         {station.name}
                       </h4>
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{station.category}</p>
-
-                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-2.5 leading-relaxed">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">{station.category}</p>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed line-clamp-2">
                         {station.desc}
                       </p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
                       <div>
-                        <span className="text-slate-400">Hoa hồng: </span>
-                        <span className="font-extrabold text-[#ec4899]">{station.commission}</span>
+                        <span className="text-[11px] text-slate-400">Hoa hồng: </span>
+                        <span className="font-black text-[#ec4899]">{station.commission}</span>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => {
                           onClose();
-                          // Tìm chiến dịch của brand hoặc cuộn tới danh sách
                           const matchCamp = campaigns.find((c) =>
                             c.brandName.toLowerCase().includes(station.brandName.toLowerCase())
                           );
@@ -546,10 +546,10 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                             document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' });
                           }
                         }}
-                        className="inline-flex items-center gap-1 font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 cursor-pointer"
+                        className="inline-flex items-center gap-1 font-bold text-xs text-violet-600 dark:text-violet-400 hover:text-violet-800 cursor-pointer"
                       >
-                        <span>Nhận mẫu Brand</span>
-                        <Icon name="arrow_forward" className="text-[16px]" />
+                        <span>Nhận mẫu ngay</span>
+                        <Icon name="arrow_forward" className="text-[14px]" />
                       </button>
                     </div>
                   </div>
@@ -558,84 +558,86 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: PHÒNG LAB SÁNG TẠO & HỖ TRỢ */}
-          {activeTab === 'lab' && (
+          {/* TAB 4: KỊCH BẢN MẪU & KÊNH HỖ TRỢ (HỮU DỤNG CAO) */}
+          {activeTab === 'tools' && (
             <div className="space-y-4">
-              <div className="text-center max-w-lg mx-auto mb-2">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                  Phòng Lab Sáng Tạo & Cộng Đồng KOC
+              <div className="text-center">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Bộ Kịch Bản Hook 3 Giây Đầu TikTok Shop
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Công thức kịch bản video TikTok Shop triệu view và kênh hỗ trợ trực tiếp cho cư dân.
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Bấm sao chép để áp dụng nhanh khi quay video mẫu thử 0đ:
                 </p>
               </div>
 
-              {/* 3 Kịch bản mẫu */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  {
-                    title: 'Kịch bản Đập Hộp 0đ',
-                    tag: 'Giữ chân 3s đầu',
-                    desc: 'Mở đầu bằng việc nhận bưu phẩm 0đ từ KOCity, tạo tò mò người xem bấm vào giỏ hàng ngay.',
-                  },
-                  {
-                    title: 'Kịch bản Trước & Sau',
-                    tag: 'Tỷ lệ chốt đơn cao',
-                    desc: 'So sánh chân thực trước và sau 5 ngày sử dụng mẫu thử, tạo độ tin cậy tuyệt đối.',
-                  },
-                  {
-                    title: 'Kịch bản Tình Huống Đời Thực',
-                    tag: 'Né bóp tương tác',
-                    desc: 'Lồng ghép khéo léo tính năng sản phẩm vào tình huống sinh hoạt hàng ngày không gây phản cảm.',
-                  },
-                ].map((kb) => (
+              {/* 3 Mẫu câu Hook kịch bản kèm nút sao chép tiện lợi */}
+              <div className="space-y-2.5">
+                {HOOK_SCRIPTS.map((script, idx) => (
                   <div
-                    key={kb.title}
-                    className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-4 flex flex-col justify-between"
+                    key={script.title}
+                    className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                   >
-                    <div>
-                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300">
-                        {kb.tag}
-                      </span>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-2">{kb.title}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{kb.desc}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white">{script.title}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300">
+                          {script.purpose}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 italic bg-white dark:bg-slate-900/60 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                        "{script.text}"
+                      </p>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyScript(script.text, idx)}
+                      className={cx(
+                        'shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer',
+                        copiedIndex === idx
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-violet-100 dark:bg-violet-900/50 text-[#7c3aed] dark:text-violet-300 hover:bg-violet-200'
+                      )}
+                    >
+                      <Icon name={copiedIndex === idx ? 'check' : 'content_copy'} className="text-[15px]" />
+                      <span>{copiedIndex === idx ? 'Đã chép' : 'Sao chép'}</span>
+                    </button>
                   </div>
                 ))}
               </div>
 
-              {/* Hộp liên kết Zalo Cư Dân & Hotline */}
-              <div className="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-slate-900 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5 text-center sm:text-left">
-                  <div className="h-12 w-12 rounded-2xl bg-[#0068ff] flex items-center justify-center text-white font-black text-lg shrink-0 shadow-lg shadow-blue-500/20">
+              {/* Hộp Zalo Cư Dân & Hotline */}
+              <div className="rounded-xl border border-blue-100 dark:border-blue-900/50 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 dark:from-blue-950/30 dark:to-slate-900 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3 text-center sm:text-left">
+                  <div className="h-10 w-10 rounded-xl bg-[#0068ff] flex items-center justify-center text-white font-black text-sm shrink-0 shadow-sm">
                     Zalo
                   </div>
                   <div>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                      Nhóm Zalo Cư Dân KOCity Chính Thức
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      Nhóm Zalo Cư Dân KOCity
                     </h4>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                      Giao lưu cùng hơn 1.200 KOC, nhận thông báo chiến dịch hot và hỗ trợ đối soát 24/7.
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Giao lưu cùng cộng đồng KOC, nhận thông báo mẫu hot và đối soát 24/7.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <a
                     href={ZALO_GROUP_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#0068ff] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-600 transition cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-full bg-[#0068ff] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-600 transition cursor-pointer"
                   >
                     <span>Vào Nhóm Zalo</span>
-                    <Icon name="open_in_new" className="text-[16px]" />
+                    <Icon name="open_in_new" className="text-[14px]" />
                   </a>
                   <a
                     href={BRAND_CONTACT.hotlineHref}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition cursor-pointer"
                   >
-                    <Icon name="phone" className="text-[16px]" />
-                    <span>Hotline: {BRAND_CONTACT.hotline}</span>
+                    <Icon name="phone" className="text-[14px]" />
+                    <span>{BRAND_CONTACT.hotline}</span>
                   </a>
                 </div>
               </div>
