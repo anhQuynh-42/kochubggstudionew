@@ -474,7 +474,7 @@ export const HomePage: React.FC = () => {
               <Icon name="arrow_forward" className="text-[18px] transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
 
-            {/* Nút Khám phá Thành phố Cư dân */}
+            {/* Nút Không gian Cư dân KOC */}
             <button
               type="button"
               onClick={() => setCityOpen(true)}
@@ -485,8 +485,8 @@ export const HomePage: React.FC = () => {
                   : 'bg-white/95 text-slate-800 ring-1 ring-violet-200 hover:bg-white hover:text-violet-900 hover:ring-violet-400 shadow-violet-500/10'
               )}
             >
-              <span className="text-[18px] animate-bounce">🏙️</span>
-              <span>Vào Thành phố Cư dân</span>
+              <Icon name="badge" className="text-[19px] text-[#7c3aed]" />
+              <span>Không gian Cư dân KOC</span>
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-pink-500" />
