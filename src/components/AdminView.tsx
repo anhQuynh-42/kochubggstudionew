@@ -1597,11 +1597,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
-    const headers = ['Mã đơn', 'Tên KOC', 'TikTok', 'Followers', 'SĐT', 'Địa chỉ nhận hàng', 'Chiến dịch', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
+    const headers = ['Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh TikTok', 'Followers', 'SĐT', 'Địa chỉ nhận hàng', 'Chiến dịch', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
     const rows = applications.map((a) => [
       `"${a.code}"`,
       `"${a.kocName}"`,
       `"${a.tiktokHandle}"`,
+      `"${a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : '')}"`,
       `"${a.followers}"`,
       `"${a.phone}"`,
       `"${a.address.replace(/"/g, '""')}"`,
@@ -3930,7 +3931,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                   )}
                                 </div>
                                 <a
-                                  href={`https://tiktok.com/@${app.tiktokHandle.replace('@', '')}`}
+                                  href={app.channelLink || `https://tiktok.com/@${app.tiktokHandle.replace('@', '')}`}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-0.5"

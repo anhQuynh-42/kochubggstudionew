@@ -91,6 +91,7 @@ export interface KOCApplication {
   phone: string;
   email: string;
   tiktokHandle: string;
+  channelLink?: string;
   followers: string;
   followersCount: number;
   avgViews: string;

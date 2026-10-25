@@ -29,6 +29,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [handle, setHandle] = useState('');
+  const [channelLink, setChannelLink] = useState('');
   const [followers, setFollowers] = useState('');
   const [avgViews, setAvgViews] = useState('');
   const [monthlyOrders, setMonthlyOrders] = useState('');
@@ -47,7 +48,12 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     setError('');
     setSubmittedCode('');
     setIsSubmitting(false);
-    setHandle(u?.tiktokHandle || '');
+    const initialHandle = u?.tiktokHandle || '';
+    setHandle(initialHandle);
+    setChannelLink(
+      u?.channelLink ||
+        (initialHandle ? `https://www.tiktok.com/${initialHandle.startsWith('@') ? initialHandle : '@' + initialHandle}` : '')
+    );
     setFollowers(u?.followers || '');
     setAvgViews(u?.avgViews || '');
     setMonthlyOrders(u?.monthlyOrders || '');
@@ -58,6 +64,15 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     setSparkAds(Boolean(u?.allowSparkAds));
     setCommitted(false);
   }, [campaign?.id]);
+
+  const handleHandleChange = (newHandle: string) => {
+    setHandle(newHandle);
+    const clean = normalizeHandle(newHandle);
+    // Tự động đồng bộ link kênh nếu KOC chưa tự nhập link riêng
+    if (!channelLink || channelLink.includes('tiktok.com/@') || channelLink.startsWith('https://www.tiktok.com/')) {
+      setChannelLink(clean ? `https://www.tiktok.com/${clean}` : '');
+    }
+  };
 
   if (!campaign) return null;
 
@@ -152,8 +167,11 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       ? Math.round(num * 1000) || 0
       : parseInt(followers.replace(/\D/g, ''), 10) || 0;
     const code = `#KOC-${Math.floor(1000 + Math.random() * 9000)}`;
-    const channelLink =
-      currentUser?.channelLink && normalizeHandle(currentUser.tiktokHandle || '') === cleanHandle ? currentUser.channelLink : `https://www.tiktok.com/${cleanHandle}`;
+    const finalChannelLink =
+      channelLink.trim() ||
+      (currentUser?.channelLink && normalizeHandle(currentUser.tiktokHandle || '') === cleanHandle
+        ? currentUser.channelLink
+        : `https://www.tiktok.com/${cleanHandle}`);
 
     const app: KOCApplication = {
       id: `app-${Date.now()}`,
@@ -164,6 +182,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       phone: currentUser?.phone || '',
       email: currentUser?.email || '',
       tiktokHandle: cleanHandle,
+      channelLink: finalChannelLink,
       followers: followers.trim(),
       followersCount,
       avgViews: avgViews.trim() ? `Avg ${avgViews.trim().replace(/^Avg\s*/i, '')}` : 'Chưa cập nhật',
@@ -208,7 +227,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       rememberFromApplication({
         ...currentUser,
         tiktokHandle: cleanHandle,
-        channelLink,
+        channelLink: finalChannelLink,
         followers: followers.trim(),
         avgViews: avgViews.trim(),
         monthlyOrders: monthlyOrders.trim(),
@@ -361,7 +380,25 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       {step === 1 && (
         <div className="space-y-4">
           <Field label="ID TikTok" required>
-            {(id) => <TikTokHandleInput id={id} value={handle} onChange={setHandle} />}
+            {(id) => <TikTokHandleInput id={id} value={handle} onChange={handleHandleChange} />}
+          </Field>
+
+          <Field label="Link kênh TikTok" hint="Link trang cá nhân TikTok của bạn để Brand duyệt nhanh hơn">
+            {(id) => (
+              <div className="relative">
+                <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">
+                  link
+                </span>
+                <input
+                  id={id}
+                  type="url"
+                  value={channelLink}
+                  onChange={(e) => setChannelLink(e.target.value)}
+                  placeholder="https://www.tiktok.com/@username"
+                  className={cx(inputClass, 'pl-9')}
+                />
+              </div>
+            )}
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
