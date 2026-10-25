@@ -28,9 +28,22 @@ export const CampaignPage: React.FC = () => {
   }
 
   const isBookmarked = bookmarkedIds.includes(campaign.id);
+  const scarcity = getScarcity(campaign);
+
+  React.useEffect(() => {
+    if (scarcity.isFull) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('kocity:drone-speak', { detail: { text: 'Oh no hết suất rồi!' } }));
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [campaign.id, scarcity.isFull]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-3 pb-32 sm:px-6 sm:pt-6 lg:pb-10">
+    <div
+      data-campaign-full={scarcity.isFull ? 'true' : 'false'}
+      className="mx-auto max-w-6xl px-4 pt-3 pb-32 sm:px-6 sm:pt-6 lg:pb-10"
+    >
       <div className="flex items-center justify-between">
         <Link to={ROUTES.home} className="inline-flex h-10 items-center gap-1 rounded-xl pr-3 text-sm font-semibold text-slate-600 hover:text-slate-900">
           <Icon name="arrow_back" className="text-[20px]" /> Khám phá
@@ -377,6 +390,7 @@ const ApplyButton: React.FC<{ campaign: Campaign; className?: string }> = ({ cam
 
   const handleApply = () => {
     if (s.isFull) {
+      window.dispatchEvent(new CustomEvent('kocity:drone-speak', { detail: { text: 'Oh no hết suất rồi!' } }));
       showToast(
         'Chiến dịch đã đủ số lượng KOC (100/100)',
         'Chiến dịch này đã nhận đủ suất. Bạn hãy khám phá các chiến dịch hấp dẫn khác đang mở nhé!',

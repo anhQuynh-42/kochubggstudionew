@@ -22,6 +22,7 @@ export const DeliveryDroneAssistant: React.FC = () => {
   const lastSpeakTimeRef = useRef<number>(0);
   const targetPosRef = useRef({ x: -100, y: -100 });
   const animFrameRef = useRef<number | null>(null);
+  const hoveredCardRef = useRef<Element | null>(null);
 
   // Nhận biết thiết bị di động
   useEffect(() => {
@@ -33,10 +34,23 @@ export const DeliveryDroneAssistant: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Hàm phát câu thoại ngẫu nhiên (có giãn cách tối thiểu 4 giây giữa các lần)
-  const triggerSpeech = (customText?: string) => {
+  // Lắng nghe sự kiện kích hoạt câu thoại riêng cho Drone (ví dụ: bấm vào chiến dịch đã đủ suất)
+  useEffect(() => {
+    const handleDroneSpeak = (e: Event) => {
+      const customEvent = e as CustomEvent<{ text?: string }>;
+      if (customEvent.detail?.text) {
+        triggerSpeech(customEvent.detail.text, true);
+      }
+    };
+
+    window.addEventListener('kocity:drone-speak', handleDroneSpeak);
+    return () => window.removeEventListener('kocity:drone-speak', handleDroneSpeak);
+  }, []);
+
+  // Hàm phát câu thoại (có giãn cách tối thiểu 3.5 giây giữa các lần tự động, nhưng force thì phát ngay)
+  const triggerSpeech = (customText?: string, force = false) => {
     const now = Date.now();
-    if (now - lastSpeakTimeRef.current < 4000) return;
+    if (!force && now - lastSpeakTimeRef.current < 3500) return;
     lastSpeakTimeRef.current = now;
 
     const chosen = customText || SHORT_MESSAGES[Math.floor(Math.random() * SHORT_MESSAGES.length)];
@@ -46,7 +60,7 @@ export const DeliveryDroneAssistant: React.FC = () => {
     if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     hideTimeoutRef.current = setTimeout(() => {
       setIsSpeaking(false);
-    }, 3200);
+    }, 3400);
   };
 
   // 1. Desktop: Drone bay mềm mại theo con trỏ chuột khi hover qua thẻ chiến dịch
@@ -61,16 +75,19 @@ export const DeliveryDroneAssistant: React.FC = () => {
       const card = target?.closest('article, .campaign-card, [data-campaign-card]');
 
       if (card) {
+        const isFull = card.getAttribute('data-campaign-full') === 'true';
         const rect = card.getBoundingClientRect();
         targetPosRef.current = {
           x: Math.min(window.innerWidth - 90, rect.right - 40),
           y: Math.max(70, rect.top - 30),
         };
-        if (!isHoveringCard) {
+        if (hoveredCardRef.current !== card) {
+          hoveredCardRef.current = card;
           setIsHoveringCard(true);
-          triggerSpeech('Job ngon kìa bạn ơi!');
+          triggerSpeech(isFull ? 'Oh no hết suất rồi!' : 'Job ngon kìa bạn ơi!', isFull);
         }
       } else {
+        hoveredCardRef.current = null;
         // Trôi nhẹ nhàng sau chuột với độ lệch tự nhiên
         targetPosRef.current = {
           x: Math.min(window.innerWidth - 90, e.clientX + 25),
@@ -95,7 +112,7 @@ export const DeliveryDroneAssistant: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isMobile, isHoveringCard]);
+  }, [isMobile]);
 
   // 2. Mobile & Desktop Scroll: Lắng nghe lướt màn hình
   useEffect(() => {
@@ -141,6 +158,8 @@ export const DeliveryDroneAssistant: React.FC = () => {
     );
   }
 
+  const isOutOfSpots = message.toLowerCase().includes('hết suất');
+
   // GIAO DIỆN TRÊN ĐIỆN THOẠI (Mobile): Cố định nổi ở góc trái dưới, không che nút Zalo
   if (isMobile) {
     return (
@@ -151,7 +170,9 @@ export const DeliveryDroneAssistant: React.FC = () => {
         >
           {/* Bong bóng thoại câu ngắn (Thuần chữ, KHÔNG ICON) */}
           <div
-            className={`absolute bottom-full left-0 mb-2 whitespace-nowrap rounded-2xl bg-slate-900/95 px-3.5 py-1.5 text-xs font-bold text-white shadow-xl backdrop-blur-md border border-white/10 transition-all duration-300 ${
+            className={`absolute bottom-full left-0 mb-2 whitespace-nowrap rounded-2xl bg-slate-900/95 px-3.5 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md transition-all duration-300 ${
+              isOutOfSpots ? 'border border-amber-400/50 text-amber-200' : 'border border-white/10 text-white'
+            } ${
               isSpeaking ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-90 translate-y-2 pointer-events-none'
             }`}
           >
@@ -192,7 +213,9 @@ export const DeliveryDroneAssistant: React.FC = () => {
       <div className="relative pointer-events-auto group">
         {/* Bong bóng thoại câu ngắn (Thuần chữ, KHÔNG ICON) */}
         <div
-          className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap rounded-2xl bg-slate-950/95 px-4 py-2 text-xs font-bold text-white shadow-2xl backdrop-blur-md border border-white/15 transition-all duration-300 ${
+          className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap rounded-2xl bg-slate-950/95 px-4 py-2 text-xs font-bold shadow-2xl backdrop-blur-md transition-all duration-300 ${
+            isOutOfSpots ? 'border border-amber-400/50 text-amber-200' : 'border border-white/15 text-white'
+          } ${
             isSpeaking ? 'opacity-100 scale-100 -translate-y-1' : 'opacity-0 scale-85 translate-y-2 pointer-events-none'
           }`}
         >

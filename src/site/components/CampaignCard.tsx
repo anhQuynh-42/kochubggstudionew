@@ -42,6 +42,7 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
   const handleApplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (scarcity.isFull) {
+      window.dispatchEvent(new CustomEvent('kocity:drone-speak', { detail: { text: 'Oh no hết suất rồi!' } }));
       showToast(
         'Chiến dịch đã đủ số lượng KOC (100/100)',
         'Chiến dịch này đã nhận đủ suất. Bạn hãy khám phá các chiến dịch hấp dẫn khác đang mở nhé!',
@@ -54,6 +55,8 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign: c, isBookm
 
   return (
     <article
+      data-campaign-card
+      data-campaign-full={scarcity.isFull ? 'true' : 'false'}
       onClick={handleCardClick}
       className={cx(
         'card-fx group flex flex-col rounded-[28px] transition-all duration-300 cursor-pointer',
