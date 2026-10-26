@@ -186,7 +186,7 @@ export const ProcessPage: React.FC = () => {
           <h2 className="font-display text-xl font-extrabold sm:text-2xl md:text-3xl">
             {tab === 'koc' ? 'Sẵn sàng nhận mẫu 0đ đầu tiên?' : 'Sẵn sàng bùng nổ doanh số TikTok Shop?'}
           </h2>
-          <p className="mx-auto mt-2 max-w-xl text-xs text-white/90 sm:text-sm">
+          <p className="mx-auto mt-2 max-w-xl text-xs sm:text-sm text-white/95 leading-relaxed font-medium">
             {tab === 'koc'
               ? 'Hàng trăm chiến dịch mở từ các thương hiệu lớn đang chờ bạn. Đăng ký chỉ 1 phút, nhận mẫu về tận tay!'
               : 'Tiếp cận mạng lưới hơn 850+ Nano & Micro KOC chất lượng cao, phủ sóng sản phẩm và đo lường GMV minh bạch.'}
@@ -195,37 +195,39 @@ export const ProcessPage: React.FC = () => {
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             {tab === 'koc' ? (
               <>
-                <Button
-                  variant="dark"
-                  size="lg"
-                  className="rounded-full bg-white text-slate-900 hover:bg-slate-100 shadow-md px-6 sm:px-7"
+                <button
+                  type="button"
                   onClick={() => navigate(`${ROUTES.home}#mau-dang-mo`)}
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-black text-slate-950 shadow-lg shadow-black/15 hover:bg-slate-50 hover:text-[#6d28d9] transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
-                  Khám phá mẫu 0đ ngay
-                </Button>
+                  <Icon name="redeem" className="text-[18px] text-[#7c3aed]" />
+                  <span>Khám phá mẫu 0đ ngay</span>
+                </button>
                 <a
                   href={ZALO_GROUP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-white/20 px-6 font-semibold text-white backdrop-blur hover:bg-white/30 text-sm"
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-[#0068ff] px-6 text-sm font-bold text-white shadow-lg shadow-blue-900/30 hover:bg-blue-600 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
-                  Vào nhóm Zalo KOC <Icon name="arrow_outward" className="text-[18px]" />
+                  <span>Vào nhóm Zalo KOC</span>
+                  <Icon name="arrow_outward" className="text-[18px]" />
                 </a>
               </>
             ) : (
               <>
                 <a
                   href={BRAND_CONTACT.hotlineHref}
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 font-bold text-slate-900 shadow-md hover:bg-slate-100 text-sm"
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-black text-slate-950 shadow-lg shadow-black/15 hover:bg-slate-50 hover:text-[#6d28d9] transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
                   <Icon name="phone" className="text-[18px] text-[#7c3aed]" />
-                  Hotline: {BRAND_CONTACT.hotline}
+                  <span>Hotline: {BRAND_CONTACT.hotline}</span>
                 </a>
                 <a
                   href={`mailto:${BRAND_CONTACT.email}`}
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-white/20 px-6 font-semibold text-white backdrop-blur hover:bg-white/30 text-sm"
+                  className="inline-flex h-12 items-center gap-2 rounded-full border-2 border-white/80 bg-white/15 px-6 text-sm font-bold text-white backdrop-blur-md shadow-md hover:bg-white hover:text-slate-900 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
-                  Email: {BRAND_CONTACT.email} <Icon name="mail" className="text-[18px]" />
+                  <span>Email: {BRAND_CONTACT.email}</span>
+                  <Icon name="mail" className="text-[18px]" />
                 </a>
               </>
             )}
