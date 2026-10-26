@@ -53,6 +53,7 @@ interface AppDataValue {
   currentUser: KOCUser | null;
   isAdmin: boolean;
   campaigns: Campaign[];
+  isCloudSynced: boolean;
   applications: KOCApplication[];
   myApplications: KOCApplication[];
   notifications: AppNotification[];
@@ -196,6 +197,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return kocityHeroStudio;
     }
   });
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [publicMediaKit, setPublicMediaKit] = useState<PublicMediaKitPayload | null>(null);
   const [adminTargetSubTab, setAdminTargetSubTab] = useState<AdminSubTab | undefined>(undefined);
@@ -220,7 +222,14 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!isSupabaseConfigured()) return;
 
     getCampaignsFromSupabase().then((data) => {
-      if (!data || data.length === 0) return;
+      if (!data) return;
+      setIsCloudSynced(true);
+
+      // Nếu Cloud trả về mảng rỗng (toàn bộ chiến dịch đã bị xóa), phản ánh trung thực lên giao diện
+      if (data.length === 0) {
+        setCampaigns([]);
+        return;
+      }
 
       // Ưu tiên kết hợp dữ liệu đã chỉnh sửa từ localStorage để không bị đè mất
       const localSaved = readJSON<Campaign[]>('koctrend_campaigns', INITIAL_CAMPAIGNS);
@@ -696,6 +705,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     currentUser,
     isAdmin: currentUser?.role === 'admin',
     campaigns,
+    isCloudSynced,
     applications,
     myApplications,
     notifications,

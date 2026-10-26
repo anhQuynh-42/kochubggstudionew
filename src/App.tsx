@@ -77,6 +77,7 @@ const AdminRoute: React.FC = () => {
         onClearInitialEditingCampaign={() => data.setEditingCampaignFromExternal(null)}
         initialTab={data.adminTargetSubTab}
         onClearInitialTab={() => data.setAdminTargetSubTab(undefined)}
+        isCloudSynced={data.isCloudSynced}
       />
       <ToastHost />
     </AdminSecurityGate>

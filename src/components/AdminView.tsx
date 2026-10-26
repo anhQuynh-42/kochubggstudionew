@@ -47,6 +47,7 @@ interface AdminViewProps {
   onClearInitialEditingCampaign?: () => void;
   initialTab?: 'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog';
   onClearInitialTab?: () => void;
+  isCloudSynced?: boolean;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -61,6 +62,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onClearInitialEditingCampaign,
   initialTab,
   onClearInitialTab,
+  isCloudSynced,
 }) => {
   // Navigation inside Admin (Sidebar Tab)
   const [activeAdminTab, setActiveAdminTab] = useState<
@@ -2140,11 +2142,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <span className="text-blue-600 font-bold">{getTabTitle()}</span>
               {isSupabaseConfigured() && (
                 <span
-                  title="Đã kết nối cơ sở dữ liệu Supabase đám mây"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700 ml-1 shadow-2xs"
+                  title={isCloudSynced ? "Đã kết nối và đồng bộ thời gian thực với Cloud CSDL" : "Đang kiểm tra kết nối Cloud..."}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ml-1 shadow-2xs transition-all ${
+                    isCloudSynced
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                      : 'bg-amber-50 border border-amber-200 text-amber-700'
+                  }`}
                 >
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                  Supabase Đã Kết Nối
+                  <span className={`h-2 w-2 rounded-full ${isCloudSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-ping'}`}></span>
+                  <span>Cloud Sync: {isCloudSynced ? `🟢 ${campaigns.length} chiến dịch · Realtime` : '🟡 Đang kết nối...'}</span>
                 </span>
               )}
             </div>
