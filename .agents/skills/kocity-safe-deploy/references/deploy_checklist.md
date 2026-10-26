@@ -27,14 +27,17 @@
   - **Bắt buộc kiểm tra màu chữ (`text-*`) trên màu nền (`bg-*`)**: Tuyệt đối không để xảy ra lỗi chữ trắng trên nền trắng hoặc chữ đen trên nền tối.
   - Tránh xung đột class CSS khi gán đè class lên component (ví dụ gán `bg-white text-slate-900` đè lên component `variant="dark"` có sẵn `text-white`).
   - Đảm bảo độ tương phản đạt chuẩn WCAG AAA (≥ 7:1 cho văn bản và ≥ 4.5:1 cho nút bấm lớn).
-- [ ] **Chốt chặn 7: Kiểm tra Đồng bộ Đa thiết bị & Đa vai trò (Cross-Device & Cross-Role Sync)**
-  - **Mobile ↔ Laptop:** Giao diện trên điện thoại di động (375px - 414px) và máy tính (1280px - 1512px) đều hiển thị thoáng đãng, không bị tràn viền, không vỡ layout, chạm nút dễ dàng.
+- [ ] **Chốt chặn 7: Kiểm tra Đồng bộ Đa thiết bị & Zero Silent Failure (Cross-Device Sync & Schema Gate)**
+  - **Chạy tự động:** Bắt buộc chạy `npm run check:sync` đạt exit code 0 (chứng thực kết nối Supabase, schema bảng `applications` và bảo toàn avatar 100%).
+  - **Mobile ↔ Laptop:** Tài khoản KOC, ảnh đại diện, đơn nhận mẫu và chiến dịch phải đồng nhất 100% giữa Điện thoại và Máy tính qua Supabase Cloud.
+  - **Zero Silent Failure:** Tuyệt đối không được chỉ lưu cục bộ ở `localStorage` của một thiết bị mà bỏ qua lỗi ghi lên Cloud.
   - **KOC ↔ Admin:** Bất kỳ thay đổi nào về tên bước tiến trình, trạng thái đơn, nhãn chiến dịch đều phải được đồng bộ chính xác giữa màn hình KOC và bộ lọc/bảng quản trị Admin.
   - **Supabase Realtime:** Đảm bảo dữ liệu phát sinh (nộp đơn, duyệt KOC, đổi ảnh) được ghi nhận chuẩn xác lên cơ sở dữ liệu đám mây Supabase mà không bị lỗi PGRST hay nghẽn payload.
 
 ---
 
 ## 2. Kiểm tra trước khi Commit (Pre-Commit Gates)
+- [ ] `npm run check:sync` chạy thành công 100% với exit code 0.
 - [ ] `npm run build` chạy thành công 100% với exit code 0.
 - [ ] TypeScript strict: không có lỗi `any` bừa bãi hay kiểu dữ liệu không khớp.
 - [ ] Commit message viết bằng tiếng Việt chuẩn theo quy ước:
