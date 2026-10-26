@@ -23,6 +23,14 @@
 - [ ] **Chốt chặn 5: Giới hạn phạm vi Git Diff**
   - Chạy `git diff --stat`: chỉ có các file phục vụ đúng yêu cầu mới được sửa đổi.
   - Không có file rác, file nháp hay API key bí mật bị đưa vào Git.
+- [ ] **Chốt chặn 6: Kiểm tra Tương phản Thị giác & Xung đột CSS (Visual & Contrast Gate)**
+  - **Bắt buộc kiểm tra màu chữ (`text-*`) trên màu nền (`bg-*`)**: Tuyệt đối không để xảy ra lỗi chữ trắng trên nền trắng hoặc chữ đen trên nền tối.
+  - Tránh xung đột class CSS khi gán đè class lên component (ví dụ gán `bg-white text-slate-900` đè lên component `variant="dark"` có sẵn `text-white`).
+  - Đảm bảo độ tương phản đạt chuẩn WCAG AAA (≥ 7:1 cho văn bản và ≥ 4.5:1 cho nút bấm lớn).
+- [ ] **Chốt chặn 7: Kiểm tra Đồng bộ Đa thiết bị & Đa vai trò (Cross-Device & Cross-Role Sync)**
+  - **Mobile ↔ Laptop:** Giao diện trên điện thoại di động (375px - 414px) và máy tính (1280px - 1512px) đều hiển thị thoáng đãng, không bị tràn viền, không vỡ layout, chạm nút dễ dàng.
+  - **KOC ↔ Admin:** Bất kỳ thay đổi nào về tên bước tiến trình, trạng thái đơn, nhãn chiến dịch đều phải được đồng bộ chính xác giữa màn hình KOC và bộ lọc/bảng quản trị Admin.
+  - **Supabase Realtime:** Đảm bảo dữ liệu phát sinh (nộp đơn, duyệt KOC, đổi ảnh) được ghi nhận chuẩn xác lên cơ sở dữ liệu đám mây Supabase mà không bị lỗi PGRST hay nghẽn payload.
 
 ---
 
@@ -37,7 +45,15 @@
 
 ---
 
-## 3. Kiểm tra thực tế trên Production (Post-Deploy Verification)
+## 3. Bắt buộc Báo cáo Kết quả Đồng bộ khi Bàn giao (Mandatory Sign-off)
+Mỗi lần AI hoàn thành yêu cầu sửa từ người dùng, trong câu trả lời bắt buộc phải xác nhận 3 tiêu chí:
+1. ✓ **Tương phản thị giác:** Đã soát màu chữ và màu nền, nút bấm hiển thị sắc nét, không xung đột CSS.
+2. ✓ **Đồng bộ thiết bị:** Hiển thị chuẩn trên cả Mobile và Laptop/PC.
+3. ✓ **Đồng bộ hệ thống:** Dữ liệu khớp chuẩn giữa tài khoản KOC, bảng Admin và CSDL Supabase.
+
+---
+
+## 4. Kiểm tra thực tế trên Production (Post-Deploy Verification)
 - [ ] Truy cập `https://www.kocity.io.vn/`:
   - Trang chủ tải mượt mà dưới 2 giây.
   - Mọi chức năng chính hoạt động ổn định trên cả máy tính và điện thoại di động.

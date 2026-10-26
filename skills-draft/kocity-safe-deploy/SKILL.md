@@ -32,13 +32,15 @@ Your highest responsibility is to guarantee:
 - Always inspect `git diff --stat` and `git status -s` before staging.
 - **Rule:** Only modify the exact files and lines required for the user's specific request. Never make incidental or unrequested changes across unrelated modules.
 
-### Rule 3: The 5-Pillar Regression Gate (Bắt buộc kiểm tra trước khi bàn giao)
-Before notifying the user that a task is finished, you **MUST** run a quick check across the 5 core pillars of KOCity:
+### Rule 3: The 7-Pillar Regression, Visual & Sync Gate (Bắt buộc kiểm tra trước khi bàn giao)
+Before notifying the user that a task is finished, you **MUST** run a quick check across the 7 core pillars of KOCity:
 1. 🔍 **Trang chủ & Blog:** 5 bài viết chuẩn SEO đầy đủ, mây che úp mở hoạt động, widget Zalo hiển thị.
 2. 🔍 **Form nhận mẫu:** Đúng 2 bước tinh gọn, có ô nhập *Số đơn/tháng* và *GMV trung bình tháng*.
 3. 🔍 **Quản trị Admin:** Vào được `/admin`, danh sách chiến dịch, duyệt ứng viên, trình soạn thảo Blog WYSIWYG hoạt động bình thường.
 4. 🔍 **Data Integrity:** Dữ liệu vẫn còn nguyên vẹn sau khi F5 (Reload) trang web.
 5. 🔍 **Build & Deploy:** `npm run build` hoàn thành với exit code 0; push Git với commit message tiếng Việt chuẩn.
+6. 🔍 **Tương phản Thị giác & Nút bấm:** Soát kỹ màu chữ và màu nền (`text-*` vs `bg-*`), không để xung đột CSS gây lỗi chữ trắng trên nền trắng, tương phản sắc nét chuẩn WCAG AAA.
+7. 🔍 **Đồng bộ Đa thiết bị & Đa vai trò:** Giao diện hoàn hảo trên cả Mobile (375px) và Laptop (1440px); nhãn tiến trình và trạng thái khớp 100% giữa tài khoản KOC, bảng Admin và Supabase.
 
 Full reference: See [deploy_checklist.md](references/deploy_checklist.md) and [regression_safeguards.md](references/regression_safeguards.md).
 
