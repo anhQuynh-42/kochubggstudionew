@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAppData } from '../state/AppDataContext';
 import { BRAND_CONTACT, ROUTES, SOCIAL_LINKS, ZALO_GROUP_URL } from '../lib/constants';
+import { NOTIFICATION_ICON } from '../lib/notifications';
 import { useSiteUI } from './SiteUI';
 import { Avatar, Button, Icon, cx } from './ui';
 import { DeliveryDroneAssistant } from './components/DeliveryDroneAssistant';
@@ -52,23 +53,47 @@ const Logo: React.FC = () => (
 );
 
 const TopBar: React.FC = () => {
-  const { currentUser, isAdmin, unreadCount, myApplications, signOut } = useAppData();
+  const {
+    currentUser,
+    isAdmin,
+    unreadCount,
+    visibleNotifications,
+    markNotificationRead,
+    markAllNotificationsRead,
+    setAdminTargetSubTab,
+    myApplications,
+    signOut,
+  } = useAppData();
   const { openAuth } = useSiteUI();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!menuOpen) return;
-    const close = (e: MouseEvent) => menuRef.current && !menuRef.current.contains(e.target as Node) && setMenuOpen(false);
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    if (!menuOpen && !notifDropdownOpen) return;
+    const close = (e: MouseEvent) => {
+      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+      if (notifDropdownOpen && notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifDropdownOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setNotifDropdownOpen(false);
+      }
+    };
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', onKey);
     };
-  }, [menuOpen]);
+  }, [menuOpen, notifDropdownOpen]);
 
   const badgeFor = (to: string) => (to === ROUTES.myApplications ? myApplications.length : to === ROUTES.notifications ? unreadCount : 0);
 
@@ -124,21 +149,116 @@ const TopBar: React.FC = () => {
             </form>
           )}
 
-          {/* Nút chuông thông báo */}
-          {!isAdmin && (
-            <Link
-              to={ROUTES.notifications}
-              aria-label={`Thông báo${unreadCount ? ` (${unreadCount} chưa đọc)` : ""}`}
-              className="relative hidden h-10 w-10 items-center justify-center rounded-full text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 md:flex"
+          {/* Nút chuông thông báo (hiển thị trên cả Mobile và Máy tính cho KOC lẫn Admin) */}
+          <div ref={notifRef} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.innerWidth < 768) {
+                  navigate(ROUTES.notifications);
+                } else {
+                  setNotifDropdownOpen((v) => !v);
+                }
+              }}
+              aria-label={`Thông báo${unreadCount ? ` (${unreadCount} chưa đọc)` : ''}`}
+              className={cx(
+                "relative flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 transition-all cursor-pointer",
+                unreadCount > 0 && "text-[#7c3aed] ring-purple-200 bg-purple-50/50"
+              )}
             >
-              <Icon name="notifications" className="text-[22px]" />
+              <Icon
+                name="notifications"
+                className={cx("text-[20px] md:text-[22px]", unreadCount > 0 && "animate-pulse")}
+              />
               {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ec4899] px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                  {unreadCount}
+                <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ec4899] px-1 text-[10px] font-bold text-white ring-2 ring-white shadow-xs">
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
-            </Link>
-          )}
+            </button>
+
+            {/* Menu xem nhanh thông báo trên Desktop */}
+            {notifDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white p-3 shadow-2xl ring-1 ring-slate-200 z-50">
+                <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">Thông báo</span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-[#ec4899]/10 text-[#ec4899] px-2 py-0.5 text-[11px] font-bold">
+                        {unreadCount} mới
+                      </span>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => markAllNotificationsRead()}
+                      className="text-xs font-semibold text-[#7c3aed] hover:underline cursor-pointer"
+                    >
+                      Đọc tất cả
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-80 overflow-y-auto space-y-1.5 py-1">
+                  {visibleNotifications.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      <Icon name="notifications_off" className="text-[28px] mx-auto mb-1 opacity-50" />
+                      Chưa có thông báo nào
+                    </div>
+                  ) : (
+                    visibleNotifications.slice(0, 5).map((n) => {
+                      const style = NOTIFICATION_ICON[n.type] || NOTIFICATION_ICON.campaign;
+                      return (
+                        <button
+                          key={n.id}
+                          type="button"
+                          onClick={() => {
+                            markNotificationRead(n.id);
+                            setNotifDropdownOpen(false);
+                            if (n.adminSubTab) setAdminTargetSubTab(n.adminSubTab);
+                            if (n.linkTab === 'admin') navigate(ROUTES.admin);
+                            else if (n.linkTab === 'my-campaigns') navigate(ROUTES.myApplications);
+                            else if (n.linkTab === 'profile') navigate(ROUTES.profile);
+                            else if (n.linkTab === 'marketplace') navigate(ROUTES.home);
+                          }}
+                          className={cx(
+                            "flex w-full items-start gap-2.5 rounded-xl p-2.5 text-left transition-colors cursor-pointer",
+                            n.read ? "bg-white hover:bg-slate-50" : "bg-violet-50/70 hover:bg-violet-100/60"
+                          )}
+                        >
+                          <span className={cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", style.className)}>
+                            <Icon name={style.icon} className="text-[16px]" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="text-xs font-semibold text-slate-900 truncate">{n.title}</p>
+                              {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-[#ec4899] shrink-0" />}
+                            </div>
+                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 leading-snug">{n.message}</p>
+                            <span className="text-[10px] text-slate-400 mt-1 block">{n.time}</span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="pt-2 mt-2 border-t border-slate-100 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotifDropdownOpen(false);
+                      navigate(ROUTES.notifications);
+                    }}
+                    className="text-xs font-bold text-[#7c3aed] hover:underline cursor-pointer"
+                  >
+                    Xem tất cả thông báo →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {isAdmin && (
             <Button variant="soft" size="sm" onClick={() => navigate(ROUTES.admin)}>

@@ -48,6 +48,9 @@ interface AdminViewProps {
   initialTab?: 'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog';
   onClearInitialTab?: () => void;
   isCloudSynced?: boolean;
+  notifications?: AppNotification[];
+  onMarkNotificationRead?: (id: string) => void;
+  onMarkAllNotificationsRead?: () => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -63,6 +66,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   initialTab,
   onClearInitialTab,
   isCloudSynced,
+  notifications = [],
+  onMarkNotificationRead,
+  onMarkAllNotificationsRead,
 }) => {
   // Navigation inside Admin (Sidebar Tab)
   const [activeAdminTab, setActiveAdminTab] = useState<
@@ -82,6 +88,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Mobile sidebar drawer state
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Admin Notification Bell states
+  const [isAdminNotifOpen, setIsAdminNotifOpen] = useState(false);
+  const adminNotifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isAdminNotifOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (adminNotifRef.current && !adminNotifRef.current.contains(e.target as Node)) {
+        setIsAdminNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isAdminNotifOpen]);
+
+  const pendingAppsCount = useMemo(() => applications.filter((a) => a.status === 'Chờ duyệt').length, [applications]);
+  const pendingVideosCount = useMemo(() => applications.filter((a) => a.status === 'Chờ duyệt video').length, [applications]);
+  const adminUnreadNotifs = useMemo(() => (notifications || []).filter((n) => n.targetRole === 'admin' && !n.read), [notifications]);
+  const totalAdminAlerts = pendingAppsCount + pendingVideosCount + adminUnreadNotifs.length;
 
   // Filter & Search states for Applications
   const [appSearch, setAppSearch] = useState('');
@@ -2158,6 +2184,139 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            {/* Chuông Thông Báo Admin */}
+            <div ref={adminNotifRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsAdminNotifOpen(!isAdminNotifOpen)}
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                  totalAdminAlerts > 0
+                    ? 'text-purple-700 bg-purple-50/80 border-purple-200'
+                    : 'text-slate-700 bg-white border-slate-200/90 hover:bg-slate-50'
+                }`}
+                title="Bấm để xem các đơn mới và video chờ duyệt"
+              >
+                <span className={`material-symbols-outlined text-[19px] ${totalAdminAlerts > 0 ? 'text-[#7c3aed] animate-pulse' : 'text-slate-500'}`}>
+                  notifications
+                </span>
+                <span className="hidden sm:inline">Chuông báo</span>
+                {totalAdminAlerts > 0 && (
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ec4899] px-1.5 text-[10px] font-extrabold text-white">
+                    {totalAdminAlerts}
+                  </span>
+                )}
+              </button>
+
+              {isAdminNotifOpen && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white p-3 shadow-2xl ring-1 ring-slate-200 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">Trung tâm chuông báo</span>
+                      {totalAdminAlerts > 0 && (
+                        <span className="rounded-full bg-[#ec4899]/10 text-[#ec4899] px-2 py-0.5 text-[10px] font-bold">
+                          {totalAdminAlerts} việc cần xử lý
+                        </span>
+                      )}
+                    </div>
+                    {onMarkAllNotificationsRead && adminUnreadNotifs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onMarkAllNotificationsRead()}
+                        className="text-xs font-semibold text-[#7c3aed] hover:underline cursor-pointer"
+                      >
+                        Đã xem hết
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 py-1 max-h-80 overflow-y-auto">
+                    {/* Mục 1: Đơn ứng tuyển mới */}
+                    <div
+                      onClick={() => {
+                        setActiveAdminTab('applications');
+                        setIsAdminNotifOpen(false);
+                      }}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
+                        pendingAppsCount > 0 ? 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/70' : 'bg-slate-50/50 border-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                          <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">Hồ sơ KOC chờ duyệt</p>
+                          <p className="text-[11px] text-slate-500">{pendingAppsCount > 0 ? `${pendingAppsCount} hồ sơ mới đang chờ bạn duyệt` : 'Đã duyệt hết'}</p>
+                        </div>
+                      </div>
+                      {pendingAppsCount > 0 ? (
+                        <span className="rounded-full bg-amber-500 text-white text-[10px] font-extrabold px-2 py-0.5">
+                          {pendingAppsCount} đơn
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-semibold">0</span>
+                      )}
+                    </div>
+
+                    {/* Mục 2: Video mới nộp chờ nghiệm thu */}
+                    <div
+                      onClick={() => {
+                        setActiveAdminTab('content');
+                        setIsAdminNotifOpen(false);
+                      }}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
+                        pendingVideosCount > 0 ? 'bg-purple-50/70 border-purple-200 hover:bg-purple-100/70' : 'bg-slate-50/50 border-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
+                          <span className="material-symbols-outlined text-[18px]">movie</span>
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">Video KOC nộp chờ nghiệm thu</p>
+                          <p className="text-[11px] text-slate-500">{pendingVideosCount > 0 ? `${pendingVideosCount} video mới cần nghiệm thu` : 'Đã duyệt hết'}</p>
+                        </div>
+                      </div>
+                      {pendingVideosCount > 0 ? (
+                        <span className="rounded-full bg-purple-600 text-white text-[10px] font-extrabold px-2 py-0.5">
+                          {pendingVideosCount} video
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-semibold">0</span>
+                      )}
+                    </div>
+
+                    {/* Danh sách thông báo realtime chi tiết */}
+                    {(notifications || [])
+                      .filter((n) => n.targetRole === 'admin')
+                      .slice(0, 4)
+                      .map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            onMarkNotificationRead?.(n.id);
+                            if (n.adminSubTab) setActiveAdminTab(n.adminSubTab as any);
+                            setIsAdminNotifOpen(false);
+                          }}
+                          className={`flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer text-xs ${
+                            n.read ? 'bg-white hover:bg-slate-50' : 'bg-purple-50/40 hover:bg-purple-100/50'
+                          }`}
+                        >
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                            <span className="material-symbols-outlined text-[14px]">notifications</span>
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-slate-900 truncate">{n.title}</p>
+                            <p className="text-[11px] text-slate-500 line-clamp-1">{n.message}</p>
+                            <span className="text-[10px] text-slate-400">{n.time}</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Menu Xổ Xuống Xuất Dữ Liệu (Gọn gàng & Sang trọng) */}
             <div className="relative">
               <button

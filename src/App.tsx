@@ -78,6 +78,9 @@ const AdminRoute: React.FC = () => {
         initialTab={data.adminTargetSubTab}
         onClearInitialTab={() => data.setAdminTargetSubTab(undefined)}
         isCloudSynced={data.isCloudSynced}
+        notifications={data.notifications}
+        onMarkNotificationRead={data.markNotificationRead}
+        onMarkAllNotificationsRead={data.markAllNotificationsRead}
       />
       <ToastHost />
     </AdminSecurityGate>

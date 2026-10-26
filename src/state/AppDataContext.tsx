@@ -171,9 +171,15 @@ const STATUS_NOTIFICATION: Partial<Record<ApplicationStatus, (a: KOCApplication)
     type: 'approval',
     linkTab: 'my-campaigns',
   }),
+  'Chờ duyệt video': (a) => ({
+    title: `⏳ Video đang chờ nghiệm thu: ${a.campaignName}`,
+    message: `Video cho đơn ${a.code} đã được nộp thành công và đang chờ Quản trị viên duyệt nghiệm thu.`,
+    type: 'delivery',
+    linkTab: 'my-campaigns',
+  }),
   'Từ chối': (a) => ({
-    title: `Kết quả: ${a.campaignName}`,
-    message: `Brand chưa chọn bạn ở đợt này (${a.code}). Còn nhiều chiến dịch khác đang chờ bạn!`,
+    title: `Kết quả xét duyệt: ${a.campaignName}`,
+    message: a.adminFeedback || `Hồ sơ đăng ký (${a.code}) chưa phù hợp với tiêu chí xét duyệt đợt này của Brand. Kocity còn nhiều chiến dịch hấp dẫn khác đang chờ bạn!`,
     type: 'approval',
     linkTab: 'marketplace',
   }),
@@ -299,7 +305,18 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const unsubApps = subscribeToApplicationsRealtime(
       (newApp) => {
         setApplications((prev) => (prev.some((a) => a.id === newApp.id) ? prev : [newApp, ...prev]));
-        // Chỉ Admin mới được báo có đơn mới (không lộ tên KOC khác cho người dùng thường)
+        // Tạo thông báo cho Admin vào chuông báo
+        pushNotification({
+          id: `admin-notif-app-${newApp.id}`,
+          title: `Hồ sơ KOC mới: ${newApp.kocName}`,
+          message: `KOC ${newApp.tiktokHandle} vừa nộp đơn đăng ký cho chiến dịch "${newApp.campaignName}".`,
+          time: 'Vừa xong',
+          read: false,
+          type: 'approval',
+          targetRole: 'admin',
+          linkTab: 'admin',
+          adminSubTab: 'applications',
+        });
         if (currentUserRef.current?.role === 'admin') {
           showToast('Đơn ứng tuyển mới!', `${newApp.kocName} vừa nộp đơn ${newApp.campaignName}`, 'info');
         }
@@ -307,6 +324,29 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       (updatedApp) => {
         setApplications((prev) => {
           const old = prev.find((a) => a.id === updatedApp.id);
+
+          // 1. Thông báo cho Admin khi KOC nộp video nghiệm thu
+          if (
+            (updatedApp.status === 'Chờ duyệt video' && old?.status !== 'Chờ duyệt video') ||
+            (updatedApp.videoLink && updatedApp.videoLink !== old?.videoLink)
+          ) {
+            pushNotification({
+              id: `admin-notif-video-${updatedApp.id}-${Date.now()}`,
+              title: `Video mới cần duyệt: ${updatedApp.kocName}`,
+              message: `KOC ${updatedApp.tiktokHandle} vừa nộp video cho chiến dịch "${updatedApp.campaignName}".`,
+              time: 'Vừa xong',
+              read: false,
+              type: 'delivery',
+              targetRole: 'admin',
+              linkTab: 'admin',
+              adminSubTab: 'content',
+            });
+            if (currentUserRef.current?.role === 'admin') {
+              showToast('Video mới cần duyệt!', `${updatedApp.kocName} vừa nộp link video`, 'info');
+            }
+          }
+
+          // 2. Thông báo cho KOC khi Admin cập nhật trạng thái đơn
           if (old && old.status !== updatedApp.status) {
             const build = STATUS_NOTIFICATION[updatedApp.status];
             if (build) {
@@ -329,6 +369,34 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
               if (me && me.role !== 'admin' && isOwnApplication(updatedApp, me)) showToast(n.title, n.message, 'success');
             }
           }
+
+          // 3. Thông báo cho KOC khi bưu tá đã phát hàng thành công
+          if (
+            updatedApp.shippingStatus === 'Đã phát thành công' &&
+            old?.shippingStatus !== 'Đã phát thành công' &&
+            updatedApp.status !== 'Đã hoàn thành' &&
+            updatedApp.status !== 'Đã lên bài'
+          ) {
+            pushNotification({
+              id: `koc-realtime-delivered-${updatedApp.id}`,
+              title: `📦 Quà mẫu đã giao thành công: ${updatedApp.campaignName}`,
+              message: `Bưu tá đã phát thành công sản phẩm mẫu cho hồ sơ (${updatedApp.code}). Bạn hãy mở hộp và quay video nhé!`,
+              time: 'Vừa xong',
+              read: false,
+              type: 'delivery',
+              targetRole: 'koc',
+              targetKocId: updatedApp.kocId,
+              targetTiktokHandle: updatedApp.tiktokHandle,
+              targetPhone: updatedApp.phone,
+              targetEmail: updatedApp.email,
+              linkTab: 'my-campaigns',
+            });
+            const me = currentUserRef.current;
+            if (me && me.role !== 'admin' && isOwnApplication(updatedApp, me)) {
+              showToast('Quà mẫu đã giao!', `Đã phát thành công mẫu ${updatedApp.campaignName}`, 'success');
+            }
+          }
+
           return prev.map((a) => (a.id === updatedApp.id ? { ...a, ...updatedApp } : a));
         });
       }
@@ -468,6 +536,45 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
           return Array.from(map.values());
         });
+
+        // TỰ ĐỘNG ĐỐI CHIẾU CHUÔNG ADMIN: Đảm bảo các đơn đang "Chờ duyệt" hoặc "Chờ duyệt video" luôn hiện trong chuông Admin
+        setNotifications((prevNotifs) => {
+          const newNotifs = [...prevNotifs];
+          cloudApps.forEach((app) => {
+            if (app.status === 'Chờ duyệt') {
+              const notifId = `admin-notif-app-${app.id}`;
+              if (!newNotifs.some((n) => n.id === notifId)) {
+                newNotifs.unshift({
+                  id: notifId,
+                  title: `Hồ sơ KOC mới: ${app.kocName}`,
+                  message: `KOC ${app.tiktokHandle} nộp hồ sơ nhận mẫu cho chiến dịch "${app.campaignName}".`,
+                  time: app.createdAtTime ? `${app.createdAtTime} ${app.createdAtDate || ''}`.trim() : 'Gần đây',
+                  read: false,
+                  type: 'approval',
+                  targetRole: 'admin',
+                  linkTab: 'admin',
+                  adminSubTab: 'applications',
+                });
+              }
+            } else if (app.status === 'Chờ duyệt video' && app.videoLink) {
+              const notifId = `admin-notif-video-${app.id}`;
+              if (!newNotifs.some((n) => n.id === notifId)) {
+                newNotifs.unshift({
+                  id: notifId,
+                  title: `Video mới cần duyệt: ${app.kocName}`,
+                  message: `KOC ${app.tiktokHandle} đã nộp video cho chiến dịch "${app.campaignName}".`,
+                  time: 'Gần đây',
+                  read: false,
+                  type: 'delivery',
+                  targetRole: 'admin',
+                  linkTab: 'admin',
+                  adminSubTab: 'content',
+                });
+              }
+            }
+          });
+          return newNotifs;
+        });
       });
     } else if (currentUser.tiktokHandle) {
       getMyApplicationsFromSupabase(currentUser.tiktokHandle).then((cloudApps) => {
@@ -484,6 +591,40 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
           });
           return Array.from(map.values());
+        });
+
+        // TỰ ĐỘNG ĐỐI CHIẾU CHUÔNG KOC: Nếu Admin duyệt/gửi hàng khi KOC offline, chuông KOC tự động hiện đầy đủ
+        setNotifications((prevNotifs) => {
+          const newNotifs = [...prevNotifs];
+          cloudApps.forEach((app) => {
+            if (app.status && app.status !== 'Chờ duyệt') {
+              const notifId = `koc-reconcile-notif-${app.id}-${app.status}`;
+              const exists = newNotifs.some(
+                (n) => n.id === notifId || n.id === `koc-realtime-notif-${app.id}-${app.status}`
+              );
+              if (!exists) {
+                const build = STATUS_NOTIFICATION[app.status];
+                if (build) {
+                  const n = build(app);
+                  newNotifs.unshift({
+                    id: notifId,
+                    title: n.title,
+                    message: n.message,
+                    time: 'Gần đây',
+                    read: false,
+                    type: n.type,
+                    targetRole: 'koc',
+                    targetKocId: app.kocId,
+                    targetTiktokHandle: app.tiktokHandle,
+                    targetPhone: app.phone,
+                    targetEmail: app.email,
+                    linkTab: n.linkTab,
+                  });
+                }
+              }
+            }
+          });
+          return newNotifs;
         });
       });
     }
