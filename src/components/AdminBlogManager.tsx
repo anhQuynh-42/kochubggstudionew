@@ -26,6 +26,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
   // Form state
   const [formData, setFormData] = useState<Partial<BlogPost>>({});
   const [editorTab, setEditorTab] = useState<'visual' | 'code' | 'preview'>('visual');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Refs for editor & file upload
   const visualEditorRef = useRef<HTMLDivElement>(null);
@@ -78,8 +79,13 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     return () => clearTimeout(timer);
   }, [editingPost?.id, editorTab]);
 
-  // In-browser lightweight image compression (max 1200px, 82% quality)
-  const compressImageFile = (file: File, callback: (compressedUrl: string) => void) => {
+  // In-browser lightweight image compression (max 800px, 75% quality để tránh tràn dung lượng)
+  const compressImageFile = (
+    file: File,
+    callback: (compressedUrl: string) => void,
+    maxDim: number = 800,
+    quality: number = 0.75
+  ) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
@@ -89,7 +95,6 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        const maxDim = 1200;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -104,7 +109,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          callback(canvas.toDataURL('image/jpeg', 0.82));
+          callback(canvas.toDataURL('image/jpeg', quality));
         } else {
           callback(dataUrl);
         }
@@ -150,7 +155,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     setEditorTab('visual');
   };
 
-  const handleToggleCloud = (postId: string) => {
+  const handleToggleCloud = async (postId: string) => {
     const updated = posts.map((p) => {
       if (p.id === postId) {
         const nextState = !p.isCloudCovered;
@@ -159,7 +164,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
       return p;
     });
     setPosts(updated);
-    saveStoredBlogPosts(updated);
+    await saveStoredBlogPosts(updated);
     onShowToast('Đã cập nhật trạng thái mây che!', 'Bài viết đã được cập nhật hiển thị ngoài trang chủ.', 'success');
   };
 
@@ -374,7 +379,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     }
   };
 
-  const handleSaveForm = (e: React.FormEvent) => {
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalContent = editorTab === 'visual' && visualEditorRef.current
       ? visualEditorRef.current.innerHTML.trim()
@@ -384,6 +389,8 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
       onShowToast('Vui lòng điền đủ thông tin', 'Tiêu đề và nội dung bài viết không được để trống.', 'warning');
       return;
     }
+
+    setIsSaving(true);
 
     const postToSave: BlogPost = {
       id: formData.id || `post-${Date.now()}`,
@@ -412,29 +419,33 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
     }
 
     setPosts(updated);
-    saveStoredBlogPosts(updated);
+    const cloudOk = await saveStoredBlogPosts(updated);
+    setIsSaving(false);
     setEditingPost(null);
     setIsCreatingNew(false);
+
     onShowToast(
       isCreatingNew ? 'Đã thêm bài viết mới!' : 'Đã lưu bài viết thành công!',
-      'Nội dung đã được lưu vĩnh viễn lên Đám mây (Cloud) và cập nhật ra Trang chủ.',
-      'success'
+      cloudOk
+        ? 'Dữ liệu và ảnh bài viết đã được lưu vĩnh viễn lên Đám mây (Cloud) và cập nhật ra Trang chủ.'
+        : 'Đã lưu trên máy này. Đang thử kết nối lại Đám mây Supabase.',
+      cloudOk ? 'success' : 'info'
     );
   };
 
-  const handleDeletePost = (postId: string) => {
+  const handleDeletePost = async (postId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này khỏi cẩm nang?')) {
       const updated = posts.filter((p) => p.id !== postId);
       setPosts(updated);
-      saveStoredBlogPosts(updated);
+      await saveStoredBlogPosts(updated);
       onShowToast('Đã xóa bài viết', 'Danh sách đã được làm mới.', 'info');
     }
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
     if (window.confirm('Khôi phục lại 5 bài viết chuẩn SEO gốc theo tài liệu? Những thay đổi thủ công của bạn sẽ được thiết lập lại.')) {
       setPosts(INITIAL_BLOG_POSTS);
-      saveStoredBlogPosts(INITIAL_BLOG_POSTS);
+      await saveStoredBlogPosts(INITIAL_BLOG_POSTS);
       onShowToast('Đã khôi phục 5 bài gốc!', 'Toàn bộ nội dung chuẩn SEO đã được khôi phục.', 'success');
     }
   };
@@ -703,7 +714,7 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
                 <label className="block font-bold text-slate-700 mb-1">Ảnh Bìa Bài Viết (Cover Image)</label>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
-                    type="url"
+                    type="text"
                     value={formData.coverImage || ''}
                     onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
                     placeholder="Dán link ảnh https://... hoặc bấm nút bên phải để tải từ máy"
@@ -716,14 +727,24 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
                     title="Tải ảnh bìa từ máy tính"
                   >
                     <span className="material-symbols-outlined text-[17px] text-purple-600">upload_file</span>
-                    <span>Tải ảnh bìa</span>
+                    <span>Tải ảnh từ máy</span>
                   </button>
                   {formData.coverImage && (
-                    <img
-                      src={formData.coverImage}
-                      alt="Preview"
-                      className="h-10 w-16 rounded-lg object-cover border border-slate-200 shadow-2xs"
-                    />
+                    <div className="relative group">
+                      <img
+                        src={formData.coverImage}
+                        alt="Preview"
+                        className="h-10 w-16 rounded-lg object-cover border border-slate-200 shadow-2xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, coverImage: '' })}
+                        className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center shadow-xs hover:bg-red-600 cursor-pointer"
+                        title="Xóa ảnh này"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1034,15 +1055,18 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
                 <button
                   type="button"
                   onClick={() => setEditingPost(null)}
-                  className="rounded-xl border border-slate-300 px-4 py-2.5 font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  disabled={isSaving}
+                  className="rounded-xl border border-slate-300 px-4 py-2.5 font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-purple-600 px-5 py-2.5 font-bold text-white shadow-md hover:bg-purple-700 transition cursor-pointer"
+                  disabled={isSaving}
+                  className="rounded-xl bg-purple-600 px-5 py-2.5 font-bold text-white shadow-md hover:bg-purple-700 transition cursor-pointer disabled:opacity-60 flex items-center gap-2"
                 >
-                  Lưu bài viết
+                  {isSaving && <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+                  <span>{isSaving ? 'Đang lưu lên Cloud...' : 'Lưu bài viết'}</span>
                 </button>
               </div>
             </form>

@@ -293,15 +293,30 @@ export const getStoredBlogPosts = (): BlogPost[] => {
   return INITIAL_BLOG_POSTS;
 };
 
-export const saveStoredBlogPosts = (posts: BlogPost[]): void => {
-  if (typeof window === 'undefined') return;
+export const saveStoredBlogPosts = async (posts: BlogPost[]): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+
+  // 1. Luôn lưu trực tiếp lên Supabase Cloud để bảo toàn dữ liệu vĩnh viễn trên mọi thiết bị
+  let cloudSuccess = false;
+  try {
+    cloudSuccess = await saveBlogPostsToSupabase(posts);
+  } catch (err) {
+    console.warn('Lỗi đồng bộ Blog lên Cloud:', err);
+  }
+
+  // 2. Lưu vào bộ nhớ cục bộ localStorage (chỉ lưu 1 key v2 để tránh tràn quota)
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-    localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(posts));
-    window.dispatchEvent(new Event('kocity-blog-updated'));
-    // Tự động đồng bộ lên Đám mây Supabase để mọi thiết bị đều nhận được
-    saveBlogPostsToSupabase(posts).catch((err) => console.warn('Lỗi đồng bộ Blog lên Cloud:', err));
   } catch (e) {
-    console.warn('Error saving blog posts to storage:', e);
+    console.warn('Dung lượng localStorage vượt giới hạn, tiến hành dọn dẹp cache cũ:', e);
+    try {
+      localStorage.removeItem('kocity_blog_posts_v1');
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+    } catch (e2) {
+      console.warn('Không thể lưu vào localStorage (dữ liệu vẫn an toàn trên Cloud):', e2);
+    }
   }
+
+  window.dispatchEvent(new Event('kocity-blog-updated'));
+  return cloudSuccess;
 };

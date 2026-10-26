@@ -293,8 +293,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getBlogPostsFromSupabase().then((cloudPosts) => {
       if (cloudPosts && cloudPosts.length >= 5) {
         try {
+          localStorage.removeItem('kocity_blog_posts_v1');
           localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(cloudPosts));
-          localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(cloudPosts));
           window.dispatchEvent(new Event('kocity-blog-updated'));
         } catch (e) {
           console.warn('Lỗi lưu cloud blog vào storage:', e);
