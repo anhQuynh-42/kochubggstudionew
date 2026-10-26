@@ -41,3 +41,10 @@
   npm run build
   ```
 - The Git pre-commit hook (`.git/hooks/pre-commit`) enforces this at the OS level. No commit can be created if Cloud sync tests fail.
+
+### Rule 5: Zero-Loss Application Access & Non-Destructive KOC Filtering
+- **Admin Data Self-Sufficiency:** The Admin View (`AdminView.tsx`) must always directly query and hold 100% of applications in Supabase Cloud (`getApplicationsFromSupabase()`), with a manual one-click refresh button and live counter.
+- **Non-Destructive KOC Merging:** When a non-admin KOC logs in, queries for their own applications (`getMyApplicationsFromSupabase`) must **NEVER** overwrite, truncate, or wipe the master application store (`applications` or `koctrend_applications`). They must only merge their specific records into existing memory/storage.
+- **Admin Session Elevation:** Successful authentication through `AdminSecurityGate` must immediately dispatch global authentication events and record admin mode so that application fetches are never blocked by client role checks.
+- **Backup Vault Storage:** A secondary local storage backup (`kocity_cloud_applications_backup`) must be maintained so that temporary memory or local disruptions can never reduce application count to zero.
+

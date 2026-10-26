@@ -68,6 +68,30 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
     return () => clearTimeout(timer);
   }, [lockCountdown, isLocked]);
 
+  // Đảm bảo phiên quản trị viên hợp lệ luôn được đồng bộ cho AppDataContext
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.setItem('kocity_admin_mode', 'true');
+      const adminProfile = {
+        id: 'admin-master',
+        name: 'Quản trị viên KOCity',
+        tiktokHandle: 'adminwebkocity1235',
+        role: 'admin' as const,
+        phone: '0908888888',
+        email: 'admin@kocity.io.vn',
+      };
+      try {
+        const existing = localStorage.getItem('koctrend_koc_profile');
+        if (!existing || JSON.parse(existing).role !== 'admin') {
+          localStorage.setItem('koctrend_koc_profile', JSON.stringify(adminProfile));
+        }
+      } catch {
+        localStorage.setItem('koctrend_koc_profile', JSON.stringify(adminProfile));
+      }
+      window.dispatchEvent(new CustomEvent('kocity-admin-authenticated', { detail: adminProfile }));
+    }
+  }, [isAuthenticated]);
+
   // XỬ LÝ BƯỚC 1: MÃ PIN
   const handleKeyPress = (num: string) => {
     if (isLocked || pin.length >= 6) return;
@@ -139,6 +163,19 @@ export const AdminSecurityGate: React.FC<AdminSecurityGateProps> = ({ children }
         };
         sessionStorage.setItem(SESSION_AUTH_KEY, JSON.stringify(sessionPayload));
         localStorage.setItem('kocity_admin_mode', 'true');
+        
+        // Thiết lập danh tính quản trị viên toàn hệ thống để kích hoạt đồng bộ 100% đơn ứng tuyển
+        const adminProfile = {
+          id: 'admin-master',
+          name: 'Quản trị viên KOCity',
+          tiktokHandle: 'adminwebkocity1235',
+          role: 'admin' as const,
+          phone: '0908888888',
+          email: 'admin@kocity.io.vn',
+        };
+        localStorage.setItem('koctrend_koc_profile', JSON.stringify(adminProfile));
+        window.dispatchEvent(new CustomEvent('kocity-admin-authenticated', { detail: adminProfile }));
+
         setIsAuthenticated(true);
         setErrorMsg('');
       } else {

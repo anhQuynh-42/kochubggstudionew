@@ -172,6 +172,27 @@ async function runVerification() {
     passed = false;
   }
 
+  // 7. Kiểm tra tính sẵn sàng & toàn vẹn của Bảng đơn ứng tuyển (applications) từ Supabase Cloud
+  try {
+    const { data: cloudApps, error: appsError } = await client
+      .from('applications')
+      .select('id, code, kocName, tiktokHandle, campaignName, status, created_at')
+      .order('created_at', { ascending: false });
+
+    if (appsError) {
+      console.error('❌ Lỗi tải applications từ Supabase:', appsError.message);
+      passed = false;
+    } else if (!cloudApps || cloudApps.length === 0) {
+      console.error('❌ CSDL Cloud không trả về đơn ứng tuyển nào!');
+      passed = false;
+    } else {
+      console.log(`✅ 7. Toàn vẹn Bảng applications trên Cloud: Đạt chuẩn (${cloudApps.length} đơn ứng tuyển KOC sẵn sàng)`);
+    }
+  } catch (e) {
+    console.error('❌ Ngoại lệ kiểm thử applications:', e);
+    passed = false;
+  }
+
   console.log('------------------------------------------------------------');
   if (passed) {
     console.log('🎉 TẤT CẢ KIỂM THỬ ĐỒNG BỘ ĐẠT CHUẨN 100%! Được phép phát hành.');

@@ -8,6 +8,7 @@ import {
   getAllRegisteredKOCsFromSupabase,
   deleteKOCProfileFromSupabase,
   toggleKOCBlacklistOnSupabase,
+  getApplicationsFromSupabase,
 } from '../services/supabaseService';
 import { APP_LOGOS } from '../data/mockData';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -276,6 +277,36 @@ export const AdminView: React.FC<AdminViewProps> = ({
   useEffect(() => {
     fetchRegisteredKOCs();
   }, [activeAdminTab]);
+
+  // Tải trực tiếp 100% đơn ứng tuyển từ Supabase Cloud khi mở trang Admin (Tự chủ dữ liệu)
+  const [isRefreshingApps, setIsRefreshingApps] = useState(false);
+
+  const refreshApplicationsFromCloud = async (isManual = false) => {
+    if (!isSupabaseConfigured()) return;
+    setIsRefreshingApps(true);
+    try {
+      const cloudApps = await getApplicationsFromSupabase();
+      if (cloudApps && Array.isArray(cloudApps)) {
+        onUpdateApplications(cloudApps);
+        localStorage.setItem('koctrend_applications', JSON.stringify(cloudApps));
+        localStorage.setItem('kocity_cloud_applications_backup', JSON.stringify(cloudApps));
+        if (isManual) {
+          onShowToast('Đồng bộ thành công!', `Đã tải ${cloudApps.length} đơn ứng tuyển mới nhất từ Cloud`, 'success');
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi tải danh sách đơn từ Supabase:', e);
+      if (isManual) {
+        onShowToast('Lỗi tải đơn', 'Vui lòng kiểm tra kết nối mạng', 'warning');
+      }
+    } finally {
+      setIsRefreshingApps(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshApplicationsFromCloud(false);
+  }, []);
 
   // Selected application for detail modal
   const [selectedApp, setSelectedApp] = useState<KOCApplication | null>(null);
@@ -2167,17 +2198,32 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <span>/</span>
               <span className="text-blue-600 font-bold">{getTabTitle()}</span>
               {isSupabaseConfigured() && (
-                <span
-                  title={isCloudSynced ? "Đã kết nối và đồng bộ thời gian thực với Cloud CSDL" : "Đang kiểm tra kết nối Cloud..."}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ml-1 shadow-2xs transition-all ${
-                    isCloudSynced
-                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
-                      : 'bg-amber-50 border border-amber-200 text-amber-700'
-                  }`}
-                >
-                  <span className={`h-2 w-2 rounded-full ${isCloudSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-ping'}`}></span>
-                  <span>Cloud Sync: {isCloudSynced ? `🟢 ${campaigns.length} chiến dịch · Realtime` : '🟡 Đang kết nối...'}</span>
-                </span>
+                <>
+                  <span
+                    title={isCloudSynced ? "Đã kết nối và đồng bộ thời gian thực với Cloud CSDL" : "Đang kiểm tra kết nối Cloud..."}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ml-1 shadow-2xs transition-all ${
+                      isCloudSynced
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                        : 'bg-amber-50 border border-amber-200 text-amber-700'
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${isCloudSynced ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-ping'}`}></span>
+                    <span>Cloud Sync: {isCloudSynced ? `🟢 ${campaigns.length} chiến dịch · Realtime` : '🟡 Đang kết nối...'}</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => refreshApplicationsFromCloud(true)}
+                    disabled={isRefreshingApps}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ml-1 bg-blue-50 border border-blue-200 text-blue-700 shadow-2xs hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50"
+                    title="Bấm để tải lại danh sách đơn ứng tuyển từ Supabase Cloud ngay"
+                  >
+                    <span>📋 {applications.length} đơn ứng tuyển</span>
+                    <span className={`material-symbols-outlined text-[13px] ${isRefreshingApps ? 'animate-spin' : ''}`}>
+                      refresh
+                    </span>
+                  </button>
+                </>
               )}
             </div>
             <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">{getTabTitle()}</h2>

@@ -133,6 +133,17 @@ function writeJSON(key: string, value: unknown) {
 const normHandle = (h?: string) => (h ? h.toLowerCase().replace(/[@\s]/g, '') : '');
 const normPhone = (p?: string) => (p ? p.replace(/[\s.-]/g, '') : '');
 
+/** Kiểm tra người dùng có quyền Quản trị viên không (hỗ trợ cả session token, admin mode, URL path) */
+export const checkIsAdminUser = (u: KOCUser | null): boolean => {
+  if (u?.role === 'admin') return true;
+  if (typeof window !== 'undefined') {
+    if (sessionStorage.getItem('kocity_admin_auth_token')) return true;
+    if (localStorage.getItem('kocity_admin_mode') === 'true') return true;
+    if (window.location.pathname.startsWith('/admin')) return true;
+  }
+  return false;
+};
+
 /** Đơn này có thuộc KOC đang đăng nhập không (khớp theo ID tài khoản, ID TikTok hoặc SĐT) */
 export function isOwnApplication(app: KOCApplication, user: KOCUser | null): boolean {
   if (!user) return false;
@@ -195,7 +206,12 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
     readJSON<Campaign[]>('koctrend_campaigns', INITIAL_CAMPAIGNS).map((c) => ({ ...c, daysLeft: calculateDaysLeft(c.endDate, c.daysLeft) }))
   );
-  const [applications, setApplications] = useState<KOCApplication[]>(() => readJSON('koctrend_applications', INITIAL_APPLICATIONS));
+  // Bảo vệ đơn ứng tuyển: luôn ưu tiên kho dự phòng lớn hơn để chống mất mát dữ liệu
+  const [applications, setApplications] = useState<KOCApplication[]>(() => {
+    const normal = readJSON<KOCApplication[]>('koctrend_applications', INITIAL_APPLICATIONS);
+    const backup = readJSON<KOCApplication[]>('kocity_cloud_applications_backup', []);
+    return backup.length > normal.length ? backup : normal;
+  });
   const [notifications, setNotifications] = useState<AppNotification[]>(() => readJSON('koctrend_notifications', INITIAL_NOTIFICATIONS));
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => readJSON('koctrend_bookmarked_ids', []));
   const [heroImage, setHeroImage] = useState<string>(() => {
@@ -211,11 +227,49 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [adminTargetSubTab, setAdminTargetSubTab] = useState<AdminSubTab | undefined>(undefined);
   const [editingCampaignFromExternal, setEditingCampaignFromExternal] = useState<Campaign | null>(null);
 
-  // Lưu xuống localStorage mỗi khi thay đổi
-  useEffect(() => writeJSON('koctrend_applications', applications), [applications]);
+  // Lưu xuống localStorage mỗi khi thay đổi (Kèm kho dự phòng chống mất dữ liệu)
+  useEffect(() => {
+    writeJSON('koctrend_applications', applications);
+    if (applications.length > 5) {
+      writeJSON('kocity_cloud_applications_backup', applications);
+    }
+  }, [applications]);
   useEffect(() => writeJSON('koctrend_notifications', notifications), [notifications]);
   useEffect(() => writeJSON('koctrend_campaigns', campaigns), [campaigns]);
   useEffect(() => writeJSON('koctrend_bookmarked_ids', bookmarkedIds), [bookmarkedIds]);
+
+  // Lắng nghe sự kiện đăng nhập Admin để kích hoạt đồng bộ 100% đơn từ Supabase Cloud
+  useEffect(() => {
+    const onAdminAuth = (e: Event) => {
+      const customEvent = e as CustomEvent<KOCUser>;
+      const adminUser = customEvent.detail || {
+        id: 'admin-master',
+        name: 'Quản trị viên KOCity',
+        tiktokHandle: 'adminwebkocity1235',
+        role: 'admin' as const,
+      };
+      setCurrentUser(adminUser);
+      if (isSupabaseConfigured()) {
+        getApplicationsFromSupabase().then((cloudApps) => {
+          if (cloudApps && Array.isArray(cloudApps)) {
+            setApplications((prev) => {
+              const map = new Map(cloudApps.map((a) => [a.id, a]));
+              prev.forEach((a) => {
+                if (!map.has(a.id) && (a.id.startsWith('offline-') || a.id.startsWith('app-local-'))) {
+                  map.set(a.id, a);
+                }
+              });
+              const merged = Array.from(map.values());
+              writeJSON('kocity_cloud_applications_backup', merged);
+              return merged;
+            });
+          }
+        });
+      }
+    };
+    window.addEventListener('kocity-admin-authenticated', onAdminAuth);
+    return () => window.removeEventListener('kocity-admin-authenticated', onAdminAuth);
+  }, []);
 
   const showToast = useCallback((title: string, message?: string, type: ToastType = 'success') => {
     setToast({ id: `toast-${Date.now()}`, title, message, type });
@@ -325,7 +379,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
           linkTab: 'admin',
           adminSubTab: 'applications',
         });
-        if (currentUserRef.current?.role === 'admin') {
+        if (checkIsAdminUser(currentUserRef.current)) {
           showToast('Đơn ứng tuyển mới!', `${newApp.kocName} vừa nộp đơn ${newApp.campaignName}`, 'info');
         }
       },
@@ -349,7 +403,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
               linkTab: 'admin',
               adminSubTab: 'content',
             });
-            if (currentUserRef.current?.role === 'admin') {
+            if (checkIsAdminUser(currentUserRef.current)) {
               showToast('Video mới cần duyệt!', `${updatedApp.kocName} vừa nộp link video`, 'info');
             }
           }
@@ -530,9 +584,11 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // ---------- TỰ ĐỘNG ĐỒNG BỘ ĐƠN ỨNG TUYỂN ĐA THIẾT BỊ (Applications Multi-Device Sync) ----------
   useEffect(() => {
-    if (!isSupabaseConfigured() || !currentUser) return;
+    if (!isSupabaseConfigured()) return;
+    const isCurrentlyAdmin = checkIsAdminUser(currentUser);
+    if (!isCurrentlyAdmin && !currentUser) return;
 
-    if (currentUser.role === 'admin') {
+    if (isCurrentlyAdmin) {
       getApplicationsFromSupabase().then((cloudApps) => {
         if (!cloudApps) return;
         setApplications((prev) => {
@@ -543,7 +599,9 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
               map.set(a.id, a);
             }
           });
-          return Array.from(map.values());
+          const merged = Array.from(map.values());
+          writeJSON('kocity_cloud_applications_backup', merged);
+          return merged;
         });
 
         // TỰ ĐỘNG ĐỐI CHIẾU CHUÔNG ADMIN: Đảm bảo các đơn đang "Chờ duyệt" hoặc "Chờ duyệt video" luôn hiện trong chuông Admin
@@ -585,16 +643,19 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return newNotifs;
         });
       });
-    } else if (currentUser.tiktokHandle) {
+    } else if (currentUser?.tiktokHandle) {
       getMyApplicationsFromSupabase(currentUser.tiktokHandle).then((cloudApps) => {
         if (!cloudApps) return;
         setApplications((prev) => {
-          const map = new Map(cloudApps.map((a) => [a.id, a]));
+          // BẢO TỒN 100% ĐƠN HIỆN CÓ: KOC chỉ cập nhật đơn của chính mình, KHÔNG BAO GIỜ xóa đơn của người khác
+          const map = new Map(prev.map((a) => [a.id, a]));
+          cloudApps.forEach((ca) => {
+            map.set(ca.id, ca);
+          });
           // Tự động đẩy đơn đang có trên máy này lên Supabase Cloud nếu Cloud chưa có
           prev.forEach((localApp) => {
             if (isOwnApplication(localApp, currentUser)) {
-              if (!map.has(localApp.id)) {
-                map.set(localApp.id, localApp);
+              if (!cloudApps.some((ca) => ca.id === localApp.id)) {
                 submitApplicationToSupabase(localApp).catch((e) => console.warn('Tự động đẩy đơn offline lên Cloud thất bại:', e));
               }
             }
@@ -853,7 +914,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const value: AppDataValue = {
     currentUser,
-    isAdmin: currentUser?.role === 'admin',
+    isAdmin: checkIsAdminUser(currentUser),
     campaigns,
     isCloudSynced,
     applications,
