@@ -229,26 +229,45 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
         className={cx(
           'relative flex flex-col w-full max-w-3xl max-h-[90vh] rounded-[28px] shadow-2xl overflow-hidden border transition-all duration-300',
           isNightDefault
-            ? 'bg-slate-900 text-white border-violet-500/20 shadow-purple-950/60'
-            : 'bg-white text-slate-800 border-slate-200 shadow-violet-500/10'
+            ? 'dark bg-slate-950 text-white border-violet-500/30 shadow-purple-950/70'
+            : 'bg-white text-slate-900 border-slate-200 shadow-violet-500/10'
         )}
       >
         {/* HEADER CỦA PORTAL */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/90 backdrop-blur-md">
+        <div
+          className={cx(
+            'flex items-center justify-between px-5 sm:px-6 py-4 border-b backdrop-blur-md transition-colors',
+            isNightDefault
+              ? 'border-slate-800 bg-slate-900/95 text-white'
+              : 'border-slate-100 bg-slate-50/90 text-slate-900'
+          )}
+        >
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-[#7c3aed] to-[#ec4899] text-white shadow-sm">
               <Icon name="verified_user" className="text-[19px]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                <h2
+                  className={cx(
+                    'text-sm sm:text-base font-extrabold tracking-tight',
+                    isNightDefault ? 'text-white' : 'text-slate-900'
+                  )}
+                >
                   Không Gian Cư Dân KOCity
                 </h2>
-                <span className="inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-950/80 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/40">
+                <span
+                  className={cx(
+                    'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border',
+                    isNightDefault
+                      ? 'bg-violet-950/90 text-violet-300 border-violet-700/50'
+                      : 'bg-violet-100 text-violet-700 border-violet-200'
+                  )}
+                >
                   Creator Hub
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className={cx('text-[11px]', isNightDefault ? 'text-slate-300' : 'text-slate-600')}>
                 Mạng lưới kết nối KOC & Brand chính hãng · 100% Không cọc phí
               </p>
             </div>
@@ -258,47 +277,83 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
+            className={cx(
+              'flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer',
+              isNightDefault
+                ? 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                : 'bg-slate-200/70 text-slate-600 hover:text-slate-900 hover:bg-slate-300'
+            )}
           >
             <Icon name="close" className="text-[17px]" />
           </button>
         </div>
 
-        {/* BẢNG TIN HOẠT ĐỘNG TRỰC TIẾP (LIVE TICKER) */}
-        <div className="flex items-center gap-2 px-5 sm:px-6 py-1.5 bg-violet-50/50 dark:bg-violet-950/20 border-b border-violet-100/50 dark:border-violet-900/20 text-xs">
+        {/* BẢNG TIN HOẠT ĐỘNG TRỰC TIẾP (LIVE TICKER) - ĐẬM RÕ NÉT */}
+        <div
+          className={cx(
+            'flex items-center gap-2 px-5 sm:px-6 py-2 border-b text-xs transition-colors',
+            isNightDefault
+              ? 'bg-gradient-to-r from-violet-950/90 via-slate-900 to-violet-950/90 border-violet-800/40'
+              : 'bg-violet-50/80 border-violet-100'
+          )}
+        >
           <span className="flex h-2 w-2 relative shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
-          <span className="font-bold text-violet-700 dark:text-violet-300 shrink-0 text-[11px]">Trực tiếp:</span>
-          <span className="truncate text-[11px] font-medium text-slate-600 dark:text-slate-300 transition-all duration-300">
+          <span
+            className={cx(
+              'font-black shrink-0 text-[11px] tracking-wide uppercase',
+              isNightDefault ? 'text-violet-300' : 'text-violet-700'
+            )}
+          >
+            Trực tiếp:
+          </span>
+          <span
+            className={cx(
+              'truncate text-[11px] font-semibold transition-all duration-300',
+              isNightDefault ? 'text-slate-100' : 'text-slate-700'
+            )}
+          >
             {LIVE_ACTIVITIES[tickerIndex]}
           </span>
         </div>
 
         {/* THANH ĐIỀU HƯỚNG TABS TINH GỌN */}
-        <div className="flex border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 gap-1 sm:gap-2 overflow-x-auto no-scrollbar pt-1.5 bg-white dark:bg-slate-900">
+        <div
+          className={cx(
+            'flex border-b px-4 sm:px-6 gap-1 sm:gap-2 overflow-x-auto no-scrollbar pt-2 transition-colors',
+            isNightDefault ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'
+          )}
+        >
           {[
             { id: 'card', label: 'Thẻ Cư Dân', icon: 'badge' },
             { id: 'hall', label: 'Bảng Vinh Danh', icon: 'military_tech' },
             { id: 'brands', label: 'Trạm Brand', icon: 'storefront' },
             { id: 'tools', label: 'Kịch Bản & Hỗ Trợ', icon: 'lightbulb' },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTab(t.id as any)}
-              className={cx(
-                'flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer rounded-t-lg',
-                activeTab === t.id
-                  ? 'border-[#7c3aed] text-[#7c3aed] dark:text-violet-300 bg-violet-50/50 dark:bg-violet-950/30'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              )}
-            >
-              <Icon name={t.icon} className="text-[16px]" />
-              <span>{t.label}</span>
-            </button>
-          ))}
+          ].map((t) => {
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id as any)}
+                className={cx(
+                  'flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer rounded-t-lg',
+                  isActive
+                    ? isNightDefault
+                      ? 'border-violet-400 text-white bg-violet-900/40 shadow-sm'
+                      : 'border-[#7c3aed] text-[#7c3aed] bg-violet-50/80 shadow-sm'
+                    : isNightDefault
+                    ? 'border-transparent text-slate-300 hover:text-white hover:bg-slate-900'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                )}
+              >
+                <Icon name={t.icon} className="text-[16px]" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* NỘI DUNG TỪNG TAB */}
@@ -390,7 +445,7 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 )}
               </div>
 
-              {/* 4 Trụ Cột Đặc Quyền Cư Dân - Trực quan, dễ đọc */}
+              {/* 4 Trụ Cột Đặc Quyền Cư Dân - Độ tương phản WCAG AAA sắc nét */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                 {[
                   {
@@ -416,14 +471,40 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 ].map((perk) => (
                   <div
                     key={perk.title}
-                    className="rounded-xl border border-slate-100 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-800/40 flex items-start gap-2.5"
+                    className={cx(
+                      'rounded-xl border p-3 flex items-start gap-3 transition-colors',
+                      isNightDefault
+                        ? 'bg-slate-900/90 border-violet-500/25 shadow-sm hover:border-violet-400/40'
+                        : 'bg-white border-slate-200 shadow-sm hover:border-violet-200'
+                    )}
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-950 text-[#7c3aed] dark:text-violet-300">
-                      <Icon name={perk.icon} className="text-[17px]" />
+                    <div
+                      className={cx(
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold',
+                        isNightDefault
+                          ? 'bg-violet-950 text-violet-300 border border-violet-800/50'
+                          : 'bg-violet-100 text-[#7c3aed]'
+                      )}
+                    >
+                      <Icon name={perk.icon} className="text-[18px]" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">{perk.title}</h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{perk.desc}</p>
+                      <h4
+                        className={cx(
+                          'text-xs font-bold',
+                          isNightDefault ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
+                        {perk.title}
+                      </h4>
+                      <p
+                        className={cx(
+                          'text-[11px] mt-0.5 leading-relaxed font-normal',
+                          isNightDefault ? 'text-slate-200' : 'text-slate-600'
+                        )}
+                      >
+                        {perk.desc}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -434,10 +515,31 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* TAB 2: BẢNG VINH DANH (ẨN DANH & BẢO MẬT 100%) */}
           {activeTab === 'hall' && (
             <div className="space-y-4">
-              <div className="rounded-xl bg-violet-50/70 dark:bg-violet-950/30 p-3 border border-violet-100 dark:border-violet-900/30 text-xs flex items-start gap-2">
-                <Icon name="lock" className="text-[18px] text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
-                <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
-                  <b className="text-violet-700 dark:text-violet-300">Cam kết bảo mật dữ liệu:</b> KOCity ẩn danh thông tin cá nhân và doanh số chi tiết nhằm bảo vệ sự riêng tư của Creator, chỉ vinh danh cột mốc cống hiến và tỷ lệ uy tín.
+              <div
+                className={cx(
+                  'rounded-xl p-3 border text-xs flex items-start gap-2.5 transition-colors',
+                  isNightDefault
+                    ? 'bg-violet-950/50 border-violet-800/50 text-slate-200'
+                    : 'bg-violet-50/80 border-violet-100 text-slate-700'
+                )}
+              >
+                <Icon
+                  name="lock"
+                  className={cx(
+                    'text-[18px] shrink-0 mt-0.5',
+                    isNightDefault ? 'text-violet-300' : 'text-violet-600'
+                  )}
+                />
+                <p className="text-[11px] leading-relaxed">
+                  <b
+                    className={cx(
+                      'font-bold mr-1',
+                      isNightDefault ? 'text-violet-200' : 'text-violet-800'
+                    )}
+                  >
+                    Cam kết bảo mật dữ liệu:
+                  </b>
+                  KOCity ẩn danh thông tin cá nhân và doanh số chi tiết nhằm bảo vệ sự riêng tư của Creator, chỉ vinh danh cột mốc cống hiến và tỷ lệ uy tín.
                 </p>
               </div>
 
@@ -445,7 +547,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 {ANONYMOUS_HONOR_ROLL.map((koc) => (
                   <div
                     key={koc.maskedName}
-                    className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-3.5 shadow-sm"
+                    className={cx(
+                      'rounded-xl border p-3.5 shadow-sm transition-colors',
+                      isNightDefault
+                        ? 'bg-slate-900/90 border-slate-800'
+                        : 'bg-white border-slate-200'
+                    )}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -459,8 +566,22 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                           {koc.avatarLetter}
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">{koc.maskedName}</h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{koc.category}</p>
+                          <h4
+                            className={cx(
+                              'text-xs font-bold',
+                              isNightDefault ? 'text-white' : 'text-slate-900'
+                            )}
+                          >
+                            {koc.maskedName}
+                          </h4>
+                          <p
+                            className={cx(
+                              'text-[11px]',
+                              isNightDefault ? 'text-slate-300' : 'text-slate-500'
+                            )}
+                          >
+                            {koc.category}
+                          </p>
                         </div>
                       </div>
 
@@ -469,11 +590,26 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                       </span>
                     </div>
 
-                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
-                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    <div
+                      className={cx(
+                        'mt-2.5 pt-2 border-t flex items-center justify-between text-xs',
+                        isNightDefault ? 'border-slate-800' : 'border-slate-100'
+                      )}
+                    >
+                      <span
+                        className={cx(
+                          'text-[11px] font-semibold',
+                          isNightDefault ? 'text-slate-200' : 'text-slate-700'
+                        )}
+                      >
                         {koc.achievement}
                       </span>
-                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      <span
+                        className={cx(
+                          'text-[11px] font-bold',
+                          isNightDefault ? 'text-emerald-400' : 'text-emerald-600'
+                        )}
+                      >
                         ⭐ {koc.rating} ({koc.onTimeRate})
                       </span>
                     </div>
@@ -482,8 +618,20 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </div>
 
               {/* Tiêu chí xét duyệt */}
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50 dark:bg-slate-800/30 text-xs text-slate-600 dark:text-slate-400">
-                <p className="font-bold text-slate-800 dark:text-slate-200 mb-1">
+              <div
+                className={cx(
+                  'rounded-xl border p-3 text-xs transition-colors',
+                  isNightDefault
+                    ? 'bg-slate-900/60 border-slate-800 text-slate-300'
+                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                )}
+              >
+                <p
+                  className={cx(
+                    'font-bold mb-1',
+                    isNightDefault ? 'text-slate-100' : 'text-slate-800'
+                  )}
+                >
                   Tiêu chuẩn xét chọn danh hiệu KOCity:
                 </p>
                 <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
@@ -498,7 +646,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {/* TAB 3: TRẠM BRAND & KHO MẪU */}
           {activeTab === 'brands' && (
             <div className="space-y-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+              <p
+                className={cx(
+                  'text-xs text-center font-medium',
+                  isNightDefault ? 'text-slate-300' : 'text-slate-600'
+                )}
+              >
                 Các Brand đối tác uy tín đang cấp mẫu trải nghiệm 0đ trên KOCity:
               </p>
 
@@ -506,30 +659,76 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 {DEFAULT_BRAND_STATIONS.map((station) => (
                   <div
                     key={station.id}
-                    className="flex flex-col justify-between rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-3.5 shadow-sm"
+                    className={cx(
+                      'flex flex-col justify-between rounded-xl border p-3.5 shadow-sm transition-colors',
+                      isNightDefault
+                        ? 'bg-slate-900/90 border-slate-800'
+                        : 'bg-white border-slate-200'
+                    )}
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black tracking-wider uppercase text-violet-600 dark:text-violet-400">
+                        <span
+                          className={cx(
+                            'text-[11px] font-black tracking-wider uppercase',
+                            isNightDefault ? 'text-violet-400' : 'text-violet-600'
+                          )}
+                        >
                           {station.brandName}
                         </span>
-                        <span className="rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                        <span
+                          className={cx(
+                            'rounded-full px-2 py-0.5 text-[10px] font-bold border',
+                            isNightDefault
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/50'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          )}
+                        >
                           Còn {station.sampleCount} suất 0đ
                         </span>
                       </div>
 
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                      <h4
+                        className={cx(
+                          'text-sm font-bold mt-0.5',
+                          isNightDefault ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {station.name}
                       </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">{station.category}</p>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed line-clamp-2">
+                      <p
+                        className={cx(
+                          'text-[11px]',
+                          isNightDefault ? 'text-slate-300' : 'text-slate-500'
+                        )}
+                      >
+                        {station.category}
+                      </p>
+                      <p
+                        className={cx(
+                          'text-[11px] mt-1.5 leading-relaxed line-clamp-2',
+                          isNightDefault ? 'text-slate-200' : 'text-slate-600'
+                        )}
+                      >
                         {station.desc}
                       </p>
                     </div>
 
-                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                    <div
+                      className={cx(
+                        'mt-3 pt-2.5 border-t flex items-center justify-between text-xs',
+                        isNightDefault ? 'border-slate-800' : 'border-slate-100'
+                      )}
+                    >
                       <div>
-                        <span className="text-[11px] text-slate-400">Hoa hồng: </span>
+                        <span
+                          className={cx(
+                            'text-[11px]',
+                            isNightDefault ? 'text-slate-400' : 'text-slate-500'
+                          )}
+                        >
+                          Hoa hồng:{' '}
+                        </span>
                         <span className="font-black text-[#ec4899]">{station.commission}</span>
                       </div>
 
@@ -546,7 +745,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                             document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' });
                           }
                         }}
-                        className="inline-flex items-center gap-1 font-bold text-xs text-violet-600 dark:text-violet-400 hover:text-violet-800 cursor-pointer"
+                        className={cx(
+                          'inline-flex items-center gap-1 font-bold text-xs cursor-pointer transition-colors',
+                          isNightDefault
+                            ? 'text-violet-300 hover:text-white'
+                            : 'text-violet-600 hover:text-violet-800'
+                        )}
                       >
                         <span>Nhận mẫu ngay</span>
                         <Icon name="arrow_forward" className="text-[14px]" />
@@ -562,10 +766,20 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
           {activeTab === 'tools' && (
             <div className="space-y-4">
               <div className="text-center">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                <h3
+                  className={cx(
+                    'text-sm font-bold',
+                    isNightDefault ? 'text-white' : 'text-slate-900'
+                  )}
+                >
                   Bộ Kịch Bản Hook 3 Giây Đầu TikTok Shop
                 </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                <p
+                  className={cx(
+                    'text-[11px] mt-0.5',
+                    isNightDefault ? 'text-slate-300' : 'text-slate-500'
+                  )}
+                >
                   Bấm sao chép để áp dụng nhanh khi quay video mẫu thử 0đ:
                 </p>
               </div>
@@ -575,16 +789,42 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                 {HOOK_SCRIPTS.map((script, idx) => (
                   <div
                     key={script.title}
-                    className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                    className={cx(
+                      'rounded-xl border p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors',
+                      isNightDefault
+                        ? 'bg-slate-900/90 border-slate-800'
+                        : 'bg-slate-50/80 border-slate-200'
+                    )}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-900 dark:text-white">{script.title}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300">
+                        <span
+                          className={cx(
+                            'font-bold text-xs',
+                            isNightDefault ? 'text-white' : 'text-slate-900'
+                          )}
+                        >
+                          {script.title}
+                        </span>
+                        <span
+                          className={cx(
+                            'px-1.5 py-0.5 rounded text-[10px] font-semibold border',
+                            isNightDefault
+                              ? 'bg-violet-950 text-violet-300 border-violet-800/40'
+                              : 'bg-violet-100 text-violet-700 border-violet-200'
+                          )}
+                        >
                           {script.purpose}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 italic bg-white dark:bg-slate-900/60 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                      <p
+                        className={cx(
+                          'text-[11px] mt-1.5 italic p-2 rounded-lg border leading-relaxed',
+                          isNightDefault
+                            ? 'bg-slate-950 text-slate-100 border-slate-800'
+                            : 'bg-white text-slate-700 border-slate-200'
+                        )}
+                      >
                         "{script.text}"
                       </p>
                     </div>
@@ -596,7 +836,9 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                         'shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer',
                         copiedIndex === idx
                           ? 'bg-emerald-600 text-white'
-                          : 'bg-violet-100 dark:bg-violet-900/50 text-[#7c3aed] dark:text-violet-300 hover:bg-violet-200'
+                          : isNightDefault
+                          ? 'bg-violet-900/80 text-violet-200 hover:bg-violet-800 border border-violet-700/50'
+                          : 'bg-violet-100 text-[#7c3aed] hover:bg-violet-200'
                       )}
                     >
                       <Icon name={copiedIndex === idx ? 'check' : 'content_copy'} className="text-[15px]" />
@@ -607,16 +849,33 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
               </div>
 
               {/* Hộp Zalo Cư Dân & Hotline */}
-              <div className="rounded-xl border border-blue-100 dark:border-blue-900/50 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 dark:from-blue-950/30 dark:to-slate-900 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div
+                className={cx(
+                  'rounded-xl border p-4 flex flex-col sm:flex-row items-center justify-between gap-3 transition-colors',
+                  isNightDefault
+                    ? 'border-blue-900/50 bg-gradient-to-r from-blue-950/60 to-slate-900'
+                    : 'border-blue-100 bg-gradient-to-r from-blue-50/80 to-indigo-50/80'
+                )}
+              >
                 <div className="flex items-center gap-3 text-center sm:text-left">
                   <div className="h-10 w-10 rounded-xl bg-[#0068ff] flex items-center justify-center text-white font-black text-sm shrink-0 shadow-sm">
                     Zalo
                   </div>
                   <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    <h4
+                      className={cx(
+                        'text-xs sm:text-sm font-bold',
+                        isNightDefault ? 'text-white' : 'text-slate-900'
+                      )}
+                    >
                       Nhóm Zalo Cư Dân KOCity
                     </h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p
+                      className={cx(
+                        'text-[11px]',
+                        isNightDefault ? 'text-slate-300' : 'text-slate-600'
+                      )}
+                    >
                       Giao lưu cùng cộng đồng KOC, nhận thông báo mẫu hot và đối soát 24/7.
                     </p>
                   </div>
@@ -634,7 +893,12 @@ export const KocityWorldModal: React.FC<KocityWorldModalProps> = ({
                   </a>
                   <a
                     href={BRAND_CONTACT.hotlineHref}
-                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition cursor-pointer"
+                    className={cx(
+                      'inline-flex items-center gap-1 rounded-full border px-3.5 py-2 text-xs font-bold transition cursor-pointer',
+                      isNightDefault
+                        ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                    )}
                   >
                     <Icon name="phone" className="text-[14px]" />
                     <span>{BRAND_CONTACT.hotline}</span>
