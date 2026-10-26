@@ -267,7 +267,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
           </button>
         </div>
         <ol className="mx-auto mt-6 max-w-xs space-y-3">
-          {['Đã gửi đơn', 'Brand đang xem', 'Duyệt gửi mẫu & vận đơn', 'Đã lên bài'].map((label, idx) => (
+          {['Đã gửi đơn', 'Brand đang xem', 'Hãy làm video để kịp tiến độ', 'Đã lên bài'].map((label, idx) => (
             <li key={label} className="flex items-center gap-3">
               <span
                 className={cx(

@@ -108,7 +108,7 @@ const ApplicationCard: React.FC<{ app: KOCApplication; progress: ApplicationProg
       title: ended ? 'Chưa được chọn' : selection === 'selected' ? 'Brand đã chọn bạn' : 'Brand đang xem',
       desc: ended ? 'Brand chưa chọn bạn ở đợt này' : selection === 'selected' ? '🎉 Chúc mừng!' : 'Đang chờ kết quả',
     },
-    { title: 'Gửi mẫu & vận đơn', desc: selection === 'selected' ? SAMPLE_LABELS[sample] : 'Sau khi Brand chọn' },
+    { title: 'Hãy làm video để kịp tiến độ', desc: selection === 'selected' ? SAMPLE_LABELS[sample] : 'Sau khi Brand chọn' },
     { title: 'Đã lên bài', desc: selection === 'selected' ? VIDEO_LABELS[video] : '' },
   ];
 
