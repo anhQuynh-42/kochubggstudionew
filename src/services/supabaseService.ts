@@ -110,7 +110,6 @@ export async function getCampaignsFromSupabase(): Promise<Campaign[] | null> {
     const { data, error } = await supabase
       .from('campaigns')
       .select('*')
-      .not('id', 'like', '__%')
       .order('created_at', { ascending: false });
 
     if (error) {

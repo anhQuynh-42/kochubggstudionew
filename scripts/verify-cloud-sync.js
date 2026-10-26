@@ -136,6 +136,42 @@ async function runVerification() {
     console.warn('⚠️ Kênh Realtime cần mạng mở rộng:', e);
   }
 
+  // 5. Kiểm thử Tải & Xóa Chiến dịch từ Cloud (Zero Ghost Campaigns)
+  try {
+    const { data: camps, error: campErr } = await client
+      .from('campaigns')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (campErr) {
+      console.error('❌ Lỗi tải chiến dịch từ Supabase:', campErr.message);
+      passed = false;
+    } else {
+      const activeCamps = camps ? camps.filter((c) => !c.id.startsWith('__')) : [];
+      if (activeCamps.length === 0) {
+        console.error('❌ CSDL Cloud không trả về chiến dịch nào (Lỗi query lọc)!');
+        passed = false;
+      } else {
+        console.log(`✅ 5. Tải chiến dịch từ Cloud: Thành công (${activeCamps.length} chiến dịch đang hoạt động)`);
+      }
+    }
+
+    // Kiểm thử tạo và xóa 1 chiến dịch tạm
+    const tempCampId = `__test_del_${Date.now()}`;
+    await client.from('campaigns').insert([{ id: tempCampId, code: 'DEL-TEST', title: 'Delete Test', brandName: 'Test', category: 'Test' }]);
+    await client.from('campaigns').delete().eq('id', tempCampId);
+    const { data: checkDeleted } = await client.from('campaigns').select('id').eq('id', tempCampId).maybeSingle();
+    if (checkDeleted) {
+      console.error('❌ Lỗi: Chiến dịch sau khi xóa trên Cloud vẫn còn tồn tại!');
+      passed = false;
+    } else {
+      console.log('✅ 6. Lệnh Xóa chiến dịch trên Cloud: Triệt để, không còn lưu vết');
+    }
+  } catch (e) {
+    console.error('❌ Ngoại lệ kiểm thử chiến dịch:', e);
+    passed = false;
+  }
+
   console.log('------------------------------------------------------------');
   if (passed) {
     console.log('🎉 TẤT CẢ KIỂM THỬ ĐỒNG BỘ ĐẠT CHUẨN 100%! Được phép phát hành.');
