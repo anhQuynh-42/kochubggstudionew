@@ -19,6 +19,7 @@ import {
   subscribeToApplicationsRealtime,
   subscribeToCampaignsRealtime,
   subscribeToHeroBannerRealtime,
+  subscribeToKOCProfileRealtime,
   updateApplicationStatusOnSupabase,
   updateCampaignOnSupabase,
   getBlogPostsFromSupabase,
@@ -250,15 +251,11 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
       });
 
-      // Bổ sung các chiến dịch có trong local hoặc initial nếu trên Supabase chưa có (bảo toàn 100% dữ liệu)
+      // ĐỒNG BỘ CLOUD-FIRST: Supabase Cloud là Chân lý duy nhất cho Chiến dịch
+      // Chỉ giữ lại các chiến dịch tạo offline (nếu có) chưa kịp đồng bộ, không làm sống lại chiến dịch Admin đã xóa trên điện thoại
       localSaved.forEach((localCamp) => {
-        if (!mergedList.some((c) => c.id === localCamp.id)) {
+        if ((localCamp.id.startsWith('offline-') || localCamp.id.startsWith('camp-local-')) && !mergedList.some((c) => c.id === localCamp.id)) {
           mergedList.push(localCamp);
-        }
-      });
-      INITIAL_CAMPAIGNS.forEach((initCamp) => {
-        if (!mergedList.some((c) => c.id === initCamp.id)) {
-          mergedList.push(initCamp);
         }
       });
 
@@ -382,6 +379,87 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubBlog();
     };
   }, [pushNotification, showToast]);
+
+  // ---------- TỰ ĐỘNG ĐỒNG BỘ HỒ SƠ & AVATAR ĐA THIẾT BỊ (Cloud-First Single Source of Truth) ----------
+  useEffect(() => {
+    if (!currentUser?.tiktokHandle || !isSupabaseConfigured()) return;
+    const handle = currentUser.tiktokHandle;
+
+    const syncProfileFromCloud = () => {
+      getKOCProfileFromSupabase(handle).then((cloud) => {
+        if (!cloud) return;
+        setCurrentUser((prev) => {
+          if (!prev) return cloud;
+          const hasChange =
+            (cloud.avatar && cloud.avatar !== prev.avatar) ||
+            cloud.name !== prev.name ||
+            cloud.phone !== prev.phone ||
+            cloud.address !== prev.address ||
+            cloud.followers !== prev.followers ||
+            cloud.bio !== prev.bio;
+
+          if (hasChange) {
+            const updated: KOCUser = {
+              ...prev,
+              ...cloud,
+              avatar: cloud.avatar || prev.avatar,
+            };
+            try {
+              localStorage.setItem('koctrend_koc_profile', JSON.stringify(updated));
+              const users = readJSON<KOCUser[]>('koctrend_registered_users', []);
+              const idx = users.findIndex((u) => normHandle(u.tiktokHandle) === normHandle(handle));
+              if (idx >= 0) users[idx] = { ...users[idx], ...updated };
+              else users.push(updated);
+              writeJSON('koctrend_registered_users', users);
+            } catch (e) {
+              console.warn(e);
+            }
+            return updated;
+          }
+          return prev;
+        });
+      });
+    };
+
+    // 1. Tự động kiểm tra ngay khi khởi động
+    syncProfileFromCloud();
+
+    // 2. Tự động kiểm tra khi người dùng chuyển lại tab KOCity từ thiết bị khác
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncProfileFromCloud();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // 3. Lắng nghe Realtime qua Supabase: khi điện thoại đổi Avatar/Profile, màn hình máy tính tự nhảy ngay trong 1s
+    const unsubRealtimeProfile = subscribeToKOCProfileRealtime(handle, (cloudProfile) => {
+      setCurrentUser((prev) => {
+        if (!prev) return cloudProfile;
+        const updated: KOCUser = {
+          ...prev,
+          ...cloudProfile,
+          avatar: cloudProfile.avatar || prev.avatar,
+        };
+        try {
+          localStorage.setItem('koctrend_koc_profile', JSON.stringify(updated));
+          const users = readJSON<KOCUser[]>('koctrend_registered_users', []);
+          const idx = users.findIndex((u) => normHandle(u.tiktokHandle) === normHandle(handle));
+          if (idx >= 0) users[idx] = { ...users[idx], ...updated };
+          else users.push(updated);
+          writeJSON('koctrend_registered_users', users);
+        } catch (e) {
+          console.warn(e);
+        }
+        return updated;
+      });
+    });
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      unsubRealtimeProfile();
+    };
+  }, [currentUser?.tiktokHandle]);
 
   // ---------- Link Media Kit công khai (?mk=... hoặc ?mediakit=...) — giữ để link KOC đã chia sẻ vẫn mở được ----------
   useEffect(() => {

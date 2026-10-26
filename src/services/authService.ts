@@ -114,7 +114,24 @@ export async function login(params: {
           categories: supaProfile?.categories || [],
           isBlacklisted: supaProfile?.isBlacklisted,
           blacklistReason: supaProfile?.blacklistReason,
+          city: supaProfile?.city || '',
+          district: supaProfile?.district || '',
+          address: supaProfile?.address || '',
+          shippingNote: supaProfile?.shippingNote || '',
+          bio: supaProfile?.bio || '',
+          channelLink: supaProfile?.channelLink || `https://www.tiktok.com/${handle}`,
+          targetAudience: supaProfile?.targetAudience || '',
+          contentStyle: supaProfile?.contentStyle || [],
+          highlightVideos: supaProfile?.highlightVideos || [],
         };
+
+        // ĐỒNG BỘ: Cập nhật ngay hồ sơ mới nhất vào danh sách tài khoản của máy này
+        const currentUsers = readUsers();
+        const existingIdx = currentUsers.findIndex((u) => handleKey(u.tiktokHandle) === handleKey(user.tiktokHandle));
+        if (existingIdx >= 0) currentUsers[existingIdx] = { ...currentUsers[existingIdx], ...user };
+        else currentUsers.push(user);
+        writeUsers(currentUsers);
+
         persistRemembered(user, params.remember);
         return { ok: true, user };
       }
@@ -159,17 +176,23 @@ export async function login(params: {
     }
   }
 
-  // Kiểm tra hồ sơ trên Supabase Cloud
-  if (!found && isSupabaseConfigured() && handle) {
+  // Kiểm tra & đồng bộ hồ sơ mới nhất trên Supabase Cloud (Cloud First)
+  if (isSupabaseConfigured() && (handle || found?.tiktokHandle)) {
     try {
-      const cloudUser = await getKOCProfileFromSupabase(handle);
-      if (
-        cloudUser &&
-        (!cloudUser.passwordHash ||
-          cloudUser.passwordHash === inputHash ||
-          (cloudUser as Record<string, unknown>).password === password)
-      ) {
-        found = cloudUser;
+      const cloudUser = await getKOCProfileFromSupabase(found?.tiktokHandle || handle);
+      if (cloudUser) {
+        if (!found) {
+          if (
+            !cloudUser.passwordHash ||
+            cloudUser.passwordHash === inputHash ||
+            (cloudUser as Record<string, unknown>).password === password
+          ) {
+            found = cloudUser;
+          }
+        } else {
+          // Nếu đã khớp tài khoản, đồng bộ avatar và thông tin mới nhất từ Cloud vào
+          found = { ...found, ...cloudUser, avatar: cloudUser.avatar || found.avatar };
+        }
       }
     } catch (e) {
       console.warn('Lỗi kiểm tra cloud profile:', e);
@@ -183,6 +206,13 @@ export async function login(params: {
   const user: KOCUser = { ...found, role: found.role || 'koc' };
   delete (user as Record<string, unknown>).password;
   user.passwordHash = inputHash; // Nâng cấp lưu trữ sang hash an toàn
+
+  // Đồng bộ đè vào bộ nhớ máy này để không bị lệch avatar/thông tin
+  const updatedUsers = readUsers();
+  const foundIdx = updatedUsers.findIndex((u) => handleKey(u.tiktokHandle) === handleKey(user.tiktokHandle));
+  if (foundIdx >= 0) updatedUsers[foundIdx] = { ...updatedUsers[foundIdx], ...user };
+  else updatedUsers.push(user);
+  writeUsers(updatedUsers);
 
   // Tự động nâng cấp tài khoản cũ lên Supabase Auth ngầm
   if (isSupabaseConfigured()) {
@@ -312,8 +342,8 @@ export async function register(params: {
   writeUsers([...users, user]);
   persistRemembered(user, params.remember);
 
-  // Lưu hồ sơ lên Supabase Cloud (đã loại bỏ hoàn toàn password)
-  saveKOCProfileToSupabase(user).catch((err) => console.warn('Lưu Supabase KOC thất bại:', err));
+  // Lưu hồ sơ lên Supabase Cloud (đã loại bỏ hoàn toàn password, chờ lưu thành công để các máy khác thấy ngay)
+  await saveKOCProfileToSupabase(user).catch((err) => console.warn('Lưu Supabase KOC thất bại:', err));
   return { ok: true, user };
 }
 

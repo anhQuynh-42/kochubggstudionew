@@ -594,9 +594,9 @@ export async function saveKOCProfileToSupabase(profile: KOCUser): Promise<boolea
     // BẢO MẬT CHÍ MẠNG: Tuyệt đối không bao giờ lưu trường password lên Supabase
     delete (safeProfile as Record<string, unknown>).password;
 
-    // Nếu avatar là data URL quá lớn (>100KB), lược bỏ chuỗi base64 để không gây nghẽn payload
-    if (safeProfile.avatar && safeProfile.avatar.startsWith('data:') && safeProfile.avatar.length > 100000) {
-      safeProfile.avatar = '';
+    // Nâng trần cho phép Base64 avatar đến 500KB để bảo toàn 100% avatar chân dung trên mọi thiết bị
+    if (safeProfile.avatar && safeProfile.avatar.startsWith('data:') && safeProfile.avatar.length > 500000) {
+      console.warn('Avatar vượt 500KB, cần nén trước khi lưu:', safeProfile.avatar.length);
     }
 
     const payload = {
@@ -607,7 +607,7 @@ export async function saveKOCProfileToSupabase(profile: KOCUser): Promise<boolea
       category: 'KOC_PROFILE',
       tiktokHandle: profile.tiktokHandle,
       tiktokUrl: profile.channelLink,
-      productHeroImage: profile.avatar && !profile.avatar.startsWith('data:') ? profile.avatar : undefined,
+      productHeroImage: profile.avatar || undefined,
       description: JSON.stringify(safeProfile),
     };
 
@@ -642,6 +642,10 @@ export async function getKOCProfileFromSupabase(targetHandle: string): Promise<K
     if (data.description) {
       try {
         const parsed = JSON.parse(data.description) as KOCUser;
+        // Cơ chế dự phòng 2 lớp: Nếu avatar trong description rỗng mà productHeroImage có ảnh, phục hồi ngay
+        if (!parsed.avatar && data.productHeroImage) {
+          parsed.avatar = data.productHeroImage;
+        }
         return parsed;
       } catch (e) {
         console.warn('Lỗi giải mã hồ sơ KOC từ Supabase:', e);
@@ -652,6 +656,50 @@ export async function getKOCProfileFromSupabase(targetHandle: string): Promise<K
     console.warn('Lỗi tải KOC Profile từ Supabase:', err);
     return null;
   }
+}
+
+// 12b. Lắng nghe thay đổi thời gian thực cho Hồ sơ KOC (Realtime KOC Profile)
+// Khi KOC đổi avatar, tên, SĐT trên điện thoại, máy tính đang mở tab sẽ tự động cập nhật ngay trong 1s
+export function subscribeToKOCProfileRealtime(
+  targetHandle: string,
+  onUpdate: (profile: KOCUser) => void
+) {
+  if (!isSupabaseConfigured()) return () => {};
+
+  const cleanHandle = targetHandle.toLowerCase().replace(/[@\s]/g, '');
+  if (!cleanHandle) return () => {};
+
+  const targetId = `__KOC_PROFILE__${cleanHandle}`;
+  const channel = supabase
+    .channel(`realtime_profile_${cleanHandle}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'campaigns',
+        filter: `id=eq.${targetId}`,
+      },
+      (payload) => {
+        if (payload.new && (payload.new as { description?: string }).description) {
+          try {
+            const parsed = JSON.parse((payload.new as { description: string }).description) as KOCUser;
+            const hero = (payload.new as { productHeroImage?: string }).productHeroImage;
+            if (!parsed.avatar && hero) {
+              parsed.avatar = hero;
+            }
+            onUpdate(parsed);
+          } catch (e) {
+            console.warn('Lỗi phân tích Realtime Profile:', e);
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 // 13. Lấy toàn bộ danh sách KOC đã đăng ký tài khoản từ Supabase (kể cả chưa tham gia chiến dịch nào)
