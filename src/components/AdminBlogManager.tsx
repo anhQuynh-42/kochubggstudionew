@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BlogPost, getStoredBlogPosts, saveStoredBlogPosts, INITIAL_BLOG_POSTS } from '../data/blogData';
+import { BlogPost, getStoredBlogPosts, saveStoredBlogPosts, mergeBlogPosts, INITIAL_BLOG_POSTS } from '../data/blogData';
+import { getBlogPostsFromSupabase } from '../services/supabaseService';
 import { BlogContentRenderer } from '../site/components/BlogContentRenderer';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
 
@@ -22,11 +23,35 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
   const [posts, setPosts] = useState<BlogPost[]>(() => getStoredBlogPosts());
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [isCloudLoaded, setIsCloudLoaded] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<Partial<BlogPost>>({});
   const [editorTab, setEditorTab] = useState<'visual' | 'code' | 'preview'>('visual');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Tự động kết nối Cloud và lắng nghe thay đổi thời gian thực
+  useEffect(() => {
+    const handleUpdate = () => {
+      setPosts(getStoredBlogPosts());
+    };
+    window.addEventListener('kocity-blog-updated', handleUpdate);
+
+    // Kéo dữ liệu bài viết mới nhất từ Đám mây Supabase và hợp nhất 2 chiều
+    getBlogPostsFromSupabase().then((cloudPosts) => {
+      setIsCloudLoaded(true);
+      if (cloudPosts && Array.isArray(cloudPosts) && cloudPosts.length > 0) {
+        const currentLocal = getStoredBlogPosts();
+        const merged = mergeBlogPosts(cloudPosts, currentLocal);
+        setPosts(merged);
+        if (merged.length > cloudPosts.length) {
+          saveStoredBlogPosts(merged);
+        }
+      }
+    });
+
+    return () => window.removeEventListener('kocity-blog-updated', handleUpdate);
+  }, []);
 
   // Refs for editor & file upload
   const visualEditorRef = useRef<HTMLDivElement>(null);
@@ -479,11 +504,14 @@ export const AdminBlogManager: React.FC<AdminBlogManagerProps> = ({ onShowToast 
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 p-6 text-white shadow-xl">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-lg bg-purple-500/30 px-2.5 py-1 text-xs font-bold text-purple-200 backdrop-blur-xs">
               CMS Cẩm Nang & SEO
             </span>
-            <span className="text-xs text-purple-300">({posts.length} bài viết)</span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/25 border border-emerald-400/40 px-2.5 py-1 text-xs font-bold text-emerald-200">
+              <span className={`h-2 w-2 rounded-full ${isCloudLoaded ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400 animate-ping'}`} />
+              <span>{isCloudLoaded ? `Cloud Đã Đồng Bộ (${posts.length} bài)` : 'Đang kết nối Cloud...'}</span>
+            </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black mt-1 font-display">
             Quản Lý Bài Viết & Bí Kíp KOCity

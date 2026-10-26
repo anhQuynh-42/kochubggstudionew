@@ -275,28 +275,86 @@ Thay vì phải mất công thiết kế file PDF hay PowerPoint phức tạp, k
 import { saveBlogPostsToSupabase } from '../services/supabaseService';
 
 const STORAGE_KEY = 'kocity_blog_posts_v2';
+const BACKUP_CUSTOM_KEY = 'kocity_admin_custom_posts';
+
+/**
+ * Hợp nhất an toàn 2 chiều giữa danh sách Cloud và danh sách Local / Backup:
+ * - Bảo vệ 100% các bài viết do Admin tạo mới trên máy (không để Cloud cũ đè mất).
+ * - Cập nhật nội dung mới nhất từ Cloud cho các bài gốc.
+ */
+export const mergeBlogPosts = (cloudPosts: BlogPost[], localPosts: BlogPost[]): BlogPost[] => {
+  if (!Array.isArray(cloudPosts) || cloudPosts.length === 0) {
+    return Array.isArray(localPosts) && localPosts.length > 0 ? localPosts : INITIAL_BLOG_POSTS;
+  }
+  if (!Array.isArray(localPosts) || localPosts.length === 0) {
+    return cloudPosts;
+  }
+
+  // Khởi tạo map với các bài từ Cloud
+  const mergedMap = new Map<string, BlogPost>();
+  cloudPosts.forEach((post) => {
+    if (post && post.id) mergedMap.set(post.id, post);
+  });
+
+  // Hợp nhất các bài từ Local:
+  // Nếu bài đó có ID chưa tồn tại trên Cloud (Admin vừa tạo mới trên máy này), giữ lại bài đó!
+  localPosts.forEach((localPost) => {
+    if (!localPost || !localPost.id) return;
+    if (!mergedMap.has(localPost.id)) {
+      mergedMap.set(localPost.id, localPost);
+    }
+  });
+
+  return Array.from(mergedMap.values());
+};
 
 export const getStoredBlogPosts = (): BlogPost[] => {
   if (typeof window === 'undefined') return INITIAL_BLOG_POSTS;
+  let result: BlogPost[] = INITIAL_BLOG_POSTS;
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('kocity_blog_posts_v1');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length >= 5) {
-        return parsed;
+        result = parsed;
       }
     }
   } catch (e) {
     console.warn('Error reading blog posts from storage:', e);
   }
-  // Mặc định luôn có đủ 5 bài viết chuẩn SEO
-  return INITIAL_BLOG_POSTS;
+
+  // Luôn khôi phục bài viết tự tạo từ két dự phòng độc lập BACKUP_CUSTOM_KEY
+  try {
+    const backupRaw = localStorage.getItem(BACKUP_CUSTOM_KEY);
+    if (backupRaw) {
+      const customPosts = JSON.parse(backupRaw);
+      if (Array.isArray(customPosts) && customPosts.length > 0) {
+        result = mergeBlogPosts(result, customPosts);
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading backup custom posts:', e);
+  }
+
+  return result;
 };
 
 export const saveStoredBlogPosts = async (posts: BlogPost[]): Promise<boolean> => {
   if (typeof window === 'undefined') return false;
 
-  // 1. Luôn lưu trực tiếp lên Supabase Cloud để bảo toàn dữ liệu vĩnh viễn trên mọi thiết bị
+  // 1. Tách và lưu các bài viết do Admin tự tạo/chỉnh sửa vào két dự phòng độc lập (không bao giờ bị mất)
+  try {
+    const initialIds = new Set(INITIAL_BLOG_POSTS.map((p) => p.id));
+    const customPosts = posts.filter((p) => !initialIds.has(p.id));
+    if (customPosts.length > 0) {
+      localStorage.setItem(BACKUP_CUSTOM_KEY, JSON.stringify(customPosts));
+    }
+  } catch (err) {
+    console.warn('Lỗi lưu két dự phòng custom posts:', err);
+  }
+
+  // 2. Luôn lưu trực tiếp lên Supabase Cloud để bảo toàn dữ liệu vĩnh viễn trên mọi thiết bị
   let cloudSuccess = false;
   try {
     cloudSuccess = await saveBlogPostsToSupabase(posts);
@@ -304,7 +362,7 @@ export const saveStoredBlogPosts = async (posts: BlogPost[]): Promise<boolean> =
     console.warn('Lỗi đồng bộ Blog lên Cloud:', err);
   }
 
-  // 2. Lưu vào bộ nhớ cục bộ localStorage (chỉ lưu 1 key v2 để tránh tràn quota)
+  // 3. Lưu vào bộ nhớ cục bộ localStorage (chỉ lưu 1 key v2 để tránh tràn quota)
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
   } catch (e) {

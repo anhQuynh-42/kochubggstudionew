@@ -23,8 +23,10 @@ import {
   updateApplicationStatusOnSupabase,
   updateCampaignOnSupabase,
   getBlogPostsFromSupabase,
+  saveBlogPostsToSupabase,
   subscribeToBlogPostsRealtime,
 } from '../services/supabaseService';
+import { getStoredBlogPosts, mergeBlogPosts } from '../data/blogData';
 import { logout } from '../services/authService';
 
 /**
@@ -289,12 +291,18 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
-    // Đồng bộ bài viết Blog (Cẩm nang KOC) từ Supabase đám mây
+    // Đồng bộ bài viết Blog (Cẩm nang KOC) từ Supabase đám mây (Cơ chế Hợp nhất 2 chiều thông minh)
     getBlogPostsFromSupabase().then((cloudPosts) => {
-      if (cloudPosts && cloudPosts.length >= 5) {
+      if (cloudPosts && Array.isArray(cloudPosts) && cloudPosts.length > 0) {
         try {
+          const currentLocal = getStoredBlogPosts();
+          const merged = mergeBlogPosts(cloudPosts, currentLocal);
           localStorage.removeItem('kocity_blog_posts_v1');
-          localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(cloudPosts));
+          localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(merged));
+          // Nếu local có bài viết mới mà Cloud chưa có, đẩy ngay lên Cloud để bảo toàn vĩnh viễn
+          if (merged.length > cloudPosts.length) {
+            saveBlogPostsToSupabase(merged).catch((e) => console.warn('Lỗi push bài mới lên Cloud:', e));
+          }
           window.dispatchEvent(new Event('kocity-blog-updated'));
         } catch (e) {
           console.warn('Lỗi lưu cloud blog vào storage:', e);
@@ -419,10 +427,11 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 
     const unsubBlog = subscribeToBlogPostsRealtime((cloudPosts) => {
-      if (cloudPosts && cloudPosts.length >= 5) {
+      if (cloudPosts && Array.isArray(cloudPosts) && cloudPosts.length > 0) {
         try {
-          localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(cloudPosts));
-          localStorage.setItem('kocity_blog_posts_v1', JSON.stringify(cloudPosts));
+          const currentLocal = getStoredBlogPosts();
+          const merged = mergeBlogPosts(cloudPosts, currentLocal);
+          localStorage.setItem('kocity_blog_posts_v2', JSON.stringify(merged));
           window.dispatchEvent(new Event('kocity-blog-updated'));
         } catch (e) {
           console.warn('Lỗi lưu realtime blog vào storage:', e);
