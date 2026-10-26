@@ -308,7 +308,6 @@ export function subscribeToCampaignsRealtime(
 const VALID_APPLICATION_COLUMNS = new Set([
   'id',
   'code',
-  'kocId',
   'kocName',
   'avatar',
   'phone',
@@ -331,8 +330,6 @@ const VALID_APPLICATION_COLUMNS = new Set([
   'campaignName',
   'verified',
   'created_at',
-  'adminFeedback',
-  'videoSubmittedAt',
 ]);
 
 /**
@@ -345,19 +342,49 @@ export function sanitizeApplicationForSupabase(app: Partial<KOCApplication>): Re
       payload[key] = value;
     }
   }
+
+  // Đóng gói các trường mở rộng không có cột riêng vào contentConcept để bảo toàn 100% dữ liệu
+  let concept = (payload.contentConcept as string) || '';
+  if (app.kocId && !concept.includes('[kocId:')) {
+    concept = `${concept} [kocId: ${app.kocId}]`.trim();
+  }
+  if (app.adminFeedback && !concept.includes('[adminFeedback:')) {
+    concept = `${concept} [adminFeedback: ${app.adminFeedback}]`.trim();
+  }
+  if (app.videoSubmittedAt && !concept.includes('[videoSubmittedAt:')) {
+    concept = `${concept} [videoSubmittedAt: ${app.videoSubmittedAt}]`.trim();
+  }
+  if (concept) {
+    payload.contentConcept = concept;
+  }
+
   return payload;
 }
 
 /**
- * Phục hồi các trường mở rộng (selectedSampleCode, selectedSampleName) từ contentConcept
+ * Phục hồi các trường mở rộng (selectedSampleCode, selectedSampleName, kocId, adminFeedback...) từ contentConcept
  */
 export function parseApplicationFromSupabase(raw: Record<string, unknown>): KOCApplication {
   const app = { ...raw } as unknown as KOCApplication;
-  if (!app.selectedSampleCode && app.contentConcept) {
-    const match = app.contentConcept.match(/\[Mẫu đăng ký:\s*([^\s-]+)\s*-\s*([^\]]+)\]/);
-    if (match) {
-      app.selectedSampleCode = match[1].trim();
-      app.selectedSampleName = match[2].trim();
+  if (app.contentConcept) {
+    if (!app.selectedSampleCode) {
+      const match = app.contentConcept.match(/\[Mẫu đăng ký:\s*([^\s-]+)\s*-\s*([^\]]+)\]/);
+      if (match) {
+        app.selectedSampleCode = match[1].trim();
+        app.selectedSampleName = match[2].trim();
+      }
+    }
+    const kocIdMatch = app.contentConcept.match(/\[kocId:\s*([^\]]+)\]/);
+    if (kocIdMatch && !app.kocId) {
+      app.kocId = kocIdMatch[1].trim();
+    }
+    const adminFeedbackMatch = app.contentConcept.match(/\[adminFeedback:\s*([^\]]+)\]/);
+    if (adminFeedbackMatch && !app.adminFeedback) {
+      app.adminFeedback = adminFeedbackMatch[1].trim();
+    }
+    const videoSubmittedAtMatch = app.contentConcept.match(/\[videoSubmittedAt:\s*([^\]]+)\]/);
+    if (videoSubmittedAtMatch && !app.videoSubmittedAt) {
+      app.videoSubmittedAt = videoSubmittedAtMatch[1].trim();
     }
   }
   return app;

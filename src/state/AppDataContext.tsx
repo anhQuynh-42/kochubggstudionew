@@ -262,26 +262,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setCampaigns(mergedList);
     });
 
-    // BẢO MẬT: Data Isolation — Chỉ tải đơn khi là Admin hoặc KOC chính chủ
-    if (currentUser?.role === 'admin') {
-      getApplicationsFromSupabase().then((data) => {
-        if (!data || data.length === 0) return;
-        setApplications((prev) => {
-          const map = new Map(prev.map((a) => [a.id, a]));
-          data.forEach((a) => map.set(a.id, { ...(map.get(a.id) || {}), ...a }));
-          return Array.from(map.values());
-        });
-      });
-    } else if (currentUser?.tiktokHandle) {
-      getMyApplicationsFromSupabase(currentUser.tiktokHandle).then((data) => {
-        if (!data || data.length === 0) return;
-        setApplications((prev) => {
-          const map = new Map(prev.map((a) => [a.id, a]));
-          data.forEach((a) => map.set(a.id, { ...(map.get(a.id) || {}), ...a }));
-          return Array.from(map.values());
-        });
-      });
-    }
+    // (Dữ liệu đơn ứng tuyển được đồng bộ tự động đa thiết bị qua useEffect chuyên biệt bên dưới)
 
     getHeroBannerFromSupabase().then((banner) => {
       if (!banner) return;
@@ -460,6 +441,44 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubRealtimeProfile();
     };
   }, [currentUser?.tiktokHandle]);
+
+  // ---------- TỰ ĐỘNG ĐỒNG BỘ ĐƠN ỨNG TUYỂN ĐA THIẾT BỊ (Applications Multi-Device Sync) ----------
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !currentUser) return;
+
+    if (currentUser.role === 'admin') {
+      getApplicationsFromSupabase().then((cloudApps) => {
+        if (!cloudApps) return;
+        setApplications((prev) => {
+          const map = new Map(cloudApps.map((a) => [a.id, a]));
+          // Bảo lưu đơn offline cục bộ nếu có
+          prev.forEach((a) => {
+            if (!map.has(a.id) && (a.id.startsWith('offline-') || a.id.startsWith('app-local-'))) {
+              map.set(a.id, a);
+            }
+          });
+          return Array.from(map.values());
+        });
+      });
+    } else if (currentUser.tiktokHandle) {
+      getMyApplicationsFromSupabase(currentUser.tiktokHandle).then((cloudApps) => {
+        if (!cloudApps) return;
+        setApplications((prev) => {
+          const map = new Map(cloudApps.map((a) => [a.id, a]));
+          // Tự động đẩy đơn đang có trên máy này lên Supabase Cloud nếu Cloud chưa có
+          prev.forEach((localApp) => {
+            if (isOwnApplication(localApp, currentUser)) {
+              if (!map.has(localApp.id)) {
+                map.set(localApp.id, localApp);
+                submitApplicationToSupabase(localApp).catch((e) => console.warn('Tự động đẩy đơn offline lên Cloud thất bại:', e));
+              }
+            }
+          });
+          return Array.from(map.values());
+        });
+      });
+    }
+  }, [currentUser?.id, currentUser?.tiktokHandle, currentUser?.role]);
 
   // ---------- Link Media Kit công khai (?mk=... hoặc ?mediakit=...) — giữ để link KOC đã chia sẻ vẫn mở được ----------
   useEffect(() => {
