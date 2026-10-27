@@ -36,6 +36,15 @@ export const getDefaultEndDateString = (daysAhead: number = 15): string => {
   return d.toISOString().split('T')[0];
 };
 
+// Hàm kiểm tra một đơn ứng tuyển có thuộc về một chiến dịch cụ thể không (hỗ trợ cả ID, mã code và tên chiến dịch)
+export const isAppOfCampaign = (app: KOCApplication, camp: Campaign): boolean => {
+  if (app.campaignId && (app.campaignId === camp.id || app.campaignId === camp.code)) return true;
+  if (!app.campaignName || !camp.title) return false;
+  const aName = app.campaignName.toLowerCase().trim();
+  const cTitle = camp.title.toLowerCase().trim();
+  return aName === cTitle || cTitle.includes(aName) || aName.includes(cTitle);
+};
+
 interface AdminViewProps {
   campaigns: Campaign[];
   onUpdateCampaigns: (campaigns: Campaign[]) => void;
@@ -322,6 +331,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [isAddCampaignModalOpen, setIsAddCampaignModalOpen] = useState(false);
   const [isPreviewDraftOpen, setIsPreviewDraftOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Quản lý KOC theo từng chiến dịch (Trang con chuyên dụng)
+  const [selectedCampaignForKoc, setSelectedCampaignForKoc] = useState<Campaign | null>(null);
+  const [campaignKocSearch, setCampaignKocSearch] = useState('');
+  const [campaignKocStatusFilter, setCampaignKocStatusFilter] = useState<string>('all');
+  const [isBrandExportDropdownOpen, setIsBrandExportDropdownOpen] = useState(false);
+  const brandExportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isBrandExportDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (brandExportRef.current && !brandExportRef.current.contains(e.target as Node)) {
+        setIsBrandExportDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isBrandExportDropdownOpen]);
 
   // Edit Campaign Form Modal State
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
@@ -1681,6 +1708,89 @@ export const AdminView: React.FC<AdminViewProps> = ({
     document.body.removeChild(link);
 
     onShowToast('Đã xuất file CSV thành công!', 'File sẵn sàng để gửi cho đơn vị vận chuyển hoặc lưu trữ.', 'success');
+  };
+
+  // Xuất file CSV danh sách KOC của riêng 1 chiến dịch cho Brand
+  const handleExportCampaignKocCSV = (targetCamp: Campaign, campApps: KOCApplication[]) => {
+    if (campApps.length === 0) {
+      onShowToast('Không có dữ liệu', 'Chiến dịch này chưa có KOC nào đăng ký', 'warning');
+      return;
+    }
+    const headers = ['STT', 'Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh', 'Followers', 'Lượt xem TB', 'SĐT', 'Email', 'Địa chỉ nhận hàng', 'Concept video', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
+    const rows = campApps.map((a, idx) => [
+      idx + 1,
+      `"${a.code}"`,
+      `"${(a.kocName || '').replace(/"/g, '""')}"`,
+      `"${a.tiktokHandle || ''}"`,
+      `"${a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : '')}"`,
+      `"${a.followers || ''}"`,
+      `"${a.avgViews || ''}"`,
+      `"${a.phone || ''}"`,
+      `"${a.email || ''}"`,
+      `"${(a.address || '').replace(/"/g, '""')}"`,
+      `"${(a.contentConcept || '').replace(/"/g, '""')}"`,
+      `"${a.status || ''}"`,
+      `"${a.shippingCode || ''}"`,
+      `"${a.videoLink || ''}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    const safeBrand = (targetCamp.brandName || 'Brand').replace(/[^a-zA-Z0-9]/g, '_');
+    link.setAttribute('download', `KOC_${safeBrand}_${targetCamp.code || 'Camp'}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    onShowToast('Đã tải file Excel!', `Danh sách ${campApps.length} KOC của chiến dịch ${targetCamp.brandName}`, 'success');
+  };
+
+  // Sao chép danh sách KOC định dạng chuẩn để gửi Zalo cho Brand
+  const handleCopyZaloList = (targetCamp: Campaign, campApps: KOCApplication[]) => {
+    if (campApps.length === 0) {
+      onShowToast('Chưa có KOC', 'Chiến dịch này chưa có đơn đăng ký nào', 'warning');
+      return;
+    }
+
+    const lines = [
+      `🌟 [KOCITY] DANH SÁCH KOC ĐĂNG KÝ NHẬN MẪU`,
+      `📦 Chiến dịch: ${targetCamp.brandName} - ${targetCamp.title}`,
+      `📊 Tổng số: ${campApps.length} KOC đăng ký | Slot: ${targetCamp.registeredSpots}/${targetCamp.totalSpots}`,
+      `----------------------------------------`,
+      ...campApps.map((a, idx) => {
+        const link = a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://tiktok.com/@${a.tiktokHandle.replace('@', '')}`) : '');
+        return `${idx + 1}. ${a.kocName} (${a.tiktokHandle})
+   • Follow: ${a.followers || 'N/A'} | Lượt xem TB: ${a.avgViews || 'N/A'}
+   • SĐT: ${a.phone}
+   • Kênh: ${link}
+   • Trạng thái: ${a.status}${a.shippingCode ? ` (Mã VĐ: ${a.shippingCode})` : ''}`;
+      }),
+      `----------------------------------------`,
+      `👉 KOCity - Nền tảng điều phối KOC chuyên nghiệp`,
+    ];
+
+    const textToCopy = lines.join('\n');
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      onShowToast('Đã sao chép danh sách!', `Đã copy danh sách ${campApps.length} KOC để dán gửi Zalo Brand`, 'success');
+    }).catch(() => {
+      onShowToast('Lỗi sao chép', 'Trình duyệt chặn sao chép tự động', 'warning');
+    });
+  };
+
+  // Duyệt hàng loạt KOC đang chờ duyệt của chiến dịch
+  const handleBulkApproveCampaignKocs = (camp: Campaign, pendingApps: KOCApplication[]) => {
+    if (pendingApps.length === 0) return;
+    const confirmApprove = window.confirm(
+      `Bạn có chắc chắn muốn DUYỆT GỬI MẪU cho toàn bộ ${pendingApps.length} KOC đang chờ duyệt của chiến dịch "${camp.title}" không?`
+    );
+    if (!confirmApprove) return;
+
+    for (const app of pendingApps) {
+      handleUpdateStatus(app.id, 'Đã duyệt gửi mẫu');
+    }
+    onShowToast('Duyệt thành công!', `Đã duyệt gửi mẫu cho ${pendingApps.length} KOC của chiến dịch`, 'success');
   };
 
   // Status badge styling helper - Tinh gọn dạng Pill chuẩn Modern SaaS
@@ -4356,112 +4466,560 @@ export const AdminView: React.FC<AdminViewProps> = ({
             --------------------------------------------------------------------- */}
         {activeAdminTab === 'campaigns' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {campaigns.map((camp) => (
-                <div
-                  key={camp.id}
-                  className="rounded-2xl bg-white overflow-hidden shadow-xs border border-slate-200 hover:shadow-md transition-all flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Header Image */}
-                    <div className="relative h-44 w-full overflow-hidden bg-slate-100 group">
-                      <img
-                        src={camp.productHeroImage}
-                        alt={camp.title}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-lg bg-blue-900/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-white border border-blue-700/40">
-                        <span>{camp.brandName}</span>
-                      </div>
-                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs">
-                        <span className="material-symbols-outlined text-[13px]">timer</span>
-                        <span>
-                          {(() => {
-                            const days = calculateDaysLeftFromDate(camp.endDate, camp.daysLeft);
-                            return days > 0 ? `Còn ${days} ngày` : 'Hết hạn';
-                          })()}
+            {selectedCampaignForKoc ? (
+              // -----------------------------------------------------------------
+              // TRANG CON: QUẢN LÝ KOC CỦA 1 CHIẾN DỊCH CỤ THỂ
+              // -----------------------------------------------------------------
+              (() => {
+                const targetCamp = selectedCampaignForKoc;
+                const targetCampApps = applications.filter((a) => isAppOfCampaign(a, targetCamp));
+                const subPending = targetCampApps.filter((a) => a.status === 'Chờ duyệt');
+                const subApproved = targetCampApps.filter((a) => a.status === 'Đã duyệt gửi mẫu');
+                const subShipping = targetCampApps.filter((a) => a.status === 'Đang giao');
+                const subVideoPending = targetCampApps.filter((a) => a.status === 'Chờ duyệt video');
+                const subCompleted = targetCampApps.filter((a) => a.status === 'Đã hoàn thành' || a.status === 'Đã lên bài');
+                const subRejected = targetCampApps.filter((a) => a.status === 'Từ chối' || a.status === 'Bị từ chối');
+
+                const filteredSubApps = targetCampApps.filter((app) => {
+                  const matchStatus = campaignKocStatusFilter === 'all' || app.status === campaignKocStatusFilter;
+                  const matchSearch = !campaignKocSearch.trim() || (
+                    (app.kocName || '').toLowerCase().includes(campaignKocSearch.toLowerCase()) ||
+                    (app.tiktokHandle || '').toLowerCase().includes(campaignKocSearch.toLowerCase()) ||
+                    (app.phone || '').includes(campaignKocSearch.trim()) ||
+                    (app.code || '').toLowerCase().includes(campaignKocSearch.toLowerCase())
+                  );
+                  return matchStatus && matchSearch;
+                });
+
+                const percentFilled = Math.min(100, Math.round((targetCampApps.length / (targetCamp.totalSpots || 50)) * 100));
+
+                return (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    {/* Thanh Điều Hướng & Nút Tác Vụ Gửi Brand */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCampaignForKoc(null)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 px-3.5 py-2 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                          <span>Tất cả chiến dịch</span>
+                        </button>
+                        <span className="text-slate-300">/</span>
+                        <span className="text-xs font-bold text-blue-600 line-clamp-1 max-w-[200px] sm:max-w-[320px]">
+                          {targetCamp.brandName} - {targetCamp.title}
                         </span>
                       </div>
-                      {/* Nút sửa ảnh nhanh khi hover ảnh */}
-                      <button
-                        onClick={() => handleOpenEditCampaign(camp)}
-                        className="absolute inset-0 bg-black/45 backdrop-blur-2xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-bold cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">photo_camera</span>
-                        <span>Đổi ảnh / Sửa chiến dịch</span>
-                      </button>
+
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        {/* Duyệt nhanh tất cả đơn chờ */}
+                        {subPending.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleBulkApproveCampaignKocs(targetCamp, subPending)}
+                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 active:scale-95 cursor-pointer"
+                            title={`Duyệt hàng loạt ${subPending.length} KOC đang chờ nhận mẫu`}
+                          >
+                            <span className="material-symbols-outlined text-[17px]">task_alt</span>
+                            <span>Duyệt tất cả ({subPending.length})</span>
+                          </button>
+                        )}
+
+                        {/* Menu Thông Minh: Gửi Brand */}
+                        <div className="relative" ref={brandExportRef}>
+                          <button
+                            type="button"
+                            onClick={() => setIsBrandExportDropdownOpen(!isBrandExportDropdownOpen)}
+                            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 text-xs font-bold transition-all shadow-sm shadow-blue-500/25 active:scale-95 cursor-pointer"
+                            title="Gửi danh sách KOC cho Brand duyệt qua Zalo hoặc xuất Excel"
+                          >
+                            <span className="material-symbols-outlined text-[17px]">send</span>
+                            <span>Gửi Brand ({targetCampApps.length})</span>
+                            <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                          </button>
+
+                          {isBrandExportDropdownOpen && (
+                            <div className="absolute right-0 mt-1.5 w-64 rounded-2xl bg-white shadow-xl border border-slate-200 p-1.5 z-50 animate-in fade-in zoom-in-95">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsBrandExportDropdownOpen(false);
+                                  handleCopyZaloList(targetCamp, targetCampApps);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-blue-50 text-slate-800 text-xs font-semibold text-left transition-colors cursor-pointer"
+                              >
+                                <span className="p-1.5 rounded-lg bg-blue-100 text-blue-600 material-symbols-outlined text-[16px]">content_copy</span>
+                                <div>
+                                  <p className="font-bold text-slate-900">Sao chép gửi Zalo Brand</p>
+                                  <p className="text-[11px] text-slate-500">Định dạng text tóm tắt dán ngay</p>
+                                </div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsBrandExportDropdownOpen(false);
+                                  handleExportCampaignKocCSV(targetCamp, targetCampApps);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-slate-800 text-xs font-semibold text-left transition-colors cursor-pointer mt-1"
+                              >
+                                <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-600 material-symbols-outlined text-[16px]">table_chart</span>
+                                <div>
+                                  <p className="font-bold text-slate-900">Tải file Excel (.CSV)</p>
+                                  <p className="text-[11px] text-slate-500">Kèm SĐT, địa chỉ kho gửi mẫu</p>
+                                </div>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="p-4 space-y-3">
-                      <h4 className="font-bold text-slate-900 line-clamp-2 text-sm leading-snug">
-                        {camp.title}
-                      </h4>
-                      <p className="text-xs text-slate-500 line-clamp-2">{camp.description}</p>
-
-                      {/* Spots Progress Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                          <span>Tiến độ nhận mẫu</span>
-                          <span>
-                            <strong className="text-blue-600">{camp.registeredSpots}</strong> / {camp.totalSpots} slot
-                          </span>
+                    {/* Khối Tóm Tắt Chiến Dịch & Bộ Đếm Số Lượng Trực Quan */}
+                    <div className="rounded-2xl bg-white p-4 sm:p-5 shadow-xs border border-slate-200/90">
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3.5">
+                          <img
+                            src={targetCamp.productHeroImage}
+                            alt={targetCamp.title}
+                            className="h-16 w-16 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0"
+                          />
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
+                                {targetCamp.brandName}
+                              </span>
+                              <span className="font-mono text-slate-400 text-[11px] font-bold">
+                                {targetCamp.code}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold">
+                                {targetCamp.category}
+                              </span>
+                            </div>
+                            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug">
+                              {targetCamp.title}
+                            </h3>
+                          </div>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-blue-600 transition-all"
-                            style={{
-                              width: `${Math.min(100, (camp.registeredSpots / camp.totalSpots) * 100)}%`,
-                            }}
-                          ></div>
+
+                        {/* Thanh tiến độ nhận mẫu */}
+                        <div className="w-full md:w-64 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
+                          <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                            <span className="text-slate-600">Tiến độ nhận mẫu</span>
+                            <span className="text-blue-600 font-mono">
+                              {targetCampApps.length} / {targetCamp.totalSpots} slot ({percentFilled}%)
+                            </span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+                              style={{ width: `${percentFilled}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      {/* Benefits tag */}
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {camp.benefits.map((b, idx) => (
-                          <span
-                            key={idx}
-                            className="rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
+                      {/* Bộ Thống Kê Số Lượng KOC */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-4">
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
+                          <span className="text-slate-500 text-[11px] font-semibold block">Tổng KOC</span>
+                          <span className="text-lg font-black text-slate-900">{targetCampApps.length}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-center">
+                          <span className="text-amber-800 text-[11px] font-semibold block">Chờ duyệt</span>
+                          <span className="text-lg font-black text-amber-700">{subPending.length}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/80 text-center">
+                          <span className="text-blue-800 text-[11px] font-semibold block">Đã duyệt gửi</span>
+                          <span className="text-lg font-black text-blue-700">{subApproved.length}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-purple-50/80 border border-purple-200/80 text-center">
+                          <span className="text-purple-800 text-[11px] font-semibold block">Đang giao</span>
+                          <span className="text-lg font-black text-purple-700">{subShipping.length}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-rose-50/80 border border-rose-200/80 text-center">
+                          <span className="text-rose-800 text-[11px] font-semibold block">Chờ video</span>
+                          <span className="text-lg font-black text-rose-700">{subVideoPending.length}</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-center">
+                          <span className="text-emerald-800 text-[11px] font-semibold block">Hoàn thành</span>
+                          <span className="text-lg font-black text-emerald-700">{subCompleted.length}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Thanh Lọc & Tìm Kiếm Trong Chiến Dịch */}
+                    <div className="rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border border-slate-200/90 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                      <div className="relative flex-1 max-w-md">
+                        <span className="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-slate-400">search</span>
+                        <input
+                          type="text"
+                          placeholder="Tìm KOC, SĐT, @tiktok, mã đơn..."
+                          value={campaignKocSearch}
+                          onChange={(e) => setCampaignKocSearch(e.target.value)}
+                          className="w-full rounded-xl border border-slate-200/80 bg-slate-50/70 py-2 pl-9 pr-8 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100/70 transition-all"
+                        />
+                        {campaignKocSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setCampaignKocSearch('')}
+                            className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
                           >
-                            {b.label}
-                          </span>
+                            <span className="material-symbols-outlined text-[16px]">close</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto no-scrollbar">
+                        {[
+                          { id: 'all', label: 'Tất cả', count: targetCampApps.length },
+                          { id: 'Chờ duyệt', label: 'Chờ duyệt', count: subPending.length },
+                          { id: 'Đã duyệt gửi mẫu', label: 'Đã duyệt gửi', count: subApproved.length },
+                          { id: 'Đang giao', label: 'Đang giao', count: subShipping.length },
+                          { id: 'Chờ duyệt video', label: 'Chờ video', count: subVideoPending.length },
+                          { id: 'Đã hoàn thành', label: 'Hoàn thành', count: subCompleted.length },
+                          { id: 'Từ chối', label: 'Từ chối', count: subRejected.length },
+                        ].map((chip) => (
+                          <button
+                            key={chip.id}
+                            type="button"
+                            onClick={() => setCampaignKocStatusFilter(chip.id)}
+                            className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                              campaignKocStatusFilter === chip.id
+                                ? 'bg-slate-900 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
+                            }`}
+                          >
+                            <span>{chip.label}</span>
+                            <span
+                              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                                campaignKocStatusFilter === chip.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {chip.count}
+                            </span>
+                          </button>
                         ))}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions footer */}
-                  <div className="p-3.5 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50/70">
-                    <span className="font-mono text-[11px] text-slate-400 font-bold">{camp.code}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenEditCampaign(camp)}
-                        className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 font-bold transition-all cursor-pointer shadow-sm shadow-blue-600/20 active:scale-95"
-                        title="Chỉnh sửa thông tin chiến dịch, đổi ảnh, cài đặt ngày đếm ngược"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">edit</span>
-                        <span>Sửa chiến dịch</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Bạn có chắc muốn xoá chiến dịch "${camp.title}"?`)) {
-                            onUpdateCampaigns(campaigns.filter((c) => c.id !== camp.id));
-                            deleteCampaignOnSupabase(camp.id);
-                            onShowToast('Đã xoá chiến dịch', camp.title, 'info');
-                          }
-                        }}
-                        className="flex items-center gap-1 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 px-2.5 py-1.5 font-bold transition-all cursor-pointer"
-                        title="Xoá chiến dịch"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">delete</span>
-                        <span>Xoá</span>
-                      </button>
+                    {/* Bảng Danh Sách KOC Của Riêng Chiến Dịch Này */}
+                    <div className="rounded-2xl bg-white shadow-xs border border-slate-200/90 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-slate-50/90 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80">
+                            <tr>
+                              <th className="px-4 py-3 sm:px-5 sm:py-3.5">Mã Đơn / Ngày</th>
+                              <th className="px-4 py-3 sm:px-5 sm:py-3.5">Thông Tin KOC</th>
+                              <th className="px-4 py-3 sm:px-5 sm:py-3.5">Địa Chỉ Giao Mẫu</th>
+                              <th className="px-4 py-3 sm:px-5 sm:py-3.5">Kế Hoạch / Concept</th>
+                              <th className="px-4 py-3 sm:px-5 sm:py-3.5">Trạng Thái & Vận Đơn</th>
+                              <th className="px-4 py-3 sm:px-5 sm:py-3.5 text-right">Thao Tác</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {filteredSubApps.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="py-12 text-center text-slate-500">
+                                  <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">groups</span>
+                                  <p className="text-sm font-semibold">Chưa có hồ sơ KOC nào phù hợp trong chiến dịch này</p>
+                                  <p className="text-xs text-slate-400 mt-1">Hãy thử đổi trạng thái lọc hoặc xóa từ khóa tìm kiếm.</p>
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredSubApps.map((app) => (
+                                <tr key={app.id} className="hover:bg-slate-50/60 transition-colors">
+                                  {/* Mã đơn */}
+                                  <td className="px-4 py-3 sm:px-5 sm:py-3.5 whitespace-nowrap">
+                                    <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded">
+                                      {app.code}
+                                    </span>
+                                    <div className="text-[11px] text-slate-400 mt-1">
+                                      {app.createdAtDate} <br />
+                                      <span className="text-[10px]">{app.createdAtTime}</span>
+                                    </div>
+                                  </td>
+
+                                  {/* Thông tin KOC */}
+                                  <td className="px-4 py-3 sm:px-5 sm:py-3.5">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={app.avatar}
+                                        alt={app.kocName}
+                                        className="h-10 w-10 rounded-full object-cover border border-slate-200 shrink-0"
+                                      />
+                                      <div>
+                                        <div className="font-bold text-slate-900 flex items-center gap-1 text-xs sm:text-sm">
+                                          {app.kocName}
+                                          {renderKocLoyaltyStar(app.tiktokHandle, app.kocName)}
+                                        </div>
+                                        <a
+                                          href={app.channelLink || (app.tiktokHandle ? (app.tiktokHandle.startsWith('http') ? app.tiktokHandle : `https://tiktok.com/@${app.tiktokHandle.replace('@', '')}`) : '#')}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-0.5"
+                                        >
+                                          {app.tiktokHandle}
+                                          <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                                        </a>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                          📞 {app.phone} • ✉️ {app.email}
+                                        </p>
+                                        <span className="inline-block mt-1 text-[10px] font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                                          {app.followers || 'Chưa cập nhật follow'} • {app.avgViews || 'Views N/A'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  {/* Địa chỉ */}
+                                  <td className="px-4 py-3 sm:px-5 sm:py-3.5 max-w-[220px]">
+                                    <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed">
+                                      {app.address || 'Chưa cung cấp địa chỉ'}
+                                    </p>
+                                  </td>
+
+                                  {/* Concept video */}
+                                  <td className="px-4 py-3 sm:px-5 sm:py-3.5 max-w-[220px]">
+                                    <p className="text-xs text-slate-600 italic line-clamp-2">
+                                      "{app.contentConcept || 'Không có mô tả concept'}"
+                                    </p>
+                                  </td>
+
+                                  {/* Trạng thái & Vận đơn */}
+                                  <td className="px-4 py-3 sm:px-5 sm:py-3.5 whitespace-nowrap">
+                                    <div>{getStatusBadge(app.status)}</div>
+                                    {app.shippingCode && (
+                                      <div className="mt-1 flex items-center gap-1 font-mono text-[11px] text-slate-600">
+                                        <span className="material-symbols-outlined text-[14px] text-slate-400">local_shipping</span>
+                                        <span>{app.shippingCode}</span>
+                                      </div>
+                                    )}
+                                  </td>
+
+                                  {/* Thao tác */}
+                                  <td className="px-4 py-3 sm:px-5 sm:py-3.5 text-right whitespace-nowrap">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      {app.status === 'Chờ duyệt' && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus(app.id, 'Đã duyệt gửi mẫu')}
+                                            className="flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+                                            title="Duyệt gửi mẫu 0đ cho KOC này"
+                                          >
+                                            <span className="material-symbols-outlined text-[15px]">check</span>
+                                            <span>Duyệt</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setRejectModalApp(app);
+                                              setRejectType('application');
+                                            }}
+                                            className="flex items-center gap-1 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer"
+                                            title="Từ chối hồ sơ kèm phản hồi"
+                                          >
+                                            <span className="material-symbols-outlined text-[15px]">close</span>
+                                            <span>Từ chối</span>
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {app.status === 'Đã duyệt gửi mẫu' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateStatus(app.id, 'Đang giao')}
+                                          className="flex items-center gap-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer"
+                                          title="Chuyển sang trạng thái đang giao bưu cục"
+                                        >
+                                          <span className="material-symbols-outlined text-[15px]">local_shipping</span>
+                                          <span>Đang giao</span>
+                                        </button>
+                                      )}
+
+                                      {app.status === 'Chờ duyệt video' && app.videoLink && (
+                                        <a
+                                          href={app.videoLink}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="flex items-center gap-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer"
+                                          title="Mở video TikTok để duyệt nghiệm thu"
+                                        >
+                                          <span className="material-symbols-outlined text-[15px]">play_circle</span>
+                                          <span>Xem video</span>
+                                        </a>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedApp(app);
+                                          setEditingShippingCode(app.shippingCode || '');
+                                          setIsDetailModalOpen(true);
+                                        }}
+                                        className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                                        title="Xem chi tiết toàn bộ hồ sơ KOC"
+                                      >
+                                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                );
+              })()
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {campaigns.map((camp) => {
+                  const campApps = applications.filter((a) => isAppOfCampaign(a, camp));
+                  const pendingCount = campApps.filter((a) => a.status === 'Chờ duyệt').length;
+
+                  return (
+                    <div
+                      key={camp.id}
+                      className="rounded-2xl bg-white overflow-hidden shadow-xs border border-slate-200 hover:shadow-md transition-all flex flex-col justify-between"
+                    >
+                      <div>
+                        {/* Header Image */}
+                        <div className="relative h-44 w-full overflow-hidden bg-slate-100 group">
+                          <img
+                            src={camp.productHeroImage}
+                            alt={camp.title}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-lg bg-blue-900/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-white border border-blue-700/40">
+                            <span>{camp.brandName}</span>
+                          </div>
+                          <div className="absolute top-2.5 right-2.5 flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs">
+                            <span className="material-symbols-outlined text-[13px]">timer</span>
+                            <span>
+                              {(() => {
+                                const days = calculateDaysLeftFromDate(camp.endDate, camp.daysLeft);
+                                return days > 0 ? `Còn ${days} ngày` : 'Hết hạn';
+                              })()}
+                            </span>
+                          </div>
+                          {/* Nút sửa ảnh nhanh khi hover ảnh */}
+                          <button
+                            onClick={() => handleOpenEditCampaign(camp)}
+                            className="absolute inset-0 bg-black/45 backdrop-blur-2xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-bold cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                            <span>Đổi ảnh / Sửa chiến dịch</span>
+                          </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4 space-y-3">
+                          <h4 className="font-bold text-slate-900 line-clamp-2 text-sm leading-snug">
+                            {camp.title}
+                          </h4>
+                          <p className="text-xs text-slate-500 line-clamp-2">{camp.description}</p>
+
+                          {/* Spots Progress Bar */}
+                          <div>
+                            <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                              <span>Tiến độ nhận mẫu</span>
+                              <span>
+                                <strong className="text-blue-600">{campApps.length}</strong> / {camp.totalSpots} slot
+                              </span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-blue-600 transition-all"
+                                style={{
+                                  width: `${Math.min(100, (campApps.length / (camp.totalSpots || 50)) * 100)}%`,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          {/* NÚT THÔNG MINH MỞ TRANG CON QUẢN LÝ KOC CỦA CHIẾN DỊCH */}
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCampaignForKoc(camp);
+                                setCampaignKocSearch('');
+                                setCampaignKocStatusFilter('all');
+                              }}
+                              className="w-full flex items-center justify-between rounded-xl bg-blue-50 border border-blue-200 hover:bg-blue-600 hover:border-blue-600 text-blue-700 hover:text-white px-3 py-2.5 text-xs font-bold transition-all shadow-2xs group/koc cursor-pointer"
+                              title="Bấm để mở trang quản lý và duyệt KOC riêng cho chiến dịch này"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[17px]">groups</span>
+                                <span>Danh sách KOC nhận mẫu</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {pendingCount > 0 && (
+                                  <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black group-hover/koc:bg-amber-300 animate-pulse">
+                                    {pendingCount} chờ duyệt
+                                  </span>
+                                )}
+                                <span className="px-2 py-0.5 rounded-lg bg-blue-100 group-hover/koc:bg-white/20 text-blue-800 group-hover/koc:text-white text-[11px] font-bold">
+                                  {campApps.length} KOC
+                                </span>
+                                <span className="material-symbols-outlined text-[15px] group-hover/koc:translate-x-0.5 transition-transform">
+                                  arrow_forward
+                                </span>
+                              </div>
+                            </button>
+                          </div>
+
+                          {/* Benefits tag */}
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {camp.benefits.map((b, idx) => (
+                              <span
+                                key={idx}
+                                className="rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
+                              >
+                                {b.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions footer */}
+                      <div className="p-3.5 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50/70">
+                        <span className="font-mono text-[11px] text-slate-400 font-bold">{camp.code}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditCampaign(camp)}
+                            className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 font-bold transition-all cursor-pointer shadow-sm shadow-blue-600/20 active:scale-95"
+                            title="Chỉnh sửa thông tin chiến dịch, đổi ảnh, cài đặt ngày đếm ngược"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                            <span>Sửa chiến dịch</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Bạn có chắc muốn xoá chiến dịch "${camp.title}"?`)) {
+                                onUpdateCampaigns(campaigns.filter((c) => c.id !== camp.id));
+                                deleteCampaignOnSupabase(camp.id);
+                                onShowToast('Đã xoá chiến dịch', camp.title, 'info');
+                              }
+                            }}
+                            className="flex items-center gap-1 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 px-2.5 py-1.5 font-bold transition-all cursor-pointer"
+                            title="Xoá chiến dịch"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">delete</span>
+                            <span>Xoá</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
