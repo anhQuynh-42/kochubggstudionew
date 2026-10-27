@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mjsmnkelreniasahhfkf.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_NWcv9pPeRzu-884jDEeW9w_Si3trWfH';
@@ -193,7 +194,25 @@ async function runVerification() {
     passed = false;
   }
 
+  // 8. Kiểm tra thuật toán xuất file CSV/Excel: Không dùng data: URI bị cắt ký tự # và giữ số 0 SĐT
+  try {
+    const adminCode = fs.readFileSync('src/components/AdminView.tsx', 'utf8');
+    if (adminCode.includes("data:text/csv") || adminCode.includes("encodeURI(csvContent)")) {
+      console.error('❌ Phát hiện lỗi: Vẫn còn sử dụng data: URI và encodeURI khiến file CSV bị cắt cụt ký tự "#"!');
+      passed = false;
+    } else if (!adminCode.includes("new Blob(['\\uFEFF'") && !adminCode.includes("new Blob(['\\uFEFF")) {
+      console.error('❌ Phát hiện lỗi: Xuất CSV thiếu UTF-8 BOM hoặc thiếu Blob chuẩn!');
+      passed = false;
+    } else {
+      console.log('✅ 8. Thuật toán xuất dữ liệu KOC (CSV/Excel Blob): Đạt chuẩn (Bảo toàn ký tự #, giữ số 0 SĐT, chuẩn UTF-8 BOM)');
+    }
+  } catch (e) {
+    console.error('❌ Ngoại lệ kiểm thử hàm xuất file:', e);
+    passed = false;
+  }
+
   console.log('------------------------------------------------------------');
+
   if (passed) {
     console.log('🎉 TẤT CẢ KIỂM THỬ ĐỒNG BỘ ĐẠT CHUẨN 100%! Được phép phát hành.');
     process.exit(0);

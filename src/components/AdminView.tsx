@@ -42,8 +42,17 @@ export const isAppOfCampaign = (app: KOCApplication, camp: Campaign): boolean =>
   if (!app.campaignName || !camp.title) return false;
   const aName = app.campaignName.toLowerCase().trim();
   const cTitle = camp.title.toLowerCase().trim();
-  return aName === cTitle || cTitle.includes(aName) || aName.includes(cTitle);
+  if (aName === cTitle || cTitle.includes(aName) || aName.includes(cTitle)) return true;
+  // Liên kết thông minh giữa các biến thể chiến dịch Cỏ Mềm
+  if (
+    (camp.id === 'comem-set-qua-duong-the' && (app.campaignId === 'co-mem-sample-20-10' || aName.includes('cỏ mềm'))) ||
+    (camp.id === 'co-mem-sample-20-10' && (app.campaignId === 'comem-set-qua-duong-the' || aName.includes('cỏ mềm')))
+  ) {
+    return true;
+  }
+  return false;
 };
+
 
 interface AdminViewProps {
   campaigns: Campaign[];
@@ -1676,7 +1685,46 @@ export const AdminView: React.FC<AdminViewProps> = ({
     onShowToast('Thêm ảnh thành công!', 'Đã thêm ảnh vào album chi tiết.', 'success');
   };
 
-  // Action: Export to CSV
+  // Helper xuất file CSV chuẩn quốc tế: Dùng Blob UTF-8 BOM, không bị cắt cụt ký tự '#' và bảo toàn số 0 SĐT
+  const downloadKocCSV = (
+    filename: string,
+    headers: string[],
+    rows: (string | number)[][],
+    phoneColIndices: number[] = []
+  ) => {
+    const formatCell = (val: string | number | undefined | null, isPhone: boolean) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/\r\n|\n|\r/g, ' ').replace(/"/g, '""').trim();
+      // Nếu là số điện thoại, dùng định dạng ="09..." để Excel & Google Sheets giữ nguyên số 0 ở đầu
+      if (isPhone && /^[0-9+]+$/.test(str)) {
+        return `="${str}"`;
+      }
+      return `"${str}"`;
+    };
+
+    const csvLines = [
+      headers.map((h) => `"${String(h).replace(/"/g, '""')}"`).join(','),
+      ...rows.map((row) =>
+        row.map((val, colIdx) => formatCell(val, phoneColIndices.includes(colIdx))).join(',')
+      ),
+    ];
+
+    // Sử dụng Blob với UTF-8 Byte Order Mark (\uFEFF) giúp Excel tự động nhận diện font Tiếng Việt có dấu
+    // và URL.createObjectURL tuyệt đối không bị lỗi cắt cụt khi gặp ký tự '#' như của data: URI
+    const blob = new Blob(['\uFEFF' + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+    }, 1500);
+  };
+
+  // Action: Export to CSV (Tất cả đơn)
   const handleExportCSV = () => {
     if (applications.length === 0) {
       onShowToast('Không có dữ liệu', 'Chưa có đơn đăng ký nào để xuất file', 'warning');
@@ -1685,29 +1733,27 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     const headers = ['Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh TikTok', 'Followers', 'SĐT', 'Địa chỉ nhận hàng', 'Chiến dịch', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
     const rows = applications.map((a) => [
-      `"${a.code}"`,
-      `"${a.kocName}"`,
-      `"${a.tiktokHandle}"`,
-      `"${a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : '')}"`,
-      `"${a.followers}"`,
-      `"${a.phone}"`,
-      `"${a.address.replace(/"/g, '""')}"`,
-      `"${a.campaignName.replace(/"/g, '""')}"`,
-      `"${a.status}"`,
-      `"${a.shippingCode}"`,
-      `"${a.videoLink || ''}"`,
+      a.code || '',
+      a.kocName || '',
+      a.tiktokHandle || '',
+      a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : ''),
+      a.followers || '',
+      a.phone || '',
+      a.address || '',
+      a.campaignName || '',
+      a.status || '',
+      a.shippingCode || '',
+      a.videoLink || '',
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `danh_sach_koc_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadKocCSV(
+      `danh_sach_tat_ca_koc_${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows,
+      [5] // Index 5 là SĐT
+    );
 
-    onShowToast('Đã xuất file CSV thành công!', 'File sẵn sàng để gửi cho đơn vị vận chuyển hoặc lưu trữ.', 'success');
+    onShowToast('Đã xuất file CSV thành công!', `Đã tải danh sách ${applications.length} đơn KOC về máy tính.`, 'success');
   };
 
   // Xuất file CSV danh sách KOC của riêng 1 chiến dịch cho Brand
@@ -1719,32 +1765,33 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const headers = ['STT', 'Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh', 'Followers', 'Lượt xem TB', 'SĐT', 'Email', 'Địa chỉ nhận hàng', 'Concept video', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
     const rows = campApps.map((a, idx) => [
       idx + 1,
-      `"${a.code}"`,
-      `"${(a.kocName || '').replace(/"/g, '""')}"`,
-      `"${a.tiktokHandle || ''}"`,
-      `"${a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : '')}"`,
-      `"${a.followers || ''}"`,
-      `"${a.avgViews || ''}"`,
-      `"${a.phone || ''}"`,
-      `"${a.email || ''}"`,
-      `"${(a.address || '').replace(/"/g, '""')}"`,
-      `"${(a.contentConcept || '').replace(/"/g, '""')}"`,
-      `"${a.status || ''}"`,
-      `"${a.shippingCode || ''}"`,
-      `"${a.videoLink || ''}"`,
+      a.code || '',
+      a.kocName || '',
+      a.tiktokHandle || '',
+      a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : ''),
+      a.followers || '',
+      a.avgViews || '',
+      a.phone || '',
+      a.email || '',
+      a.address || '',
+      a.contentConcept || '',
+      a.status || '',
+      a.shippingCode || '',
+      a.videoLink || '',
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
     const safeBrand = (targetCamp.brandName || 'Brand').replace(/[^a-zA-Z0-9]/g, '_');
-    link.setAttribute('download', `KOC_${safeBrand}_${targetCamp.code || 'Camp'}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const safeCode = (targetCamp.code || targetCamp.id || 'Camp').replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `KOC_${safeBrand}_${safeCode}_${new Date().toISOString().slice(0, 10)}.csv`;
 
-    onShowToast('Đã tải file Excel!', `Danh sách ${campApps.length} KOC của chiến dịch ${targetCamp.brandName}`, 'success');
+    downloadKocCSV(
+      filename,
+      headers,
+      rows,
+      [7] // Index 7 là SĐT
+    );
+
+    onShowToast('Đã tải file Excel thành công!', `Đã xuất ${campApps.length} KOC của chiến dịch ${targetCamp.brandName}`, 'success');
   };
 
   // Sao chép danh sách KOC định dạng chuẩn để gửi Zalo cho Brand
