@@ -4491,7 +4491,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   return matchStatus && matchSearch;
                 });
 
-                const percentFilled = Math.min(100, Math.round((targetCampApps.length / (targetCamp.totalSpots || 50)) * 100));
+                const displaySubSpots = Math.max(targetCamp.registeredSpots || 0, targetCampApps.length);
+                const percentFilled = Math.min(100, Math.round((displaySubSpots / (targetCamp.totalSpots || 50)) * 100));
 
                 return (
                   <div className="space-y-4 animate-in fade-in duration-200">
@@ -4607,7 +4608,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           <div className="flex justify-between items-center text-xs font-bold mb-1.5">
                             <span className="text-slate-600">Tiến độ nhận mẫu</span>
                             <span className="text-blue-600 font-mono">
-                              {targetCampApps.length} / {targetCamp.totalSpots} slot ({percentFilled}%)
+                              {displaySubSpots} / {targetCamp.totalSpots} slot ({percentFilled}%)
                             </span>
                           </div>
                           <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
@@ -4924,22 +4925,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           <p className="text-xs text-slate-500 line-clamp-2">{camp.description}</p>
 
                           {/* Spots Progress Bar */}
-                          <div>
-                            <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                              <span>Tiến độ nhận mẫu</span>
-                              <span>
-                                <strong className="text-blue-600">{campApps.length}</strong> / {camp.totalSpots} slot
-                              </span>
-                            </div>
-                            <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-blue-600 transition-all"
-                                style={{
-                                  width: `${Math.min(100, (campApps.length / (camp.totalSpots || 50)) * 100)}%`,
-                                }}
-                              ></div>
-                            </div>
-                          </div>
+                          {(() => {
+                            const displayCardSpots = Math.max(camp.registeredSpots || 0, campApps.length);
+                            const cardPercent = Math.min(100, Math.round((displayCardSpots / (camp.totalSpots || 50)) * 100));
+                            return (
+                              <div>
+                                <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                                  <span>Tiến độ nhận mẫu</span>
+                                  <span>
+                                    <strong className="text-blue-600">{displayCardSpots}</strong> / {camp.totalSpots} slot
+                                  </span>
+                                </div>
+                                <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-blue-600 transition-all"
+                                    style={{
+                                      width: `${cardPercent}%`,
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* NÚT THÔNG MINH MỞ TRANG CON QUẢN LÝ KOC CỦA CHIẾN DỊCH */}
                           <div className="pt-1">
