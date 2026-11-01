@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "url": "https://mjsmnkelreniasahhfkf.supabase.co/rest/v1/applications?shippingStatus=eq.Đã%20phát%20thành%20công&videoLink=is.null",
+        "url": "https://mjsmnkelreniasahhfkf.supabase.co/rest/v1/applications?select=*&order=created_at.desc&limit=200",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -42,7 +42,7 @@
         "options": {}
       },
       "id": "get-applications",
-      "name": "Lấy Đơn Đã Nhận Mẫu Chưa Nộp Video",
+      "name": "Lấy Toàn Bộ Đơn Ứng Tuyển KOC",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -52,7 +52,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Phân loại SLA theo số ngày kể từ khi bưu tá giao hàng thành công\nconst now = new Date();\nconst results = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n  // Lấy ngày tạo hoặc ngày giao (fallback)\n  const dateStr = data.deliveredAt || data.createdAtDate || data.created_at;\n  if (!dateStr) continue;\n  \n  const eventDate = new Date(dateStr);\n  const diffMs = now.getTime() - eventDate.getTime();\n  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));\n  \n  let alertType = 'normal';\n  let message = '';\n  \n  if (diffDays >= 7) {\n    alertType = 'OVERDUE';\n    message = `🚨 [QUÁ HẠN NỘP VIDEO] KOC ${data.kocName} (@${data.tiktokHandle}) đã nhận mẫu \"${data.campaignName}\" được ${diffDays} ngày nhưng chưa gửi video!`;\n  } else if (diffDays >= 5) {\n    alertType = 'WARNING_48H';\n    message = `⏳ [CẬN HẠN 48H] KOC ${data.kocName} (@${data.tiktokHandle}) - Chiến dịch \"${data.campaignName}\" chỉ còn 2 ngày đến hạn chót nộp video!`;\n  } else if (diffDays >= 1 && diffDays < 2) {\n    alertType = 'UNBOXING_REMINDER';\n    message = `🎁 [NHẮC MỞ HỘP] KOC ${data.kocName} (@${data.tiktokHandle}) vừa nhận mẫu \"${data.campaignName}\". Nhắc KOC quay clip unboxing mở hàng!`;\n  }\n  \n  if (alertType !== 'normal') {\n    results.push({\n      json: {\n        ...data,\n        diffDays,\n        alertType,\n        alertMessage: message\n      }\n    });\n  }\n}\n\nreturn results;"
+        "jsCode": "// PHÂN TÍCH SLA CHÍNH XÁC THEO SCHEMA SUPABASE THỰC TẾ\nconst now = new Date();\nconst results = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n  \n  // 1. Kiểm tra điều kiện: Chưa nộp video (videoLink rỗng hoặc null)\n  const hasVideo = data.videoLink && typeof data.videoLink === 'string' && data.videoLink.trim().length > 5;\n  if (hasVideo) continue;\n  \n  // 2. Bỏ qua các đơn đã hoàn thành hoặc bị từ chối\n  if (data.status === 'Đã hoàn thành' || data.status === 'Bị từ chối' || data.status === 'Từ chối') {\n    continue;\n  }\n\n  // 3. Tính ngày chính xác từ created_at (ISO) hoặc createdAtDate (DD/MM/YYYY)\n  let eventDate = null;\n  if (data.created_at) {\n    eventDate = new Date(data.created_at);\n  } else if (data.createdAtDate && typeof data.createdAtDate === 'string' && data.createdAtDate.includes('/')) {\n    const parts = data.createdAtDate.split('/');\n    if (parts.length === 3) {\n      eventDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));\n    }\n  }\n  \n  if (!eventDate || isNaN(eventDate.getTime())) continue;\n  \n  const diffMs = now.getTime() - eventDate.getTime();\n  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));\n  \n  // Làm sạch handle TikTok (bỏ ký tự @ nếu có để tạo link chuẩn)\n  const rawHandle = data.tiktokHandle || 'koc';\n  const cleanHandle = rawHandle.startsWith('@') ? rawHandle.slice(1) : rawHandle;\n  const kocName = data.kocName || 'KOC';\n  const campaignName = data.campaignName || 'Chiến dịch KOCity';\n  const shippingCode = data.shippingCode || 'Chưa có';\n  const phone = data.phone || 'Chưa cập nhật';\n  const shippingStatus = data.shippingStatus || 'Đang vận chuyển';\n  \n  let alertType = 'normal';\n  let alertTitle = '';\n  let alertMessage = '';\n  \n  // Điều kiện phân loại SLA 5-7 ngày\n  if (diffDays >= 7) {\n    alertType = 'OVERDUE';\n    alertTitle = '🚨 [QUÁ HẠN NỘP VIDEO >7 NGÀY]';\n    alertMessage = `KOC <b>${kocName}</b> đã nhận hàng được <b>${diffDays} ngày</b> nhưng CHƯA nộp link video! Cần liên hệ giục gấp.`;\n  } else if (diffDays >= 5) {\n    alertType = 'WARNING_48H';\n    alertTitle = '⏳ [CẬN HẠN 48H - CẦN GIỤC VIDEO]';\n    alertMessage = `KOC <b>${kocName}</b> đã nhận hàng được <b>${diffDays} ngày</b>, chỉ còn 1-2 ngày là hết hạn nộp video.`;\n  } else if (diffDays >= 1 && diffDays < 2) {\n    alertType = 'UNBOXING_REMINDER';\n    alertTitle = '🎁 [NHẮC QUAY UNBOXING NGÀY 1]';\n    alertMessage = `KOC <b>${kocName}</b> vừa nhận hàng mẫu ngày đầu tiên. Nhắc KOC quay clip unboxing ngay!`;\n  }\n  \n  if (alertType !== 'normal') {\n    results.push({\n      json: {\n        id: data.id,\n        kocName,\n        cleanHandle,\n        campaignName,\n        phone,\n        shippingCode,\n        shippingStatus,\n        diffDays,\n        alertType,\n        alertTitle,\n        alertMessage\n      }\n    });\n  }\n}\n\nreturn results;"
       },
       "id": "calc-sla",
       "name": "Tính Số Ngày SLA & Phân Loại Cảnh Báo",
@@ -65,8 +65,8 @@
     },
     {
       "parameters": {
-        "chatId": "-100123456789",
-        "text": "=📊 KOCITY BÁO CÁO SLA VIDEO ({{ $today.format('DD/MM/YYYY') }}):\n\n{{ $json.alertMessage }}\n\n📱 SĐT: {{ $json.phone }}\n📦 Mã vận đơn: {{ $json.shippingCode }}\n🔗 TikTok: https://tiktok.com/@{{ $json.tiktokHandle }}",
+        "chatId": "-5348405193",
+        "text": "=<b>{{ $json.alertTitle }}</b>\n\n📌 <b>Chiến dịch:</b> {{ $json.campaignName }}\n👤 <b>KOC:</b> {{ $json.kocName }} (@{{ $json.cleanHandle }})\n📱 <b>SĐT Zalo:</b> {{ $json.phone }}\n📦 <b>Mã vận đơn:</b> <code>{{ $json.shippingCode }}</code> ({{ $json.shippingStatus }})\n⏱️ <b>Thời gian:</b> Đã trôi qua {{ $json.diffDays }} ngày\n\n💬 <i>Nội dung:</i> {{ $json.alertMessage }}\n🔗 <b>Kênh TikTok:</b> https://tiktok.com/@{{ $json.cleanHandle }}",
         "additionalFields": {
           "parse_mode": "HTML"
         }
@@ -86,14 +86,14 @@
       "main": [
         [
           {
-            "node": "Lấy Đơn Đã Nhận Mẫu Chưa Nộp Video",
+            "node": "Lấy Toàn Bộ Đơn Ứng Tuyển KOC",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lấy Đơn Đã Nhận Mẫu Chưa Nộp Video": {
+    "Lấy Toàn Bộ Đơn Ứng Tuyển KOC": {
       "main": [
         [
           {
