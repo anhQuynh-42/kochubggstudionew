@@ -6,6 +6,7 @@ import { NOTIFICATION_ICON } from '../lib/notifications';
 import { useSiteUI } from './SiteUI';
 import { Avatar, Button, Icon, cx } from './ui';
 import { DeliveryDroneAssistant } from './components/DeliveryDroneAssistant';
+import { KocityAiChatWidget } from './components/KocityAiChatWidget';
 
 const NAV = [
   { to: ROUTES.home, label: 'Khám phá', icon: 'explore', end: true },
@@ -35,6 +36,7 @@ export const SiteLayout: React.FC = () => {
       <Footer />
       {!isCampaignPage && <BottomNav />}
       <DeliveryDroneAssistant />
+      <KocityAiChatWidget />
       <ZaloFab raised={!isCampaignPage} />
       <ToastHost />
     </div>

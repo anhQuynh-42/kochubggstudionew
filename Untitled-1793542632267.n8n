@@ -1,0 +1,122 @@
+{
+  "name": "KOCity - Tự Động Hóa Giục Nộp Video & Quản Lý SLA",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Chạy Mỗi 9h Sáng",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://mjsmnkelreniasahhfkf.supabase.co/rest/v1/applications?shippingStatus=eq.Đã%20phát%20thành%20công&videoLink=is.null",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_NWcv9pPeRzu-884jDEeW9w_Si3trWfH"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_NWcv9pPeRzu-884jDEeW9w_Si3trWfH"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-applications",
+      "name": "Lấy Đơn Đã Nhận Mẫu Chưa Nộp Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Phân loại SLA theo số ngày kể từ khi bưu tá giao hàng thành công\nconst now = new Date();\nconst results = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n  // Lấy ngày tạo hoặc ngày giao (fallback)\n  const dateStr = data.deliveredAt || data.createdAtDate || data.created_at;\n  if (!dateStr) continue;\n  \n  const eventDate = new Date(dateStr);\n  const diffMs = now.getTime() - eventDate.getTime();\n  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));\n  \n  let alertType = 'normal';\n  let message = '';\n  \n  if (diffDays >= 7) {\n    alertType = 'OVERDUE';\n    message = `🚨 [QUÁ HẠN NỘP VIDEO] KOC ${data.kocName} (@${data.tiktokHandle}) đã nhận mẫu \"${data.campaignName}\" được ${diffDays} ngày nhưng chưa gửi video!`;\n  } else if (diffDays >= 5) {\n    alertType = 'WARNING_48H';\n    message = `⏳ [CẬN HẠN 48H] KOC ${data.kocName} (@${data.tiktokHandle}) - Chiến dịch \"${data.campaignName}\" chỉ còn 2 ngày đến hạn chót nộp video!`;\n  } else if (diffDays >= 1 && diffDays < 2) {\n    alertType = 'UNBOXING_REMINDER';\n    message = `🎁 [NHẮC MỞ HỘP] KOC ${data.kocName} (@${data.tiktokHandle}) vừa nhận mẫu \"${data.campaignName}\". Nhắc KOC quay clip unboxing mở hàng!`;\n  }\n  \n  if (alertType !== 'normal') {\n    results.push({\n      json: {\n        ...data,\n        diffDays,\n        alertType,\n        alertMessage: message\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "calc-sla",
+      "name": "Tính Số Ngày SLA & Phân Loại Cảnh Báo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-100123456789",
+        "text": "=📊 KOCITY BÁO CÁO SLA VIDEO ({{ $today.format('DD/MM/YYYY') }}):\n\n{{ $json.alertMessage }}\n\n📱 SĐT: {{ $json.phone }}\n📦 Mã vận đơn: {{ $json.shippingCode }}\n🔗 TikTok: https://tiktok.com/@{{ $json.tiktokHandle }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-alert",
+      "name": "Bắn Báo Động Về Telegram Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Chạy Mỗi 9h Sáng": {
+      "main": [
+        [
+          {
+            "node": "Lấy Đơn Đã Nhận Mẫu Chưa Nộp Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy Đơn Đã Nhận Mẫu Chưa Nộp Video": {
+      "main": [
+        [
+          {
+            "node": "Tính Số Ngày SLA & Phân Loại Cảnh Báo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tính Số Ngày SLA & Phân Loại Cảnh Báo": {
+      "main": [
+        [
+          {
+            "node": "Bắn Báo Động Về Telegram Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "name": "KOCity - Gemini AI Assistant & Script Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kocity-ai-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "KOCity Website Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "kocity-ai-chat-webhook"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Bạn là Trợ lý AI Thông Minh của nền tảng KOCity (kocity.io.vn) - Nền tảng kết nối Nano & Micro KOC với các thương hiệu uy tín để nhận mẫu sản phẩm 0đ và nhận hoa hồng affiliate TikTok Shop.\n\nNhiệm vụ chính của bạn:\n1. TƯ VẤN QUY TRÌNH & ĐIỀU KIỆN NHẬN MẪU:\n   - KOCity chào đón cả Nano/Micro KOC (chỉ từ 500 - 1.000 followers, có kênh TikTok sáng tạo nội dung đều đặn).\n   - Nhận mẫu sản phẩm 0đ 100% miễn phí (Freeship).\n   - Hạn nộp video review: 5 - 7 ngày kể từ khi bưu tá giao hàng thành công.\n   - Quy trình 4 bước: Chọn mẫu -> Điền đơn duyệt -> Nhận hàng & làm video gắn link giỏ hàng -> Duyệt video nhận thưởng & hoa hồng.\n\n2. SÁNG TẠO KỊCH BẢN VIDEO TIKTOK 60S (Khi KOC yêu cầu kịch bản review):\n   Luôn tuân thủ cấu trúc 3 phần chuẩn chuyển đổi cao:\n   - 0-3s đầu (Hook giật tít): Câu mở đầu gây tò mò, đánh trúng nỗi đau hoặc hiểu lầm phổ biến.\n   - 3-45s (Thân bài): Trải nghiệm chân thật, nói rõ 2-3 điểm khác biệt (USP) của sản phẩm, không đọc văn quảng cáo khô khan.\n   - 45-60s (Call To Action - Kêu gọi hành động): Nhắc người xem bấm ngay vào biểu tượng giỏ hàng màu vàng ở góc trái màn hình để nhận ưu đãi.\n\n3. HỖ TRỢ MEDIA KIT & CỘNG ĐỒNG:\n   - Nhắc KOC cập nhật Media Kit để tăng tỷ lệ duyệt đơn lên 95%.\n   - Kêu gọi tham gia nhóm Zalo KOCity để nhận thông báo mẫu hot mỗi ngày.\n\nPhong cách trả lời: Thân thiện, năng động, dùng emoji trẻ trung, trả lời ngắn gọn, rành mạch bằng Markdown."
+        }
+      },
+      "id": "ai-agent",
+      "name": "KOCity AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.7,
+          "maxOutputTokens": 2048
+        }
+      },
+      "id": "gemini-model",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        520,
+        520
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gemini-api-cred",
+          "name": "Google Gemini API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "chat-memory",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        680,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"reply\": {{ JSON.stringify($json.output) }},\n  \"timestamp\": {{ Date.now() }}\n}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Website",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "KOCity Website Webhook": {
+      "main": [
+        [
+          {
+            "node": "KOCity AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "KOCity AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "KOCity AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KOCity AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
