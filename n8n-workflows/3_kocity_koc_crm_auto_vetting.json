@@ -1,0 +1,169 @@
+{
+  "name": "KOCity - Tự Động Hóa Xét Duyệt KOC & Đồng Bộ CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kocity-new-application",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-new-app",
+      "name": "Webhook Tiếp Nhận Đơn Mới",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "kocity-new-app-webhook"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger-15m",
+      "name": "Quét Đơn Mới Mỗi 15 Phút",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mjsmnkelreniasahhfkf.supabase.co/rest/v1/applications?status=eq.Chờ%20duyệt&order=created_at.desc&limit=50",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_NWcv9pPeRzu-884jDEeW9w_Si3trWfH"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_NWcv9pPeRzu-884jDEeW9w_Si3trWfH"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-pending-apps",
+      "name": "Lấy Các Đơn Đang Chờ Duyệt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// THUẬT TOÁN ĐÁNH GIÁ & CHẤM ĐIỂM KOC TỰ ĐỘNG (AUTO-VETTING)\nconst results = [];\n\nfor (const item of $input.all()) {\n  const data = item.json.body || item.json;\n  if (!data || !data.kocName) continue;\n  \n  let score = 0;\n  const reasons = [];\n  \n  // 1. Chấm điểm theo Follower\n  const followersCount = Number(data.followersCount) || (parseInt(data.followers) * (String(data.followers).toLowerCase().includes('k') ? 1000 : 1)) || 0;\n  if (followersCount >= 10000) {\n    score += 45;\n    reasons.push('Followers lớn (>=10k: +45đ)');\n  } else if (followersCount >= 3000) {\n    score += 35;\n    reasons.push('Followers khá (>=3k: +35đ)');\n  } else if (followersCount >= 1000) {\n    score += 25;\n    reasons.push('Nano KOC chuẩn (>=1k: +25đ)');\n  } else if (followersCount >= 500) {\n    score += 15;\n    reasons.push('Kênh mới tiềm năng (>=500: +15đ)');\n  } else {\n    score += 5;\n    reasons.push('Kênh dưới 500 follow (+5đ)');\n  }\n  \n  // 2. Chấm điểm theo GMV & Đơn bán/tháng\n  const gmvStr = String(data.monthlyAvgGmv || data.gmv || '').toLowerCase();\n  const ordersStr = String(data.monthlyOrders || '').toLowerCase();\n  \n  if (gmvStr.includes('triệu') || gmvStr.includes('tr') || parseInt(gmvStr) >= 10000000) {\n    score += 35;\n    reasons.push('Có GMV thực tế ấn tượng (+35đ)');\n  } else if (ordersStr.includes('đơn') || parseInt(ordersStr) >= 30) {\n    score += 25;\n    reasons.push('Có đơn bán hàng tháng (+25đ)');\n  }\n  \n  // 3. Chấm điểm Ý tưởng video (Concept)\n  const concept = String(data.contentConcept || '');\n  if (concept.length >= 30) {\n    score += 20;\n    reasons.push('Ý tưởng video chi tiết (+20đ)');\n  } else if (concept.length > 5) {\n    score += 10;\n    reasons.push('Có ý tưởng video (+10đ)');\n  }\n  \n  // Phân loại quyết định\n  let decision = 'MANUAL_REVIEW';\n  let badge = '⏳ CẦN DUYỆT TAY';\n  \n  if (score >= 65) {\n    decision = 'AUTO_APPROVE';\n    badge = '⚡ ĐỦ ĐIỀU KIỆN DUYỆT NHANH (VIP)';\n  } else if (score < 20) {\n    decision = 'AUTO_REJECT';\n    badge = '❌ KHÔNG ĐẠT TIÊU CHÍ';\n  }\n  \n  const rawHandle = data.tiktokHandle || 'koc';\n  const cleanHandle = rawHandle.startsWith('@') ? rawHandle.slice(1) : rawHandle;\n  \n  results.push({\n    json: {\n      ...data,\n      score,\n      reasons: reasons.join(' • '),\n      decision,\n      badge,\n      cleanHandle\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "scoring-engine",
+      "name": "Chấm Điểm & Phân Hạng KOC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-5348405193",
+        "text": "=📋 <b>ĐƠN ỨNG TUYỂN KOC MỚI - {{ $json.badge }}</b>\n\n🎯 <b>Chiến dịch:</b> {{ $json.campaignName }}\n👤 <b>KOC:</b> <b>{{ $json.kocName }}</b> (@{{ $json.cleanHandle }})\n📊 <b>Chỉ số:</b> {{ $json.followers || $json.followersCount }} followers • {{ $json.avgViews || 'N/A views' }}\n💰 <b>Kinh nghiệm:</b> {{ $json.monthlyOrders || 'Chưa rõ đơn' }} • GMV: {{ $json.monthlyAvgGmv || '0đ' }}\n🎁 <b>Mẫu nhận:</b> {{ $json.selectedSampleName || 'Mẫu mặc định' }}\n📍 <b>Địa chỉ ship:</b> {{ $json.address }}\n📱 <b>SĐT Zalo:</b> {{ $json.phone }}\n\n💡 <b>Điểm uy tín KOC:</b> <b>{{ $json.score }}/100</b>\n📝 <b>Lý do:</b> {{ $json.reasons }}\n🎬 <b>Ý tưởng clip:</b> <i>{{ $json.contentConcept }}</i>\n\n🔗 <b>Xem kênh:</b> https://tiktok.com/@{{ $json.cleanHandle }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-notify",
+      "name": "Báo Cáo KOC Vào Nhóm Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Đơn KOC đã được tiếp nhận và thẩm định thành công!\",\n  \"score\": {{ $json.score }},\n  \"decision\": {{ JSON.stringify($json.decision) }}\n}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Phản Hồi Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        920,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Tiếp Nhận Đơn Mới": {
+      "main": [
+        [
+          {
+            "node": "Chấm Điểm & Phân Hạng KOC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quét Đơn Mới Mỗi 15 Phút": {
+      "main": [
+        [
+          {
+            "node": "Lấy Các Đơn Đang Chờ Duyệt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy Các Đơn Đang Chờ Duyệt": {
+      "main": [
+        [
+          {
+            "node": "Chấm Điểm & Phân Hạng KOC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chấm Điểm & Phân Hạng KOC": {
+      "main": [
+        [
+          {
+            "node": "Báo Cáo KOC Vào Nhóm Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Phản Hồi Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
