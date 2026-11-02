@@ -138,6 +138,7 @@ export interface KOCUser {
   name: string;
   role?: 'koc' | 'admin';
   avatar: string;
+  email?: string;
   tiktokHandle: string;
   followers: string;
   phone: string;

@@ -8,9 +8,9 @@ export type AuthMode = 'login' | 'register' | 'forgot';
 const CATEGORIES = ['Làm đẹp & Mỹ phẩm', 'Thời trang & Phụ kiện', 'Lifestyle & Gia dụng', 'Công nghệ & Gaming', 'Ẩm thực & Quán xá', 'Mẹ & Bé'];
 
 const TITLES: Record<AuthMode, { title: string; subtitle: string }> = {
-  register: { title: 'Tạo tài khoản KOC', subtitle: 'Miễn phí · bảo mật · chưa tới 1 phút' },
-  login: { title: 'Chào mừng trở lại', subtitle: 'Đăng nhập bằng ID TikTok' },
-  forgot: { title: 'Đặt lại mật khẩu', subtitle: 'Xác minh ID TikTok và số điện thoại đã đăng ký' },
+  register: { title: 'Tạo tài khoản KOC', subtitle: 'Đăng ký nhanh bằng Email · Hoàn toàn miễn phí' },
+  login: { title: 'Chào mừng trở lại', subtitle: 'Đăng nhập tài khoản KOC bằng Email' },
+  forgot: { title: 'Đặt lại mật khẩu', subtitle: 'Xác minh Email và số điện thoại đã đăng ký' },
 };
 
 interface AuthSheetProps {
@@ -28,19 +28,20 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
   const [remembered, setRemembered] = useState<KOCUser | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Đăng nhập
-  const [loginMethod, setLoginMethod] = useState<'tiktok' | 'phone'>('tiktok');
-  const [handle, setHandle] = useState('');
+  // Thông tin đăng nhập & đăng ký
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  // Đăng ký
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Thông tin KOC bổ sung khi đăng ký
   const [name, setName] = useState('');
+  const [handle, setHandle] = useState('');
   const [followers, setFollowers] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
-  // Xác nhận mật khẩu (cho cả Đăng ký & Quên mật khẩu)
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -53,9 +54,11 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
     const saved = loadRememberedAccount();
     setRemembered(saved.user && saved.user.role !== 'admin' ? saved.user : null);
     setRememberMe(saved.rememberMe);
-    if (saved.user?.tiktokHandle && saved.user.role !== 'admin') {
-      setHandle(saved.user.tiktokHandle);
+    if (saved.user && saved.user.role !== 'admin') {
+      if (saved.user.email) setEmail(saved.user.email);
+      if (saved.user.tiktokHandle) setHandle(saved.user.tiktokHandle);
       if (saved.user.phone) setPhone(saved.user.phone);
+      if (saved.user.name) setName(saved.user.name);
     }
   }, [open, initialMode]);
 
@@ -68,8 +71,22 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (mode === 'register') {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail) {
+        setError('Vui lòng nhập địa chỉ email của bạn.');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        setError('Địa chỉ email không hợp lệ (VD: creator@gmail.com).');
+        return;
+      }
+      if (!name.trim()) {
+        setError('Vui lòng nhập tên hiển thị của bạn.');
+        return;
+      }
       const cleanPhone = phone.replace(/[\s.-]/g, '');
       if (!cleanPhone || cleanPhone.length < 10) {
         setError('Vui lòng nhập số điện thoại hợp lệ (tối thiểu 10 chữ số) để liên hệ nhận mẫu.');
@@ -87,7 +104,70 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
         setError('Vui lòng tích chọn đồng ý với Điều khoản dịch vụ & Chính sách bảo mật.');
         return;
       }
-    } else if (mode === 'forgot') {
+
+      const result = await register({
+        email: cleanEmail,
+        name: name.trim(),
+        phone: cleanPhone,
+        handle: handle.trim(),
+        followers: followers.trim(),
+        category,
+        password,
+        confirmPassword,
+        remember: rememberMe,
+        agreedTerms,
+      });
+
+      if ('error' in result) {
+        setError(result.error);
+        return;
+      }
+      onSuccess(result.user, true);
+      return;
+    }
+
+    if (mode === 'login') {
+      if (loginMethod === 'email') {
+        const cleanEmail = email.trim().toLowerCase();
+        if (!cleanEmail) {
+          setError('Vui lòng nhập địa chỉ email.');
+          return;
+        }
+      } else {
+        const cleanPhone = phone.replace(/[\s.-]/g, '');
+        if (!cleanPhone) {
+          setError('Vui lòng nhập số điện thoại.');
+          return;
+        }
+      }
+      if (!password.trim()) {
+        setError('Vui lòng nhập mật khẩu.');
+        return;
+      }
+
+      const result = await login({
+        method: loginMethod,
+        email: email.trim(),
+        phone: phone.trim(),
+        handle: handle.trim(),
+        password,
+        remember: rememberMe,
+      });
+
+      if ('error' in result) {
+        setError(result.error);
+        return;
+      }
+      onSuccess(result.user, false);
+      return;
+    }
+
+    if (mode === 'forgot') {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail) {
+        setError('Vui lòng nhập địa chỉ email đã đăng ký.');
+        return;
+      }
       const cleanPhone = phone.replace(/[\s.-]/g, '');
       if (!cleanPhone) {
         setError('Vui lòng nhập số điện thoại đã dùng khi tạo tài khoản để xác minh.');
@@ -101,20 +181,20 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
         setError('Hai mật khẩu chưa khớp nhau. Vui lòng kiểm tra lại.');
         return;
       }
-    }
 
-    const result =
-      mode === 'login'
-        ? await login({ method: loginMethod, handle, phone, password, remember: rememberMe })
-        : mode === 'register'
-        ? await register({ name, handle, phone, followers, category, password, confirmPassword, remember: rememberMe, agreedTerms })
-        : await resetPassword({ handle, phone, newPassword: password, confirmPassword });
+      const result = await resetPassword({
+        email: cleanEmail,
+        phone: cleanPhone,
+        newPassword: password,
+        confirmPassword,
+      });
 
-    if ('error' in result) {
-      setError(result.error);
-      return;
+      if ('error' in result) {
+        setError(result.error);
+        return;
+      }
+      onSuccess(result.user, false);
     }
-    onSuccess(result.user, mode === 'register');
   };
 
   const { title, subtitle } = TITLES[mode];
@@ -124,7 +204,11 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
     <>
       <Sheet open={open} onClose={onClose} title={title} subtitle={subtitle}>
         {mode === 'forgot' && (
-          <button type="button" onClick={() => switchMode('login')} className="-mt-1 mb-3 inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-900 cursor-pointer">
+          <button
+            type="button"
+            onClick={() => switchMode('login')}
+            className="-mt-1 mb-3 inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-900 cursor-pointer"
+          >
             <Icon name="arrow_back" className="text-[18px]" />
             Quay lại đăng nhập
           </button>
@@ -146,7 +230,9 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
             <Avatar name={remembered.name} src={remembered.avatar} size={40} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-bold text-slate-900">Tiếp tục với {remembered.name}</span>
-              <span className="block truncate text-xs text-slate-500">{remembered.tiktokHandle} · đã lưu trên máy này</span>
+              <span className="block truncate text-xs text-slate-500">
+                {remembered.email || remembered.tiktokHandle} · đã lưu trên máy này
+              </span>
             </span>
             <Icon name="arrow_forward" className="text-[#8b5cf6]" />
           </button>
@@ -160,41 +246,123 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
             </p>
           )}
 
-          {mode === 'login' && loginMethod === 'phone' ? (
-            <Field
-              label="Số điện thoại"
-              action={
-                <button type="button" onClick={() => setLoginMethod('tiktok')} className="text-xs font-semibold text-[#6366f1] cursor-pointer">
-                  Dùng ID TikTok
-                </button>
-              }
-            >
-              {(id) => <input id={id} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0908 123 456" className={inputClass} />}
-            </Field>
-          ) : (
-            <Field
-              label="ID TikTok"
-              required
-              action={
-                mode === 'login' && (
-                  <button type="button" onClick={() => setLoginMethod('phone')} className="text-xs font-semibold text-[#6366f1] cursor-pointer">
-                    Dùng số điện thoại
+          {/* Ô NHẬP TÀI KHOẢN KHI ĐĂNG NHẬP (MẶC ĐỊNH EMAIL, CÓ THỂ ĐỔI SANG SĐT) */}
+          {mode === 'login' && (
+            <>
+              {loginMethod === 'phone' ? (
+                <Field
+                  label="Số điện thoại"
+                  required
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setLoginMethod('email')}
+                      className="text-xs font-semibold text-[#6366f1] cursor-pointer"
+                    >
+                      Đăng nhập bằng Email
+                    </button>
+                  }
+                >
+                  {(id) => (
+                    <input
+                      id={id}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="0908 123 456"
+                      className={inputClass}
+                    />
+                  )}
+                </Field>
+              ) : (
+                <Field
+                  label="Địa chỉ Email"
+                  required
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setLoginMethod('phone')}
+                      className="text-xs font-semibold text-[#6366f1] cursor-pointer"
+                    >
+                      Dùng số điện thoại
+                    </button>
+                  }
+                >
+                  {(id) => (
+                    <input
+                      id={id}
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="VD: creator@gmail.com"
+                      className={inputClass}
+                    />
+                  )}
+                </Field>
+              )}
+
+              <Field
+                label="Mật khẩu"
+                required
+                action={
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
+                    className="text-xs font-semibold text-[#6366f1] cursor-pointer"
+                  >
+                    Quên mật khẩu?
                   </button>
-                )
-              }
-            >
-              {(id) => <TikTokHandleInput id={id} value={handle} onChange={setHandle} />}
-            </Field>
+                }
+              >
+                {(id) => (
+                  <PasswordInput
+                    id={id}
+                    value={password}
+                    onChange={setPassword}
+                    placeholder="Mật khẩu của bạn"
+                    autoComplete="current-password"
+                  />
+                )}
+              </Field>
+            </>
           )}
 
-          {/* CÁC TRƯỜNG ĐẶC BIỆT KHI ĐĂNG KÝ MỚI */}
+          {/* CÁC TRƯỜNG ĐẶC BIỆT KHI ĐĂNG KÝ MỚI BẰNG EMAIL */}
           {mode === 'register' && (
             <>
+              <Field label="Địa chỉ Email" required hint="Dùng để đăng nhập tài khoản KOC và nhận thông báo duyệt đơn">
+                {(id) => (
+                  <input
+                    id={id}
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="VD: creator@gmail.com"
+                    className={inputClass}
+                  />
+                )}
+              </Field>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Tên hiển thị" required>
-                  {(id) => <input id={id} value={name} onChange={(e) => setName(e.target.value)} placeholder="VD: Thảo Nhi" autoComplete="nickname" className={inputClass} />}
+                  {(id) => (
+                    <input
+                      id={id}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="VD: Thảo Nhi"
+                      autoComplete="nickname"
+                      className={inputClass}
+                    />
+                  )}
                 </Field>
-                <Field label="Số điện thoại" required>
+                <Field label="Số điện thoại" required hint="Liên hệ nhận mẫu 0đ">
                   {(id) => (
                     <input
                       id={id}
@@ -210,27 +378,39 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
                 </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Followers">
-                  {(id) => <input id={id} value={followers} onChange={(e) => setFollowers(e.target.value)} placeholder="VD: 12K" className={inputClass} />}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="ID TikTok" hint="VD: @thaonhi (không bắt buộc)">
+                  {(id) => <TikTokHandleInput id={id} value={handle} onChange={setHandle} />}
                 </Field>
-                <Field label="Lĩnh vực chính">
+                <Field label="Followers">
                   {(id) => (
-                    <select
+                    <input
                       id={id}
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className={cx(inputClass, 'cursor-pointer')}
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                      value={followers}
+                      onChange={(e) => setFollowers(e.target.value)}
+                      placeholder="VD: 12K"
+                      className={inputClass}
+                    />
                   )}
                 </Field>
               </div>
+
+              <Field label="Lĩnh vực chính">
+                {(id) => (
+                  <select
+                    id={id}
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className={cx(inputClass, 'cursor-pointer')}
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Field>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Mật khẩu" required>
@@ -298,9 +478,24 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
             </>
           )}
 
-          {/* KHI QUÊN MẬT KHẨU: YÊU CẦU XÁC MINH SĐT ĐỂ BẢO VỆ TÀI KHOẢN */}
+          {/* KHI QUÊN MẬT KHẨU: XÁC MINH BẰNG EMAIL & SĐT */}
           {mode === 'forgot' && (
             <>
+              <Field label="Địa chỉ Email đã đăng ký" required>
+                {(id) => (
+                  <input
+                    id={id}
+                    type="email"
+                    inputMode="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="VD: creator@gmail.com"
+                    autoComplete="email"
+                    className={inputClass}
+                  />
+                )}
+              </Field>
+
               <Field label="Số điện thoại đã đăng ký" required>
                 {(id) => (
                   <input
@@ -342,32 +537,14 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
             </>
           )}
 
-          {/* KHI ĐĂNG NHẬP */}
-          {mode === 'login' && (
-            <Field
-              label="Mật khẩu"
-              required
-              action={
-                <button type="button" onClick={() => switchMode('forgot')} className="text-xs font-semibold text-[#6366f1] cursor-pointer">
-                  Quên mật khẩu?
-                </button>
-              }
-            >
-              {(id) => (
-                <PasswordInput
-                  id={id}
-                  value={password}
-                  onChange={setPassword}
-                  placeholder="Mật khẩu của bạn"
-                  autoComplete="current-password"
-                />
-              )}
-            </Field>
-          )}
-
           {mode !== 'forgot' && (
             <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 accent-[#8b5cf6]" />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 accent-[#8b5cf6]"
+              />
               Ghi nhớ trên thiết bị này
             </label>
           )}
@@ -384,7 +561,11 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
           {mode !== 'forgot' && (
             <p className="pb-1 text-center text-sm text-slate-500">
               {mode === 'login' ? 'Chưa có tài khoản? ' : 'Đã có tài khoản? '}
-              <button type="button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')} className="font-bold text-[#6366f1] cursor-pointer">
+              <button
+                type="button"
+                onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
+                className="font-bold text-[#6366f1] cursor-pointer"
+              >
                 {mode === 'login' ? 'Tạo tài khoản KOC' : 'Đăng nhập'}
               </button>
             </p>
@@ -490,13 +671,13 @@ export const AuthSheet: React.FC<AuthSheetProps> = ({ open, initialMode, reason,
                     <strong>Bảo vệ thông tin:</strong> KOCITY cam kết áp dụng các biện pháp bảo mật phù hợp nhằm bảo vệ dữ liệu cá nhân của KOC và ngăn chặn truy cập trái phép.
                   </li>
                   <li>
-                    <strong>Thông tin giao hàng:</strong> KOCITY không thu thập hoặc lưu trữ địa chỉ nhận hàng. KOC cung cấp thông tin giao hàng trực tiếp trên nền tảng TikTok khi đăng ký nhận sản phẩm mẫu.
+                    <strong>Thông tin giao hàng:</strong> KOCITY không thu thập hoặc lưu trữ trái phép dữ liệu. Thông tin giao hàng chỉ dùng cho mục đích chuyển phát mẫu chiến dịch.
                   </li>
                   <li>
-                    <strong>Mục đích sử dụng:</strong> Số điện thoại và thông tin liên hệ chỉ được sử dụng để trao đổi công việc, hỗ trợ KOC và phối hợp triển khai các chiến dịch hợp tác.
+                    <strong>Mục đích sử dụng:</strong> Email và số điện thoại chỉ dùng để trao đổi công việc, xác thực tài khoản và hỗ trợ KOC.
                   </li>
                   <li>
-                    <strong>Cam kết bảo mật:</strong> KOCITY không mua bán hoặc chia sẻ dữ liệu cá nhân của KOC cho bên thứ ba nhằm mục đích quảng cáo, tiếp thị trái phép.
+                    <strong>Cam kết bảo mật:</strong> KOCITY không mua bán hoặc chia sẻ dữ liệu cá nhân của KOC cho bên thứ ba nhằm mục đích quảng cáo trái phép.
                   </li>
                 </ul>
               </section>
