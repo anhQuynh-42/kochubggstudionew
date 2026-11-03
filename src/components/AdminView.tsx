@@ -1731,20 +1731,29 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
-    const headers = ['Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh TikTok', 'Followers', 'SĐT', 'Địa chỉ nhận hàng', 'Chiến dịch', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
-    const rows = applications.map((a) => [
-      a.code || '',
-      a.kocName || '',
-      a.tiktokHandle || '',
-      a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : ''),
-      a.followers || '',
-      a.phone || '',
-      a.address || '',
-      a.campaignName || '',
-      a.status || '',
-      a.shippingCode || '',
-      a.videoLink || '',
-    ]);
+    const headers = ['Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh TikTok', 'Followers', 'SĐT', 'Email của KOC', 'Địa chỉ nhận hàng', 'Chiến dịch', 'Sản phẩm đăng ký', 'Đơn hàng và GMV', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
+    const rows = applications.map((a) => {
+      const ordersAndGmv = [
+        a.monthlyOrders ? `${a.monthlyOrders}` : '',
+        a.monthlyAvgGmv ? `GMV: ${a.monthlyAvgGmv}` : '',
+      ].filter(Boolean).join(' • ') || 'Chưa cập nhật';
+      return [
+        a.code || '',
+        a.kocName || '',
+        a.tiktokHandle || '',
+        a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : ''),
+        a.followers || '',
+        a.phone || '',
+        a.email || '',
+        a.address || '',
+        a.campaignName || '',
+        a.selectedSampleName || 'Mẫu mặc định',
+        ordersAndGmv,
+        a.status || '',
+        a.shippingCode || '',
+        a.videoLink || '',
+      ];
+    });
 
     downloadKocCSV(
       `danh_sach_tat_ca_koc_${new Date().toISOString().slice(0, 10)}.csv`,
@@ -1762,23 +1771,31 @@ export const AdminView: React.FC<AdminViewProps> = ({
       onShowToast('Không có dữ liệu', 'Chiến dịch này chưa có KOC nào đăng ký', 'warning');
       return;
     }
-    const headers = ['STT', 'Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh', 'Followers', 'Lượt xem TB', 'SĐT', 'Email', 'Địa chỉ nhận hàng', 'Concept video', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
-    const rows = campApps.map((a, idx) => [
-      idx + 1,
-      a.code || '',
-      a.kocName || '',
-      a.tiktokHandle || '',
-      a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : ''),
-      a.followers || '',
-      a.avgViews || '',
-      a.phone || '',
-      a.email || '',
-      a.address || '',
-      a.contentConcept || '',
-      a.status || '',
-      a.shippingCode || '',
-      a.videoLink || '',
-    ]);
+    const headers = ['STT', 'Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh', 'Followers', 'Lượt xem TB', 'SĐT', 'Email của KOC', 'Sản phẩm đăng ký', 'Đơn hàng và GMV', 'Địa chỉ nhận hàng', 'Concept video', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
+    const rows = campApps.map((a, idx) => {
+      const ordersAndGmv = [
+        a.monthlyOrders ? `${a.monthlyOrders}` : '',
+        a.monthlyAvgGmv ? `GMV: ${a.monthlyAvgGmv}` : '',
+      ].filter(Boolean).join(' • ') || 'Chưa cập nhật';
+      return [
+        idx + 1,
+        a.code || '',
+        a.kocName || '',
+        a.tiktokHandle || '',
+        a.channelLink || (a.tiktokHandle ? (a.tiktokHandle.startsWith('http') ? a.tiktokHandle : `https://www.tiktok.com/${a.tiktokHandle.startsWith('@') ? a.tiktokHandle : '@' + a.tiktokHandle}`) : ''),
+        a.followers || '',
+        a.avgViews || '',
+        a.phone || '',
+        a.email || '',
+        a.selectedSampleName || 'Mẫu mặc định',
+        ordersAndGmv,
+        a.address || '',
+        a.contentConcept || '',
+        a.status || '',
+        a.shippingCode || '',
+        a.videoLink || '',
+      ];
+    });
 
     const safeBrand = (targetCamp.brandName || 'Brand').replace(/[^a-zA-Z0-9]/g, '_');
     const safeCode = (targetCamp.code || targetCamp.id || 'Camp').replace(/[^a-zA-Z0-9]/g, '_');

@@ -28,6 +28,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [email, setEmail] = useState('');
   const [handle, setHandle] = useState('');
   const [channelLink, setChannelLink] = useState('');
   const [followers, setFollowers] = useState('');
@@ -48,6 +49,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     setError('');
     setSubmittedCode('');
     setIsSubmitting(false);
+    setEmail(u?.email || '');
     const initialHandle = u?.tiktokHandle || '';
     setHandle(initialHandle);
     setChannelLink(
@@ -83,6 +85,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
 
   const validate = (s: Step): string => {
     if (s === 1) {
+      if (email.trim() && !email.includes('@')) return 'Vui lòng nhập địa chỉ email hợp lệ.';
       if (!normalizeHandle(handle)) return 'Vui lòng nhập ID TikTok.';
       if (!followers.trim()) return 'Vui lòng nhập số followers hiện tại.';
     }
@@ -180,7 +183,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       kocName: currentUser?.name || cleanHandle || 'KOC Thành viên',
       avatar: currentUser?.avatar || APP_LOGOS.userProfile,
       phone: currentUser?.phone || '',
-      email: currentUser?.email || '',
+      email: email.trim() || currentUser?.email || '',
       tiktokHandle: cleanHandle,
       channelLink: finalChannelLink,
       followers: followers.trim(),
@@ -381,6 +384,19 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
         <div className="space-y-4">
           <Field label="ID TikTok" required>
             {(id) => <TikTokHandleInput id={id} value={handle} onChange={handleHandleChange} />}
+          </Field>
+
+          <Field label="Email của bạn" hint="Dùng để nhận kết quả duyệt mẫu từ Brand">
+            {(id) => (
+              <input
+                id={id}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="VD: creator@gmail.com"
+                className={inputClass}
+              />
+            )}
           </Field>
 
           <Field label="Link kênh TikTok" hint="Link trang cá nhân TikTok của bạn để Brand duyệt nhanh hơn">
