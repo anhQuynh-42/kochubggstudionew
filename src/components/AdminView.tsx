@@ -1734,8 +1734,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const headers = ['Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh TikTok', 'Followers', 'SĐT', 'Email của KOC', 'Địa chỉ nhận hàng', 'Chiến dịch', 'Sản phẩm đăng ký', 'Đơn hàng và GMV', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
     const rows = applications.map((a) => {
       const ordersAndGmv = [
-        a.monthlyOrders ? `${a.monthlyOrders}` : '',
-        a.monthlyAvgGmv ? `GMV: ${a.monthlyAvgGmv}` : '',
+        a.monthlyOrders ? `— Đơn bán/tháng: ${a.monthlyOrders}` : '',
+        a.monthlyAvgGmv ? `GMV TB/tháng: ${a.monthlyAvgGmv}` : '',
       ].filter(Boolean).join(' • ') || 'Chưa cập nhật';
       return [
         a.code || '',
@@ -1774,8 +1774,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const headers = ['STT', 'Mã đơn', 'Tên KOC', 'TikTok', 'Link kênh', 'Followers', 'Lượt xem TB', 'SĐT', 'Email của KOC', 'Sản phẩm đăng ký', 'Đơn hàng và GMV', 'Địa chỉ nhận hàng', 'Concept video', 'Trạng thái', 'Mã vận đơn', 'Link Video'];
     const rows = campApps.map((a, idx) => {
       const ordersAndGmv = [
-        a.monthlyOrders ? `${a.monthlyOrders}` : '',
-        a.monthlyAvgGmv ? `GMV: ${a.monthlyAvgGmv}` : '',
+        a.monthlyOrders ? `— Đơn bán/tháng: ${a.monthlyOrders}` : '',
+        a.monthlyAvgGmv ? `GMV TB/tháng: ${a.monthlyAvgGmv}` : '',
       ].filter(Boolean).join(' • ') || 'Chưa cập nhật';
       return [
         idx + 1,

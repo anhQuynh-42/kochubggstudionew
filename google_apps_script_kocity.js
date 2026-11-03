@@ -29,35 +29,39 @@ function doPost(e) {
     // 8. Đơn hàng và GMV
     // 9. Link kênh TikTok
     
-    var timestamp = Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "dd/MM/yyyy HH:mm:ss");
+    var timestamp = Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "M/d/yyyy hh:mm a");
     var brand = data.campaignName || "";
     var kocName = data.kocName || "";
     var phone = "'" + (data.phone || ""); // Thêm dấu ' ở đầu để Google Sheet giữ nguyên số 0 của SĐT
     var tiktokHandle = data.tiktokHandle || "";
     var email = data.email || data.kocEmail || "";
     
-    // Tách riêng sản phẩm đăng ký
-    var sampleProduct = data.sampleProduct || data.selectedSampleName || "Mẫu mặc định";
+    // Cột 7: Sản phẩm đăng ký (tách hoàn toàn khỏi dòng Đơn bán/tháng & GMV)
+    var rawSample = data.sampleProduct || data.contentConcept || data.selectedSampleName || "Mẫu mặc định";
+    var sampleProduct = String(rawSample)
+      .replace(/\r?\n— Đơn bán\/tháng:.*$/i, "")
+      .trim();
     
-    // Tách riêng đơn hàng và GMV
+    // Cột 8: Đơn hàng và GMV (tách riêng thành 1 cột độc lập)
     var ordersAndGmv = data.ordersAndGmv || "";
     if (!ordersAndGmv) {
-      var orders = data.monthlyOrders ? data.monthlyOrders : "";
-      var gmv = data.monthlyAvgGmv ? data.monthlyAvgGmv : "";
+      var orders = data.monthlyOrders ? String(data.monthlyOrders).trim() : "";
+      var gmv = data.monthlyAvgGmv ? String(data.monthlyAvgGmv).trim() : "";
       if (orders && gmv) {
-        ordersAndGmv = orders + " • GMV: " + gmv;
+        ordersAndGmv = "— Đơn bán/tháng: " + orders + " • GMV TB/tháng: " + gmv;
       } else if (orders) {
-        ordersAndGmv = orders;
+        ordersAndGmv = "— Đơn bán/tháng: " + orders;
       } else if (gmv) {
-        ordersAndGmv = "GMV: " + gmv;
+        ordersAndGmv = "— GMV TB/tháng: " + gmv;
       } else {
-        ordersAndGmv = "Chưa cập nhật";
+        var matchOrders = String(rawSample).match(/— Đơn bán\/tháng:.*$/i);
+        ordersAndGmv = matchOrders ? matchOrders[0].trim() : "Chưa cập nhật";
       }
     }
     
-    var channelLink = data.channelLink || (tiktokHandle ? "https://www.tiktok.com/" + tiktokHandle.replace(/^@/, '') : "");
+    var channelLink = data.channelLink || (tiktokHandle ? "https://www.tiktok.com/" + (tiktokHandle.indexOf("@") === 0 ? tiktokHandle : "@" + tiktokHandle) : "");
 
-    // Ghi thêm dòng mới vào Google Sheet
+    // Ghi thêm dòng mới vào Google Sheet (9 cột tách biệt)
     sheet.appendRow([
       timestamp,
       brand,

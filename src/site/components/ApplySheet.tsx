@@ -85,9 +85,11 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
 
   const validate = (s: Step): string => {
     if (s === 1) {
-      if (email.trim() && !email.includes('@')) return 'Vui lòng nhập địa chỉ email hợp lệ.';
       if (!normalizeHandle(handle)) return 'Vui lòng nhập ID TikTok.';
+      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Vui lòng nhập địa chỉ email hợp lệ của bạn.';
       if (!followers.trim()) return 'Vui lòng nhập số followers hiện tại.';
+      if (!monthlyOrders.trim()) return 'Vui lòng nhập số đơn bán ra / tháng.';
+      if (!monthlyAvgGmv.trim()) return 'Vui lòng nhập GMV trung bình tháng.';
     }
     if (s === 2) {
       if (concept.trim().length < 10) return 'Viết ngắn ý tưởng video (ít nhất 10 ký tự) hoặc chọn một gợi ý.';
@@ -176,6 +178,13 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
         ? currentUser.channelLink
         : `https://www.tiktok.com/${cleanHandle}`);
 
+    const appEmail = email.trim() || currentUser?.email || '';
+    const sampleAndConcept =
+      (product ? `[Mẫu đăng ký: ${product.code} - ${product.name}] ` : '') +
+      concept.trim() +
+      `\n— Lên bài: ${expectedDays} • Spark Ads: ${sparkAds ? 'Đồng ý' : 'Chưa đồng ý'}`;
+    const ordersAndGmvText = `— Đơn bán/tháng: ${monthlyOrders.trim()} • GMV TB/tháng: ${monthlyAvgGmv.trim()}`;
+
     const app: KOCApplication = {
       id: `app-${Date.now()}`,
       kocId: currentUser?.id,
@@ -183,14 +192,14 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       kocName: currentUser?.name || cleanHandle || 'KOC Thành viên',
       avatar: currentUser?.avatar || APP_LOGOS.userProfile,
       phone: currentUser?.phone || '',
-      email: email.trim() || currentUser?.email || '',
+      email: appEmail,
       tiktokHandle: cleanHandle,
       channelLink: finalChannelLink,
       followers: followers.trim(),
       followersCount,
       avgViews: avgViews.trim() ? `Avg ${avgViews.trim().replace(/^Avg\s*/i, '')}` : 'Chưa cập nhật',
-      monthlyOrders: monthlyOrders.trim() || undefined,
-      monthlyAvgGmv: monthlyAvgGmv.trim() || undefined,
+      monthlyOrders: monthlyOrders.trim(),
+      monthlyAvgGmv: monthlyAvgGmv.trim(),
       address: currentUser?.address || 'Nhận mẫu trực tiếp qua kênh',
       shippingCode: '',
       shippingStatus: 'Chờ duyệt để sinh mã',
@@ -200,12 +209,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       videoLink: '',
       videoViews: '',
       audience: currentUser?.targetAudience || currentUser?.categories?.join(', ') || '',
-      contentConcept:
-        (product ? `[Mẫu đăng ký: ${product.code} - ${product.name}] ` : '') +
-        concept.trim() +
-        `\n— Lên bài: ${expectedDays} • Spark Ads: ${sparkAds ? 'Đồng ý' : 'Chưa đồng ý'}` +
-        (monthlyOrders.trim() ? `\n— Đơn bán/tháng: ${monthlyOrders.trim()}` : '') +
-        (monthlyAvgGmv.trim() ? ` • GMV TB/tháng: ${monthlyAvgGmv.trim()}` : ''),
+      contentConcept: sampleAndConcept,
       campaignId: campaign.id,
       campaignName: campaign.title,
       verified: Boolean(currentUser?.verified),
@@ -214,14 +218,25 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       selectedSampleImage: product?.image || campaign.productHeroImage,
     };
 
-    // Gửi sang Google Sheets Webhook
+    // Gửi sang Google Sheets Webhook (tách riêng cột Sản phẩm đăng ký và cột Đơn hàng và GMV)
     const WEBHOOK_URL = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
     if (WEBHOOK_URL) {
+      const sheetPayload = {
+        ...app,
+        email: appEmail,
+        kocEmail: appEmail,
+        contentConcept: sampleAndConcept,
+        sampleProduct: sampleAndConcept,
+        registeredSample: product ? `${product.code} - ${product.name}` : (app.selectedSampleName || 'Mẫu mặc định'),
+        ordersAndGmv: ordersAndGmvText,
+        monthlyOrders: monthlyOrders.trim(),
+        monthlyAvgGmv: monthlyAvgGmv.trim(),
+      };
       fetch(WEBHOOK_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(app),
+        body: JSON.stringify(sheetPayload),
       }).catch((err) => console.error('Lỗi khi gửi data đến Google Sheets', err));
     }
 
@@ -229,6 +244,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     if (currentUser) {
       rememberFromApplication({
         ...currentUser,
+        email: appEmail || currentUser.email,
         tiktokHandle: cleanHandle,
         channelLink: finalChannelLink,
         followers: followers.trim(),
@@ -386,11 +402,12 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
             {(id) => <TikTokHandleInput id={id} value={handle} onChange={handleHandleChange} />}
           </Field>
 
-          <Field label="Email của bạn" hint="Dùng để nhận kết quả duyệt mẫu từ Brand">
+          <Field label="Email của bạn" required hint="Dùng để nhận kết quả duyệt mẫu từ Brand">
             {(id) => (
               <input
                 id={id}
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="VD: creator@gmail.com"
@@ -419,7 +436,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Followers" required>
-              {(id) => <input id={id} value={followers} onChange={(e) => setFollowers(e.target.value)} placeholder="VD: 12.5K" className={inputClass} />}
+              {(id) => <input id={id} required value={followers} onChange={(e) => setFollowers(e.target.value)} placeholder="VD: 12.5K" className={inputClass} />}
             </Field>
             <Field label="View TB / video">
               {(id) => <input id={id} value={avgViews} onChange={(e) => setAvgViews(e.target.value)} placeholder="VD: 5K" className={inputClass} />}
@@ -427,10 +444,11 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Số đơn bán ra / tháng">
+            <Field label="Số đơn bán ra / tháng" required>
               {(id) => (
                 <input
                   id={id}
+                  required
                   value={monthlyOrders}
                   onChange={(e) => setMonthlyOrders(e.target.value)}
                   placeholder="VD: 150 đơn"
@@ -438,10 +456,11 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
                 />
               )}
             </Field>
-            <Field label="GMV trung bình tháng">
+            <Field label="GMV trung bình tháng" required>
               {(id) => (
                 <input
                   id={id}
+                  required
                   value={monthlyAvgGmv}
                   onChange={(e) => setMonthlyAvgGmv(e.target.value)}
                   placeholder="VD: 35.000.000đ"
