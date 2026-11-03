@@ -223,6 +223,7 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     if (WEBHOOK_URL) {
       const sheetPayload = {
         ...app,
+        address: appEmail, // Đảm bảo nếu Apps Script cũ đọc data.address thì Cột 6 (Email của KOC) vẫn nhận đúng email
         email: appEmail,
         kocEmail: appEmail,
         contentConcept: sampleAndConcept,
