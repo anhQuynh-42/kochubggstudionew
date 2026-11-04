@@ -103,7 +103,17 @@ export const KocityAiChatWidget: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const webhookUrl = import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL || 'https://thanhloc.app.n8n.cloud/webhook/kocity-ai-chat';
+      const DEFAULT_N8N_URL = 'https://kocity-n8n.onrender.com/webhook/kocity-ai-chat';
+      const envChatUrl = import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL;
+      const webhookUrl = (!envChatUrl || envChatUrl.includes('thanhloc.app.n8n.cloud') || envChatUrl.includes('localhost'))
+        ? DEFAULT_N8N_URL
+        : envChatUrl;
+
+      let sessionId = sessionStorage.getItem('kocity_ai_session_id');
+      if (!sessionId) {
+        sessionId = `session-${Date.now()}`;
+        sessionStorage.setItem('kocity_ai_session_id', sessionId);
+      }
 
       let replyText = '';
 
@@ -114,7 +124,7 @@ export const KocityAiChatWidget: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: query,
-            sessionId: sessionStorage.getItem('kocity_ai_session_id') || `session-${Date.now()}`,
+            sessionId,
           }),
         });
 

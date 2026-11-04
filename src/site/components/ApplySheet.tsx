@@ -219,7 +219,12 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     };
 
     // Gửi sang Google Sheets Webhook (tách riêng cột Sản phẩm đăng ký và cột Đơn hàng và GMV)
-    const WEBHOOK_URL = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+    const DEFAULT_GOOGLE_SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbx8JFKrkaPKKPdAfVWC-7piJZiMI57LWgOGbgWWtNn59y2-Lqvi7Lamp6NB45d47N0f9A/exec';
+    const OLD_WEBHOOK_ID = 'AKfycbwsTJu5xrjzFqFfRmwNaZnYSoByS_Wci-LVl4aAVAdBE0FnPImTfMwEmRd6aXKi-nT03g';
+    const envWebhook = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+    const WEBHOOK_URL = (!envWebhook || envWebhook.includes(OLD_WEBHOOK_ID))
+      ? DEFAULT_GOOGLE_SHEETS_WEBHOOK_URL
+      : envWebhook;
     if (WEBHOOK_URL) {
       const sheetPayload = {
         ...app,
