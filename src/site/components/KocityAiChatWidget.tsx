@@ -71,7 +71,7 @@ export const KocityAiChatWidget: React.FC = () => {
       {
         id: 'welcome',
         sender: 'assistant',
-        text: 'Xin chào! Mình là **Trợ lý AI KOCity**. Bạn cần hỗ trợ nhận mẫu 0đ hay gợi ý kịch bản video TikTok hôm nay?',
+        text: 'Hey bạn ơi! Miu đây ✨ Bạn cần hỏi gì về nhận mẫu 0đ hay kịch bản TikTok triệu view nè?',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ];
@@ -103,16 +103,16 @@ export const KocityAiChatWidget: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const DEFAULT_N8N_URL = 'https://kocity-n8n.onrender.com/webhook/kocity-ai-chat';
+      const DEFAULT_N8N_URL = 'https://kocity.app.n8n.cloud/webhook/kocity-ai-chat';
       const envChatUrl = import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL;
-      const webhookUrl = (!envChatUrl || envChatUrl.includes('thanhloc.app.n8n.cloud') || envChatUrl.includes('localhost'))
+      const webhookUrl = (!envChatUrl || envChatUrl.includes('localhost') || envChatUrl.includes('onrender.com') || envChatUrl.includes('thanhloc.app.n8n.cloud'))
         ? DEFAULT_N8N_URL
         : envChatUrl;
 
-      let sessionId = sessionStorage.getItem('kocity_ai_session_id');
+      let sessionId = localStorage.getItem('miu_sid');
       if (!sessionId) {
-        sessionId = `session-${Date.now()}`;
-        sessionStorage.setItem('kocity_ai_session_id', sessionId);
+        sessionId = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        localStorage.setItem('miu_sid', sessionId);
       }
 
       let replyText = '';
@@ -165,7 +165,7 @@ export const KocityAiChatWidget: React.FC = () => {
     const welcome: ChatMessage = {
       id: 'welcome',
       sender: 'assistant',
-      text: 'Cuộc trò chuyện mới đã bắt đầu. Bạn muốn mình giải đáp điều gì nè?',
+      text: 'Cuộc trò chuyện mới đã bắt đầu. Miu sẵn sàng giải đáp mọi thắc mắc của bạn nè! ✨',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setMessages([welcome]);
@@ -186,7 +186,7 @@ export const KocityAiChatWidget: React.FC = () => {
             type="button"
             onClick={() => setIsOpen(true)}
             className="group relative flex h-13 w-13 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-pink-500 text-white shadow-xl shadow-violet-500/30 transition-all duration-300 hover:scale-108 hover:shadow-violet-500/50 active:scale-95 cursor-pointer ring-2 ring-white/40"
-            title="Chat với Trợ lý AI KOCity (Gemini)"
+            title="Chat với Miu - Trợ lý KOCity ✨"
           >
             {/* Vòng hào quang lấp lánh */}
             <span className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-violet-500 to-pink-500 opacity-40 blur-sm group-hover:opacity-80 transition duration-300 animate-pulse" />
@@ -214,7 +214,7 @@ export const KocityAiChatWidget: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                  KOCity AI Assistant
+                  Miu - Trợ lý KOCity ✨
                   <span className="rounded-full bg-violet-500/30 px-1.5 py-0.2 text-[9px] font-semibold text-violet-300 ring-1 ring-violet-400/40">
                     Gemini
                   </span>
@@ -318,7 +318,7 @@ export const KocityAiChatWidget: React.FC = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Nhập câu hỏi hoặc yêu cầu kịch bản..."
+              placeholder="Nhắn cho Miu..."
               disabled={isLoading}
               className="flex-1 rounded-xl bg-slate-900/90 border border-white/10 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 transition"
             />
