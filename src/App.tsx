@@ -10,6 +10,7 @@ import type { PublicMediaKitData } from './components/PublicMediaKitModal';
 
 // Tải lười (Lazy loading) các trang con và tính năng nặng để trang chủ tải nhanh gấp 4 lần
 const CampaignPage = React.lazy(() => import('./site/pages/CampaignPage').then(m => ({ default: m.CampaignPage })));
+const BlogPage = React.lazy(() => import('./site/pages/BlogPage').then(m => ({ default: m.BlogPage })));
 const MyApplicationsPage = React.lazy(() => import('./site/pages/MyApplicationsPage').then(m => ({ default: m.MyApplicationsPage })));
 const NotificationsPage = React.lazy(() => import('./site/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const ProfilePage = React.lazy(() => import('./site/pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
@@ -42,6 +43,8 @@ export const App: React.FC = () => (
             <Route element={<SiteLayout />}>
               <Route index element={<HomePage />} />
               <Route path="/c/:id" element={<CampaignPage />} />
+              <Route path={ROUTES.blog} element={<BlogPage />} />
+              <Route path="/blog/:slug" element={<BlogPage />} />
               <Route path={ROUTES.process} element={<ProcessPage />} />
               <Route path={ROUTES.progress} element={<ProgressPage />} />
               <Route path={ROUTES.myApplications} element={<MyApplicationsPage />} />

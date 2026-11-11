@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface BlogContentRendererProps {
   content: string;
@@ -7,6 +7,51 @@ interface BlogContentRendererProps {
 
 export const BlogContentRenderer: React.FC<BlogContentRendererProps> = ({ content, className = '' }) => {
   const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tableRowCount, setTableRowCount] = useState<number | null>(null);
+  const [matchCount, setMatchCount] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Detect if content contains a table and count rows
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const table = containerRef.current.querySelector('table');
+    if (!table) {
+      setTableRowCount(null);
+      return;
+    }
+    const rows = table.querySelectorAll('tbody tr');
+    setTableRowCount(rows.length);
+  }, [content]);
+
+  // Real-time table filter when searching
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const table = containerRef.current.querySelector('table');
+    if (!table) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr')) as HTMLElement[];
+    if (rows.length === 0) return;
+
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) {
+      rows.forEach((r) => (r.style.display = ''));
+      setMatchCount(null);
+      return;
+    }
+
+    let count = 0;
+    rows.forEach((r) => {
+      const text = r.textContent?.toLowerCase() || '';
+      if (text.includes(term)) {
+        r.style.display = '';
+        count++;
+      } else {
+        r.style.display = 'none';
+      }
+    });
+    setMatchCount(count);
+  }, [searchTerm, content]);
 
   if (!content) return null;
 
@@ -33,7 +78,51 @@ export const BlogContentRenderer: React.FC<BlogContentRendererProps> = ({ conten
   const blocks = content.split(/\n\n+/);
 
   return (
-    <div className={`space-y-4 text-slate-700 leading-relaxed ${className}`}>
+    <div ref={containerRef} className={`space-y-4 text-slate-700 leading-relaxed ${className}`}>
+      {/* Thanh tìm kiếm nhanh KOC & sản phẩm khi bài viết có bảng danh sách */}
+      {tableRowCount && tableRowCount > 3 && (
+        <div className="sticky top-2 z-10 my-4 p-3 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-violet-200 shadow-md flex flex-col sm:flex-row items-center gap-3 animate-fade-in">
+          <div className="relative flex-1 w-full">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-violet-500 text-[20px] select-none">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="🔍 Nhập ID TikTok, tên KOC hoặc sản phẩm để tìm nhanh..."
+              className="w-full pl-10 pr-9 py-2 rounded-xl border border-violet-200 bg-slate-50/50 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all shadow-inner"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 text-xs font-bold transition cursor-pointer"
+                title="Xóa tìm kiếm"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 text-xs font-bold shadow-xs">
+              <span className="h-2 w-2 rounded-full bg-violet-600 animate-pulse"></span>
+              {matchCount !== null ? (
+                <span>Tìm thấy <b>{matchCount}</b>/{tableRowCount} KOC</span>
+              ) : (
+                <span>Tổng cộng: <b>{tableRowCount}</b> KOC</span>
+              )}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Thông báo nếu không tìm thấy KOC nào khớp */}
+      {matchCount === 0 && searchTerm && (
+        <div className="my-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-center text-sm font-medium animate-fade-in">
+          Không tìm thấy KOC hoặc sản phẩm nào khớp với từ khóa <b>&ldquo;{searchTerm}&rdquo;</b>. Vui lòng kiểm tra lại chính tả hoặc ID TikTok!
+        </div>
+      )}
       {blocks.map((block, index) => {
         const text = block.trim();
         if (!text) return null;

@@ -841,17 +841,27 @@ export const HomePage: React.FC = () => {
                 Tổng hợp kiến thức chuẩn SEO, hướng dẫn nhận mẫu 0đ và kinh nghiệm săn job hoa hồng cao từ KOCITY.
               </p>
             </div>
-            <Button
-              variant="primary"
-              size="sm"
-              className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] shrink-0 self-start sm:self-auto cursor-pointer"
-              onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
-            >
-              {currentUser ? 'Nhận mẫu 0đ ngay' : 'Tham gia ngay'}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
+              <Button
+                variant="soft"
+                size="sm"
+                className="rounded-full cursor-pointer"
+                onClick={() => navigate(ROUTES.blog)}
+              >
+                Xem tất cả bài viết →
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                className="rounded-full bg-gradient-to-r from-[#ec4899] to-[#8b5cf6] cursor-pointer"
+                onClick={() => (currentUser ? document.getElementById('mau-dang-mo')?.scrollIntoView({ behavior: 'smooth' }) : openAuth('register'))}
+              >
+                {currentUser ? 'Nhận mẫu 0đ ngay' : 'Tham gia ngay'}
+              </Button>
+            </div>
           </div>
 
-          {/* Danh sách 5 bài viết: 3 bài công khai + 2 bài phủ mây úp mở */}
+          {/* Danh sách bài viết: mở trang đích riêng chuẩn SEO */}
           <div className="no-scrollbar -mx-4 mt-6 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:px-0">
             {blogPosts.map((post, idx) => {
               const isTeaser = post.isCloudCovered && !uncloudedPostIds.has(post.id);
@@ -863,7 +873,7 @@ export const HomePage: React.FC = () => {
                     if (isTeaser) {
                       setUncloudedPostIds(prev => new Set([...prev, post.id]));
                     }
-                    setSelectedBlogPost(post);
+                    navigate(ROUTES.blogPost(post.slug));
                   }}
                   className={cx(
                     'card-fx group relative flex flex-col justify-between overflow-hidden rounded-[26px] bg-white border border-slate-200/80 shadow-sm hover:shadow-xl transition-all cursor-pointer',
@@ -910,7 +920,7 @@ export const HomePage: React.FC = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         setUncloudedPostIds(prev => new Set([...prev, post.id]));
-                        setSelectedBlogPost(post);
+                        navigate(ROUTES.blogPost(post.slug));
                       }}
                     >
                       {/* Biểu tượng mây & tia sáng */}

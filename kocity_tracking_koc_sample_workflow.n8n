@@ -1,0 +1,108 @@
+{
+  "name": "KOCity - Bắn Tín Hiệu Ngầm Khi KOC Nhận Mẫu (Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "koc-sample-claim",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-post-beacon",
+      "name": "Webhook Nhận Tín Hiệu Ngầm (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ],
+      "webhookId": "koc-sample-claim-post"
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "koc-sample-claim",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-get-beacon",
+      "name": "Webhook Nhận Tín Hiệu Ngầm (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        180
+      ],
+      "webhookId": "koc-sample-claim-get"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $input.first().json.query || {};\nconst koc = (query.koc || 'Ẩn danh').replace(/^@/, '');\nconst product = query.product || 'Sản phẩm Cỏ Mềm';\nconst followers = query.followers || 'Chưa rõ';\nconst affLink = query.affLink || 'https://www.tiktok.com';\nconst now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });\n\nconst telegramMessage = `🎉 <b>[KOCITY] KOC VỪA BẤM YÊU CẦU MẪU CỎ MỀM!</b>\\n\\n` +\n  `👤 <b>KOC:</b> <code>@${koc}</code>\\n` +\n  `📦 <b>Sản phẩm:</b> <b>${product}</b>\\n` +\n  `👥 <b>Followers:</b> ${followers}\\n` +\n  `⏰ <b>Thời gian:</b> ${now}\\n\\n` +\n  `🔗 <b>Kênh TikTok:</b> https://www.tiktok.com/@${koc}\\n` +\n  `🎁 <b>Link mẫu đã bấm:</b> <a href=\"${affLink}\">Mở TikTok Affiliate</a>\\n\\n` +\n  `💡 <i>Nhắc nhở: Hãy vào TikTok Shop Seller Center kiểm tra và duyệt gửi mẫu cho KOC nhé!</i>`;\n\nreturn [{\n  json: {\n    koc,\n    product,\n    followers,\n    affLink,\n    now,\n    telegramMessage\n  }\n}];"
+      },
+      "id": "format-data",
+      "name": "Xử Lý Thông Tin KOC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        90
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-5348405193",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-notify",
+      "name": "Bắn Thông Báo Về Telegram Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        360,
+        90
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Nhận Tín Hiệu Ngầm (POST)": {
+      "main": [
+        [
+          {
+            "node": "Xử Lý Thông Tin KOC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Nhận Tín Hiệu Ngầm (GET)": {
+      "main": [
+        [
+          {
+            "node": "Xử Lý Thông Tin KOC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Xử Lý Thông Tin KOC": {
+      "main": [
+        [
+          {
+            "node": "Bắn Thông Báo Về Telegram Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

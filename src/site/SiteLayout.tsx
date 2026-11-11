@@ -10,6 +10,7 @@ import { KocityAiChatWidget } from './components/KocityAiChatWidget';
 
 const NAV = [
   { to: ROUTES.home, label: 'Khám phá', icon: 'explore', end: true },
+  { to: ROUTES.blog, label: 'Cẩm nang', icon: 'menu_book' },
   { to: ROUTES.process, label: 'Quy trình', icon: 'alt_route' },
   { to: ROUTES.progress, label: 'Tiến độ', icon: 'monitoring' },
   { to: ROUTES.myApplications, label: 'Đơn của tôi', icon: 'inventory_2' },
@@ -344,7 +345,7 @@ const BottomNav: React.FC = () => {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
     >
       <ul className="grid grid-cols-4">
-        {NAV.filter((item) => item.to !== ROUTES.progress && item.to !== ROUTES.process).map((item) => (
+        {NAV.filter((item) => item.to !== ROUTES.progress && item.to !== ROUTES.process && item.to !== ROUTES.blog).map((item) => (
           <li key={item.to}>
             <NavLink to={item.to} end={item.end} className="flex h-[4.25rem] flex-col items-center justify-center gap-1">
               {({ isActive }) => (
