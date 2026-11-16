@@ -18,6 +18,8 @@ export const BRAND_CONTACT = {
 export const ROUTES = {
   home: '/',
   campaign: (id: string) => `/c/${encodeURIComponent(id)}`,
+  sampleCampaign: (brandSlug: string) => `/mau-thu/${encodeURIComponent(brandSlug)}`,
+  freeTools: '/cong-cu',
   blog: '/blog',
   blogPost: (slug: string) => `/blog/${encodeURIComponent(slug)}`,
   process: '/quy-trinh',

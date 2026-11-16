@@ -10,6 +10,7 @@ import { KocityAiChatWidget } from './components/KocityAiChatWidget';
 
 const NAV = [
   { to: ROUTES.home, label: 'Khám phá', icon: 'explore', end: true },
+  { to: ROUTES.freeTools, label: 'Công cụ KOC', icon: 'calculate' },
   { to: ROUTES.blog, label: 'Cẩm nang', icon: 'menu_book' },
   { to: ROUTES.process, label: 'Quy trình', icon: 'alt_route' },
   { to: ROUTES.progress, label: 'Tiến độ', icon: 'monitoring' },

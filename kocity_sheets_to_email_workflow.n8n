@@ -1,0 +1,129 @@
+{
+  "name": "KOCity - Gửi Đúng 1 Gmail Cho KOC Mới Nhất",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "13QyPjS4BPRrrd6-_1eOM7BN0RhUENoJpzImhBENsu7o"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet tổng",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13QyPjS4BPRrrd6-_1eOM7BN0RhUENoJpzImhBENsu7o/edit#gid=0"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "9a8b7003-2624-4609-9df6-155617c56938",
+      "name": "Google Sheets Trigger (Dòng Mới)",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        64
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "3S82hdSyN2TlpyJc",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 1,
+        "keep": "lastItems"
+      },
+      "id": "74aaca76-c0bb-436e-9b70-aedf68e83037",
+      "name": "Chỉ lấy 1 dòng mới nhất",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        112,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['Email của KOC'] }}",
+        "subject": "=[KOCity] Đăng ký nhận mẫu thành công - {{ $json['Brand đăng ký '] }}",
+        "emailType": "text",
+        "message": "=Chào {{ $json['Tên KOC'] }}\n\nKOCity đã nhận đơn đăng ký nhận mẫu của bạn:\n- Brand: {{ $json['Brand đăng ký '] }}\n- Sản phẩm: {{ $json['Sản phẩm đăng ký'] }}\n- TikTok: {{ $json['ID name Tiktok của bạn ?'] }}\n\nNhãn hàng sẽ duyệt đơn trong 24–48h. Sau khi nhận mẫu, bạn vui lòng đăng clip TikTok trong 5–7 ngày.\n\nTheo dõi đơn tại: https://kocity.io.vn/don-cua-toi\n\nCảm ơn bạn,\nKOCity",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "61462b7f-908c-4d08-b8b2-ce698d2adf78",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        368,
+        64
+      ],
+      "webhookId": "68c1bf50-68f7-40da-ac92-8c22bb069823",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "IIbE13M1MhJ5HzK1",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Google Sheets Trigger (Dòng Mới)": {
+      "main": [
+        [
+          {
+            "node": "Chỉ lấy 1 dòng mới nhất",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chỉ lấy 1 dòng mới nhất": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Google Sheets Trigger (Dòng Mới)": [
+      {
+        "json": {
+          "Dấu thời gian": "11/11/2026 04:59 PM",
+          "Brand đăng ký ": "🌸 [CỎ MỀM] SAMPLE 20/10 – COMBO QUÀ TẶNG THIÊN NHIÊN, HOA HỒNG 8% & 100% FREECAST 🎁",
+          "Tên KOC": "Lộc Test",
+          "Số điện thoại": "0983956243",
+          "ID name Tiktok của bạn ?": "@cr7loc",
+          "Email của KOC": "cr7loc2005@gmail.com",
+          "Sản phẩm đăng ký": "Son Dưỡng Gạo Cỏ Mềm Cải Thiện Nứt Nẻ 4.5g",
+          "Đơn hàng và GVM": "— Đơn bán/tháng: 50+ • GMV TB/tháng: 15.000.000đ",
+          "Link kênh TikTok": "https://www.tiktok.com/@cr7loc"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "15654a025d1ce5129ffb048d13eb6232ef4f3c528870a8a0c4321843c4db15d2"
+  }
+}

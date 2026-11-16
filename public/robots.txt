@@ -1,0 +1,27 @@
+# robots.txt for KOCity (kocity.io.vn)
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# AI Crawlers & Answer Engines (GEO & Agentic Browsing Enabled)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# LLM Discovery
+# llms.txt standard: https://llmstxt.org/
+# Location of the machine-readable summary:
+Sitemap: https://kocity.io.vn/sitemap.xml
+

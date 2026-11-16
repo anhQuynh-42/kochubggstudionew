@@ -42,6 +42,7 @@ Before notifying the user that a task is finished, you **MUST** run a quick chec
 5. 🔍 **Build & Deploy:** Chạy `npm run check:sync` VÀ `npm run build` hoàn thành với exit code 0; push Git với commit message tiếng Việt chuẩn.
 6. 🔍 **Tương phản Thị giác & Nút bấm:** Soát kỹ màu chữ và màu nền (`text-*` vs `bg-*`), không để xung đột CSS gây lỗi chữ trắng trên nền trắng, tương phản sắc nét chuẩn WCAG AAA.
 7. 🔍 **Đồng bộ Đa thiết bị & Zero Silent Failure:** Bắt buộc chạy `npm run check:sync` đạt exit code 0. Giao diện hoàn hảo trên cả Mobile (375px) và Laptop (1440px); tài khoản, avatar, đơn nhận mẫu và chiến dịch phải đồng nhất 100% giữa Điện thoại và Máy tính qua Supabase Cloud. Tuyệt đối không nuốt lỗi schema.
+8. 🔍 **SEO Drift & AI Discovery Gate:** Bắt buộc chạy `npm run check:seo` đạt exit code 0. Xác nhận tệp `public/llms.txt`, `public/robots.txt`, schema JSON-LD và các route programmatic SEO (`/mau-thu/:brandSlug`, `/cong-cu`) luôn nguyên vẹn, không bao giờ bị mất sau khi chỉnh sửa code.
 
 Full reference: See [deploy_checklist.md](references/deploy_checklist.md) and [regression_safeguards.md](references/regression_safeguards.md).
 
@@ -53,6 +54,7 @@ Full reference: See [deploy_checklist.md](references/deploy_checklist.md) and [r
 Before staging or committing any code, you **MUST** run:
 ```bash
 npm run check:sync
+npm run check:seo
 npm run build
 ```
 - If `npm run check:sync` fails: **HALT IMMEDIATELY**. There is a schema mismatch or Cloud sync violation. Fix the payload or database contract before proceeding.

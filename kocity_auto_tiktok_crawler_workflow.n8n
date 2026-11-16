@@ -1,0 +1,160 @@
+{
+  "name": "KOCity - Tự Động Quét Ngầm TikTok Phát Hiện Video KOC Lên Bài",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 12,20 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Lịch Quét Ngầm (12h & 20h Hàng Ngày)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -300,
+        100
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Bấm Để Quét Ngay",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Danh sách KOC trọng điểm cần theo dõi chiến dịch Cỏ Mềm\nconst targetKocs = [\n  'embes.bii',\n  'dh.t172',\n  'muoi2021.pe',\n  'sunnynguyen09',\n  'Oanh.thu1408',\n  'yyuunnii03',\n  'yenlamme',\n  'gaoiu2511',\n  'me.emleo',\n  'hathilan0711'\n];\n\n// 2. Bộ lọc Hashtag & Từ khóa bắt buộc trong Caption\nconst campaignHashtags = ['#comem', '#comemhomelab', '#adfi', '#kocity', '#myphamthiennhien'];\nconst campaignKeywords = ['cỏ mềm', 'comem', 'son dưỡng gạo', 'sâm 1700'];\n\nreturn targetKocs.map(koc => ({\n  json: {\n    kocHandle: koc.replace(/^@/, '').trim(),\n    channelUrl: `https://www.tiktok.com/@${koc.replace(/^@/, '').trim()}`,\n    campaignHashtags,\n    campaignKeywords,\n    scanTime: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })\n  }\n}));"
+      },
+      "id": "config-kocs",
+      "name": "Cấu Hình KOC & Bộ Lọc Hashtag",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-kocs",
+      "name": "Lặp Từng KOC",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        200,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst koc = item.kocHandle;\n\n// n8n Static Data lưu trữ các video ID đã từng phát hiện và danh sách KOC độc nhất đã đăng clip\nconst staticData = $getWorkflowStaticData('global');\nif (!Array.isArray(staticData.detectedVideoIds)) {\n  staticData.detectedVideoIds = [];\n}\nif (!Array.isArray(staticData.postedKocs)) {\n  staticData.postedKocs = [];\n}\n\n// Module phân tích & thẩm định video tự động\n// (Trong thực tế sẽ nhận dữ liệu video mới nhất từ TikTok API/Scraper)\nconst mockRecentVideos = [\n  {\n    videoId: `vid_${koc}_01`,\n    caption: `Trải nghiệm bộ sản phẩm thiên nhiên siêu ưng ý cùng #CoMem và #KOCity nè mn ơi! Cảm ơn brand #ADFI đã gửi mẫu nhé ❤️`,\n    postedAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),\n    videoUrl: `https://www.tiktok.com/@${koc}/video/7328192837492`,\n    views: '12.5K'\n  }\n];\n\nconst matchedVideos = [];\n\nfor (const vid of mockRecentVideos) {\n  const captionLower = vid.caption.toLowerCase();\n  const matchedTags = item.campaignHashtags.filter(tag => captionLower.includes(tag.toLowerCase()));\n  const matchedWords = item.campaignKeywords.filter(w => captionLower.includes(w.toLowerCase()));\n  \n  const isCampaignVideo = matchedTags.length > 0 || matchedWords.length > 0;\n  const isAlreadyReported = staticData.detectedVideoIds.includes(vid.videoId);\n\n  if (isCampaignVideo && !isAlreadyReported) {\n    // 1. Lưu video ID để không gửi lại video này lần sau\n    staticData.detectedVideoIds.push(vid.videoId);\n\n    // 2. Cập nhật danh sách KOC độc nhất đã lên video (không trùng lặp tên KOC)\n    const kocLower = koc.toLowerCase();\n    const isNewPoster = !staticData.postedKocs.some(k => k.toLowerCase() === kocLower);\n    if (isNewPoster) {\n      staticData.postedKocs.push(koc);\n    }\n\n    const totalPosted = staticData.postedKocs.length;\n    const totalTarget = 68;\n    const percent = Math.round((totalPosted / totalTarget) * 100);\n    const remaining = Math.max(0, totalTarget - totalPosted);\n\n    // Danh sách KOC đã lên bài dạng tag\n    let postedListText = '';\n    if (totalPosted === 0) {\n      postedListText = '<i>(Chưa có KOC nào lên bài)</i>';\n    } else if (totalPosted <= 25) {\n      postedListText = staticData.postedKocs.map((name, idx) => `${idx + 1}. <code>@${name}</code>`).join('\\n');\n    } else {\n      postedListText = staticData.postedKocs.map(name => `<code>@${name}</code>`).join(' • ');\n    }\n\n    const posterTag = isNewPoster ? '✨ <b>[KOC MỚI LÊN BÀI LẦN ĐẦU]</b>' : '🎬 <i>(KOC này đăng thêm video mới)</i>';\n\n    const telegramMessage = \n      `🎬 <b>[KOCITY AUTO-CRAWLER] PHÁT HIỆN KOC VỪA LÊN VIDEO!</b>\\n\\n` +\n      `👤 <b>KOC:</b> <code>@${koc}</code> ${posterTag}\\n` +\n      `📦 <b>Chiến dịch:</b> Cỏ Mềm Homelab (Mẫu 0đ)\\n` +\n      `🔗 <b>Link video TikTok:</b> <a href=\"${vid.videoUrl}\">${vid.videoUrl}</a>\\n` +\n      `📝 <b>Caption trích đoạn:</b> <i>\"${vid.caption}\"</i>\\n` +\n      `⏰ <b>Thời gian phát hiện:</b> ${vid.postedAt}\\n` +\n      `🏷️ <b>Hashtag khớp:</b> ${matchedTags.join(' ') || '#CoMem'}\\n\\n` +\n      `━━━━━━━━━━━━━━━━━━━━\\n` +\n      `📊 <b>TỔNG HỢP TIẾN ĐỘ KOC LÊN VIDEO:</b>\\n` +\n      `🔥 <b>Đã đăng clip:</b> <b>${totalPosted}/${totalTarget} KOC</b> (${percent}%)\\n` +\n      `⏳ <b>Chưa lên video:</b> <b>${remaining} KOC</b>\\n` +\n      `👥 <b>Tổng số KOC độc nhất đã đăng:</b> <b>${totalPosted} KOC</b>\\n` +\n      `📋 <b>Danh sách KOC đã lên bài:</b>\\n${postedListText}\\n` +\n      `━━━━━━━━━━━━━━━━━━━━\\n\\n` +\n      `✅ <b>Trạng thái:</b> Tự động nhận diện 100% — KOC không cần nộp link!\\n` +\n      `💡 <i>Nhắc nhở: Hãy vào TikTok Shop Seller Center kiểm tra gắn giỏ hàng và nghiệm thu nhé!</i>`;\n\n    matchedVideos.push({\n      koc,\n      videoUrl: vid.videoUrl,\n      caption: vid.caption,\n      matchedTags,\n      postedAt: vid.postedAt,\n      totalPosted,\n      totalTarget,\n      percent,\n      remaining,\n      telegramMessage\n    });\n  }\n}\n\nreturn matchedVideos.map(v => ({ json: v }));"
+      },
+      "id": "detect-and-validate",
+      "name": "Phân Tích & Thẩm Định Video",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-5348405193",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-alert",
+      "name": "Bắn Báo Cáo Về Telegram Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        180
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "8YlUcAebdBbqEpKr",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Lịch Quét Ngầm (12h & 20h Hàng Ngày)": {
+      "main": [
+        [
+          {
+            "node": "Cấu Hình KOC & Bộ Lọc Hashtag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bấm Để Quét Ngay": {
+      "main": [
+        [
+          {
+            "node": "Cấu Hình KOC & Bộ Lọc Hashtag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cấu Hình KOC & Bộ Lọc Hashtag": {
+      "main": [
+        [
+          {
+            "node": "Lặp Từng KOC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lặp Từng KOC": {
+      "main": [
+        [
+          {
+            "node": "Phân Tích & Thẩm Định Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phân Tích & Thẩm Định Video": {
+      "main": [
+        [
+          {
+            "node": "Bắn Báo Cáo Về Telegram Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

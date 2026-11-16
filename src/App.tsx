@@ -16,6 +16,7 @@ const NotificationsPage = React.lazy(() => import('./site/pages/NotificationsPag
 const ProfilePage = React.lazy(() => import('./site/pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const ProgressPage = React.lazy(() => import('./site/pages/ProgressPage').then(m => ({ default: m.ProgressPage })));
 const ProcessPage = React.lazy(() => import('./site/pages/ProcessPage').then(m => ({ default: m.ProcessPage })));
+const FreeToolsPage = React.lazy(() => import('./site/pages/FreeToolsPage').then(m => ({ default: m.FreeToolsPage })));
 const AdminView = React.lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
 const PublicMediaKitModal = React.lazy(() => import('./components/PublicMediaKitModal').then(m => ({ default: m.PublicMediaKitModal })));
 
@@ -43,6 +44,8 @@ export const App: React.FC = () => (
             <Route element={<SiteLayout />}>
               <Route index element={<HomePage />} />
               <Route path="/c/:id" element={<CampaignPage />} />
+              <Route path="/mau-thu/:brandSlug" element={<CampaignPage />} />
+              <Route path={ROUTES.freeTools} element={<FreeToolsPage />} />
               <Route path={ROUTES.blog} element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogPage />} />
               <Route path={ROUTES.process} element={<ProcessPage />} />

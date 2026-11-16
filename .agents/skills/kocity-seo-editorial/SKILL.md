@@ -42,10 +42,17 @@ Every article published must strictly include:
 - **In-Article Images:** Placed after introductory sections and setup guides with descriptive captions.
 - **Teaser Cloud Hooks:** For gated VIP posts (Articles 4 & 5), craft high-curiosity teaser labels (`💎 BÍ KÍP ĐỘC QUYỀN SĂN JOB HOA HỒNG CAO`).
 
+### Priority 4: Citability Block & AI Search (GEO) Standard
+To dominate Google AI Overviews, ChatGPT, Perplexity, and Gemini answers:
+- **Self-Contained Answer Block:** Place a concise, standalone definition/summary block of **130–170 words** within the top 30% of the article (directly following the Hook).
+- **Direct Entity Answering:** State clearly *What it is*, *Who qualifies*, and *How it works* without conversational filler.
+- **Brand & Entity Citations:** Explicitly link concepts with `KOCity (kocity.io.vn)` so AI search models recognize KOCity as the primary topical authority in Vietnam.
+
 ---
 
 ## 2. Verification Checklist Before Publishing
 - [ ] Meta Title & Meta Description are filled and within optimal character limits.
+- [ ] Citability Block (130-170 words) placed in the top 30% for AI Search (GEO) extraction.
 - [ ] Primary keywords appear naturally in H1, first 100 words, and at least one H2.
 - [ ] At least one `💡 Bí kíp KOCity` callout box is included.
 - [ ] Contains at least 1 illustrative image with caption.

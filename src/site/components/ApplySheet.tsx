@@ -335,30 +335,52 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
     </span>
   );
 
+  const ORDER_PRESETS = ['Chưa có (0 đơn)', '1 - 20 đơn', '20 - 50 đơn', '50 - 200 đơn', '200+ đơn'];
+  const GMV_PRESETS = ['0đ (Mới bán)', '< 5 triệu', '5 - 20 triệu', '20 - 50 triệu', '50M+'];
+
   const footer = (
-    <div className="flex gap-2">
-      {step > 1 && (
-        <Button variant="outline" size="lg" onClick={back} aria-label="Quay lại" className="w-12 px-0">
-          <Icon name="arrow_back" />
-        </Button>
-      )}
-      {step === 1 ? (
-        <Button variant="dark" size="lg" block onClick={next}>
-          Tiếp tục sang chọn mẫu
-        </Button>
-      ) : (
-        <Button variant="primary" size="lg" block onClick={submit} disabled={scarcity.isFull || isSubmitting}>
-          {isSubmitting ? (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        {step > 1 && (
+          <Button variant="outline" size="lg" onClick={back} aria-label="Quay lại" className="w-12 px-0">
+            <Icon name="arrow_back" />
+          </Button>
+        )}
+        {step === 1 ? (
+          <Button variant="dark" size="lg" block onClick={next} className="shadow-md shadow-slate-900/10">
             <span className="flex items-center justify-center gap-2">
-              <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              <span>Đang gửi hồ sơ...</span>
+              <span>Tiếp tục sang chọn mẫu</span>
+              <Icon name="arrow_forward" className="text-[18px]" />
             </span>
-          ) : (
-            <>
-              <Icon name="send" className="text-[18px]" /> Gửi đơn nhận mẫu
-            </>
-          )}
-        </Button>
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="lg"
+            block
+            onClick={submit}
+            disabled={scarcity.isFull || isSubmitting}
+            className="shadow-lg shadow-violet-500/25 active:scale-[0.99] transition-transform"
+          >
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                <span>Đang gửi hồ sơ...</span>
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2 font-bold">
+                <Icon name="verified" className="text-[18px]" />
+                <span>Xác Nhận Nhận Mẫu 0đ Ngay</span>
+                <Icon name="arrow_forward" className="text-[18px]" />
+              </span>
+            )}
+          </Button>
+        )}
+      </div>
+      {step === 2 && (
+        <p className="text-center text-[11px] text-slate-500">
+          🔒 Bảo mật 100% • Không cọc tiền • Nhãn hàng tài trợ phí ship
+        </p>
       )}
     </div>
   );
@@ -375,6 +397,17 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
         <p className="mt-2 text-xs font-semibold text-slate-500">
           Bước {step}/2 · {STEP_LABELS[step]}
         </p>
+      </div>
+
+      {/* Social Proof & Guarantee Pill */}
+      <div className="mb-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-violet-50/80 p-2.5 border border-emerald-200/60 text-xs shadow-2xs">
+        <span className="flex items-center gap-1.5 font-medium text-emerald-950">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span><b>39+ KOC</b> vừa đăng ký nhận mẫu</span>
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-0.5 font-bold text-emerald-700">
+          <Icon name="verified_user" className="text-[14px]" /> 0đ Không cọc
+        </span>
       </div>
 
       {/* Banner xem nhanh Brief chiến dịch */}
@@ -442,36 +475,96 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Followers" required>
-              {(id) => <input id={id} required value={followers} onChange={(e) => setFollowers(e.target.value)} placeholder="VD: 12.5K" className={inputClass} />}
-            </Field>
-            <Field label="View TB / video">
-              {(id) => <input id={id} value={avgViews} onChange={(e) => setAvgViews(e.target.value)} placeholder="VD: 5K" className={inputClass} />}
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Số đơn bán ra / tháng" required>
               {(id) => (
                 <input
                   id={id}
                   required
-                  value={monthlyOrders}
-                  onChange={(e) => setMonthlyOrders(e.target.value)}
-                  placeholder="VD: 150 đơn"
+                  inputMode="numeric"
+                  value={followers}
+                  onChange={(e) => setFollowers(e.target.value)}
+                  placeholder="VD: 12.5K hoặc 1500"
                   className={inputClass}
                 />
               )}
             </Field>
-            <Field label="GMV trung bình tháng" required>
+            <Field label="View TB / video">
               {(id) => (
                 <input
                   id={id}
-                  required
-                  value={monthlyAvgGmv}
-                  onChange={(e) => setMonthlyAvgGmv(e.target.value)}
-                  placeholder="VD: 35.000.000đ"
+                  inputMode="numeric"
+                  value={avgViews}
+                  onChange={(e) => setAvgViews(e.target.value)}
+                  placeholder="VD: 5K hoặc 3000"
                   className={inputClass}
                 />
+              )}
+            </Field>
+          </div>
+
+          <div>
+            <Field label="Số đơn bán ra / tháng" required hint="Chọn nhanh hoặc tự nhập số đơn">
+              {(id) => (
+                <div className="space-y-1.5">
+                  <input
+                    id={id}
+                    required
+                    value={monthlyOrders}
+                    onChange={(e) => setMonthlyOrders(e.target.value)}
+                    placeholder="VD: 50 đơn (hoặc chọn bên dưới)"
+                    className={inputClass}
+                  />
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {ORDER_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setMonthlyOrders(preset)}
+                        className={cx(
+                          'rounded-lg px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer border',
+                          monthlyOrders === preset
+                            ? 'bg-violet-100 text-violet-800 border-violet-300 font-bold'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        )}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Field>
+          </div>
+
+          <div>
+            <Field label="GMV trung bình tháng" required hint="Doanh số ước tính qua kênh">
+              {(id) => (
+                <div className="space-y-1.5">
+                  <input
+                    id={id}
+                    required
+                    value={monthlyAvgGmv}
+                    onChange={(e) => setMonthlyAvgGmv(e.target.value)}
+                    placeholder="VD: 20 triệu (hoặc chọn bên dưới)"
+                    className={inputClass}
+                  />
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {GMV_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setMonthlyAvgGmv(preset)}
+                        className={cx(
+                          'rounded-lg px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer border',
+                          monthlyAvgGmv === preset
+                            ? 'bg-violet-100 text-violet-800 border-violet-300 font-bold'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        )}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
             </Field>
           </div>

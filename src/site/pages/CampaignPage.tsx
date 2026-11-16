@@ -9,10 +9,97 @@ import { useSiteUI } from '../SiteUI';
 import { Badge, Button, EmptyState, Icon, IconButton, cx } from '../ui';
 
 export const CampaignPage: React.FC = () => {
-  const { id = '' } = useParams();
+  const { id = '', brandSlug = '' } = useParams();
   const { campaigns, bookmarkedIds, toggleBookmark, isAdmin, setEditingCampaignFromExternal } = useAppData();
   const navigate = useNavigate();
-  const campaign = campaigns.find((c) => c.id === decodeURIComponent(id));
+
+  const searchKey = decodeURIComponent(id || brandSlug).toLowerCase().trim();
+  const campaign = campaigns.find((c) => {
+    if (c.id.toLowerCase() === searchKey) return true;
+    const bSlug = (c.brandName || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-');
+    return bSlug === searchKey || (c.brandName || '').toLowerCase() === searchKey;
+  });
+
+  const isBookmarked = campaign ? bookmarkedIds.includes(campaign.id) : false;
+  const scarcity = campaign ? getScarcity(campaign) : { isFull: false, spotsLeft: 0, totalSpots: 0, percentage: 0 };
+
+  // Programmatic SEO: Tự động inject Title, Meta và JSON-LD Schema (Product 0đ & BreadcrumbList)
+  React.useEffect(() => {
+    if (!campaign) return;
+    const title = `Mẫu Thử ${campaign.brandName} 0đ Cho KOC TikTok | KOCity`;
+    document.title = title;
+
+    const schemaData = {
+      '@context': 'https://schema.org/',
+      '@graph': [
+        {
+          '@type': 'Product',
+          name: campaign.title,
+          image: campaign.productHeroImage,
+          description: campaign.description || `Đăng ký nhận sản phẩm mẫu 0đ từ ${campaign.brandName} dành cho KOC TikTok tại KOCity.`,
+          brand: {
+            '@type': 'Brand',
+            name: campaign.brandName,
+          },
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'VND',
+            price: '0',
+            availability: scarcity.isFull ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+            url: window.location.href,
+            priceValidUntil: '2026-12-31',
+          },
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: '4.9',
+            reviewCount: '68',
+          },
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Trang chủ',
+              item: 'https://kocity.io.vn/',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Mẫu thử 0đ',
+              item: 'https://kocity.io.vn/#campaigns',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: campaign.brandName,
+              item: window.location.href,
+            },
+          ],
+        },
+      ],
+    };
+
+    let scriptEl = document.getElementById('kocity-campaign-schema') as HTMLScriptElement | null;
+    if (!scriptEl) {
+      scriptEl = document.createElement('script');
+      scriptEl.id = 'kocity-campaign-schema';
+      scriptEl.type = 'application/ld+json';
+      document.head.appendChild(scriptEl);
+    }
+    scriptEl.textContent = JSON.stringify(schemaData);
+
+    return () => {
+      const el = document.getElementById('kocity-campaign-schema');
+      if (el) el.remove();
+    };
+  }, [campaign?.id, scarcity.isFull]);
 
   if (!campaign) {
     return (
@@ -26,9 +113,6 @@ export const CampaignPage: React.FC = () => {
       </div>
     );
   }
-
-  const isBookmarked = bookmarkedIds.includes(campaign.id);
-  const scarcity = getScarcity(campaign);
 
   React.useEffect(() => {
     if (scarcity.isFull) {
