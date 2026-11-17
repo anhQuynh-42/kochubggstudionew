@@ -12,7 +12,7 @@
 ## Danh mục trang và tính năng chính
 - [Khám phá chiến dịch mẫu 0đ](https://kocity.io.vn/): Danh sách các chiến dịch gửi mẫu thử miễn phí đang mở đăng ký từ các thương hiệu chính hãng.
 - [Chiến dịch Cỏ Mềm Homelab](https://kocity.io.vn/mau-thu/co-mem): Chương trình tài trợ mẫu son dưỡng gạo, nước hoa, kem chống nắng sâm 1700 cho 68 KOC TikTok.
-- [Bộ công cụ KOC miễn phí](https://kocity.io.vn/cong-cu): Bảng tính hoa hồng TikTok Shop Affiliate và trình định giá video booking KOC (Rate Card Estimator).
+- [Bộ công cụ KOC miễn phí](https://kocity.io.vn/cong-cu): Bảng tính hoa hồng TikTok Shop Affiliate, trình định giá video booking KOC, và KOCity Data Formulator (AI phân tích và trực quan hóa dữ liệu chiến dịch).
 - [Hướng dẫn gắn giỏ hàng TikTok Shop 2026](https://kocity.io.vn/blog/cach-gan-gio-hang-tiktok-shop-cho-koc-moi-2026): Hướng dẫn từng bước kích hoạt giỏ hàng từ 1.000 followers và bí kíp nhận mẫu 0đ qua KOCity.
 - [Cẩm nang & Kinh nghiệm KOC](https://kocity.io.vn/blog): Hướng dẫn xây kênh TikTok từ 0 follower, bí quyết nhận mẫu không cọc và cách gắn link giỏ hàng tăng tỷ lệ chuyển đổi.
 - [Quy trình nhận mẫu 4 bước](https://kocity.io.vn/quy-trinh): Hướng dẫn chi tiết: 1. Đăng ký mẫu -> 2. Brand duyệt hồ sơ -> 3. Nhận hàng tại nhà trong 48h -> 4. Đăng video nghiệm thu và nhận hoa hồng.

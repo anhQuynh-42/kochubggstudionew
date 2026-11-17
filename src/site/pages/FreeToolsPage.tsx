@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../lib/constants';
 import { Badge, Button, Icon, cx } from '../ui';
 import { copyTextToClipboard } from '../../lib/clipboard';
+import { DataFormulatorTool } from '../components/DataFormulatorTool';
 
-type ToolTab = 'affiliate' | 'booking';
+type ToolTab = 'affiliate' | 'booking' | 'data-formulator';
 
 export const FreeToolsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -122,6 +123,20 @@ export const FreeToolsPage: React.FC = () => {
           >
             <Icon name="sell" className="text-[18px]" />
             <span>Định Giá Video Booking</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('data-formulator')}
+            className={cx(
+              'flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer',
+              activeTab === 'data-formulator'
+                ? 'bg-white text-violet-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            )}
+          >
+            <Icon name="auto_awesome" className="text-[18px] text-amber-500" />
+            <span>AI Data Formulator</span>
+            <Badge tone="emerald" className="hidden sm:inline-flex text-[10px]">Mới</Badge>
           </button>
         </div>
       </div>
@@ -427,6 +442,13 @@ export const FreeToolsPage: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 3: AI DATA FORMULATOR (MICROSOFT DATA-FORMULATOR ARCHITECTURE) */}
+      {activeTab === 'data-formulator' && (
+        <div className="mt-8">
+          <DataFormulatorTool />
         </div>
       )}
     </div>

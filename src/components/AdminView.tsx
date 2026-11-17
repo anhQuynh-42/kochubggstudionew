@@ -13,6 +13,7 @@ import {
 import { APP_LOGOS } from '../data/mockData';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { AdminBlogManager } from './AdminBlogManager';
+import { AdminBIAnalyticsTab } from './AdminBIAnalyticsTab';
 
 // Hàm tính số ngày còn lại theo thời gian thực từ chuỗi ngày kết thúc
 export const calculateDaysLeftFromDate = (endDateStr?: string, fallbackDays: number = 15): number => {
@@ -64,7 +65,7 @@ interface AdminViewProps {
   onBackToMarketplace: () => void;
   initialEditingCampaign?: Campaign | null;
   onClearInitialEditingCampaign?: () => void;
-  initialTab?: 'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog';
+  initialTab?: 'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog' | 'bi-analytics';
   onClearInitialTab?: () => void;
   isCloudSynced?: boolean;
   notifications?: AppNotification[];
@@ -91,7 +92,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 }) => {
   // Navigation inside Admin (Sidebar Tab)
   const [activeAdminTab, setActiveAdminTab] = useState<
-    'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog'
+    'dashboard' | 'applications' | 'campaigns' | 'content' | 'koc-crm' | 'blog' | 'bi-analytics'
   >(initialTab || 'dashboard');
 
   useEffect(() => {
@@ -2315,6 +2316,31 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 }`}
               >
                 5 bài
+              </span>
+            </button>
+
+            {/* MỤC: BÁO CÁO BI METABASE */}
+            <button
+              onClick={() => {
+                setActiveAdminTab('bi-analytics');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer ${
+                activeAdminTab === 'bi-analytics'
+                  ? 'bg-blue-600 text-white font-bold shadow-sm shadow-blue-500/20'
+                  : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-[20px]">analytics</span>
+                <span>Báo Cáo BI Metabase</span>
+              </div>
+              <span
+                className={`rounded text-[10px] font-bold px-1.5 py-0.5 ${
+                  activeAdminTab === 'bi-analytics' ? 'bg-white text-blue-700' : 'bg-blue-100 text-blue-700'
+                }`}
+              >
+                BI
               </span>
             </button>
           </nav>
@@ -5695,6 +5721,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
         {/* TAB QUẢN LÝ BÀI VIẾT CẨM NANG & SEO */}
         {activeAdminTab === 'blog' && (
           <AdminBlogManager onShowToast={onShowToast} />
+        )}
+
+        {/* TAB BÁO CÁO BI METABASE */}
+        {activeAdminTab === 'bi-analytics' && (
+          <AdminBIAnalyticsTab
+            campaigns={campaigns}
+            applications={applications}
+            onShowToast={onShowToast}
+          />
         )}
       </main>
 

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  kocity-metabase:
+    image: metabase/metabase:latest
+    container_name: kocity-bi-metabase
+    restart: unless-stopped
+    ports:
+      - "3050:3000"
+    environment:
+      # Port trong container
+      MB_JETTY_PORT: 3000
+      # Cho phép nhúng Dashboard vào web KOCity (Embedded Analytics)
+      MB_ENABLE_EMBEDDING: "true"
+      # Khóa mã hóa session & token nhúng (đổi khóa này trong production)
+      MB_ENCRYPTION_SECRET_KEY: "kocity_metabase_secret_encryption_key_2026_super_secure"
+      # Múi giờ Việt Nam
+      JAVA_TIMEZONE: "Asia/Ho_Chi_Minh"
+    volumes:
+      - kocity_metabase_data:/metabase-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  kocity_metabase_data:
+    driver: local
