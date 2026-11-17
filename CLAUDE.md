@@ -196,3 +196,25 @@ Mục tiêu giao diện: **Thu hút KOC ngay trong 3 giây đầu và giữ châ
 2. **KOC Media Kit Cá Nhân Hóa:** Cho phép KOC xuất link & ảnh Card Profile Media Kit đẹp mắt để tự đi pitching nhãn hàng.
 3. **Cộng đồng Zalo hỗ trợ 24/7:** Widget kết nối cộng đồng ghim góc màn hình.
 4. **Mobile-First:** Thanh Bottom Navigation cố định dưới đáy màn hình điện thoại & nút Sticky CTA khi xem chi tiết chiến dịch.
+
+---
+
+## 9. 🤖 Đội ngũ 8 AI Agents KOCity (Claude Code & Claude Team Dashboard)
+
+Dự án KOCity được trang bị đội ngũ 8 AI Agents chuyên trách. Khi làm việc trong **Claude Code CLI** hoặc theo dõi qua **Claude Team Dashboard (`http://localhost:3001`)**, hãy tham chiếu và điều phối các agents sau:
+
+| STT | Tên Agent (`name`) | Vai trò (Role) | Chuyên môn cốt lõi | File Skill tham chiếu |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | `geo-agentic-seo` | GEO & AI Search Specialist | Tối ưu trích dẫn trên Google AI Overviews, Perplexity, ChatGPT; quản lý `public/llms.txt`, `robots.txt`, Citability Block | `.agents/skills/kocity-geo-agentic-seo/SKILL.md` |
+| 2 | `form-conversion-cro` | CRO & Funnel Engineer | Tối ưu tỷ lệ nộp form nhận mẫu 0đ (`ApplySheet`), giảm thiểu drop-off của KOC | `.agents/skills/kocity-form-conversion-cro/SKILL.md` |
+| 3 | `programmatic-seo` | Programmatic SEO Architect | Xây dựng hệ thống tự động sinh hàng trăm landing page chiến dịch `/mau-thu/:brandSlug` và Schema Markup Product 0đ | `.agents/skills/kocity-programmatic-seo/SKILL.md` |
+| 4 | `free-tools-leadgen` | Growth & Free Tools Engineer | Phát triển các tiện ích tính hoa hồng TikTok, định giá kênh KOC tại `/cong-cu` để thu hút user mới vào phễu | `.agents/skills/kocity-free-tools-leadgen/SKILL.md` |
+| 5 | `ui-ux-designer` | Lead Product Designer | Chuẩn hóa nhận diện thương hiệu tím `#7c3aed`, mobile-first parity, Curiosity Cloud và micro-interactions | `.agents/skills/kocity-ui-ux-design/SKILL.md` |
+| 6 | `safe-deploy-guardian` | QA & Release Engineer | Giám sát zero-regression, chạy `npm run check:seo` & `npm run build`, bảo vệ quy trình release an toàn | `.agents/skills/kocity-safe-deploy/SKILL.md` |
+| 7 | `seo-content-editor` | Content & Editorial Lead | Biên soạn bài viết SEO / cẩm nang KOC 2026 với cấu trúc Citability Block 130-170 từ | `.agents/skills/kocity-seo-editorial/SKILL.md` |
+| 8 | `wysiwyg-cms-engineer` | Admin CMS Specialist | Bảo vệ bộ soạn thảo CMS, ngăn ngừa vỡ định dạng HTML/CSS và bảo toàn mã code khi xuất bản | `.agents/skills/kocity-wysiwyg-cms/SKILL.md` |
+
+### Cách gọi và phân quyền trong Claude Code:
+- **Kích hoạt Agent:** Bạn có thể yêu cầu Claude Code đóng vai hoặc giao việc trực tiếp cho từng Agent bằng cú pháp:  
+  `"Hãy đóng vai agent [tên-agent] để thực hiện [nhiệm vụ]..."` hoặc `"@agent-name: ..."`
+- **Dashboard Giám Sát:** Truy cập `http://localhost:3001` (Team: `kocity-core`) để theo dõi trạng thái nhiệm vụ thời gian thực, hộp thư (Inboxes) và tiến độ Kanban của toàn đội ngũ Agent.
