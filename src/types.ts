@@ -215,3 +215,22 @@ export interface LiveActivityItem {
   action: 'applied' | 'selected' | 'posted';
   dateLabel: string;
 }
+
+/** Chỉ số hoạt động đa kênh chính chủ của KOCity (Website, TikTok, Facebook, Threads, Zalo) */
+export type KocityChannelType = 'website' | 'tiktok' | 'facebook' | 'threads' | 'zalo';
+
+export interface KocityChannelMetric {
+  id: string;
+  report_date: string;
+  channel: KocityChannelType;
+  channel_name: string;
+  channel_url?: string;
+  followers_or_members: number;
+  total_views: number;
+  engagements: number;
+  new_subscribers_today: number;
+  notes?: string;
+  metadata?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}

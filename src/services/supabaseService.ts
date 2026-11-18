@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { Campaign, KOCApplication, KOCUser } from '../types';
+import { Campaign, KOCApplication, KOCUser, KocityChannelMetric } from '../types';
 import type { BlogPost } from '../data/blogData';
 
 /**
@@ -896,4 +896,156 @@ export function subscribeToBlogPostsRealtime(onUpdate: (posts: BlogPost[]) => vo
   return () => {
     supabase.removeChannel(channel);
   };
+}
+
+// =========================================================================
+// 17. QUẢN LÝ DỮ LIỆU ĐA KÊNH CHÍNH CHỦ KOCITY (OMNICHANNEL METRICS)
+// =========================================================================
+
+export const DEFAULT_OMNICHANNEL_METRICS: KocityChannelMetric[] = [
+  {
+    id: 'metric-website-1',
+    report_date: new Date().toISOString().split('T')[0],
+    channel: 'website',
+    channel_name: 'Website KOCity',
+    channel_url: 'https://kocity.io.vn',
+    followers_or_members: 3420,
+    total_views: 18500,
+    engagements: 1260,
+    new_subscribers_today: 145,
+    notes: 'Chiến dịch Cỏ Mềm đang thu hút lượng truy cập nhận mẫu cao',
+  },
+  {
+    id: 'metric-tiktok-1',
+    report_date: new Date().toISOString().split('T')[0],
+    channel: 'tiktok',
+    channel_name: 'TikTok Official',
+    channel_url: 'https://www.tiktok.com/@kocity.vn',
+    followers_or_members: 12800,
+    total_views: 142000,
+    engagements: 8900,
+    new_subscribers_today: 320,
+    notes: 'Video hướng dẫn gắn giỏ hàng 2026 đang lên xu hướng',
+  },
+  {
+    id: 'metric-facebook-1',
+    report_date: new Date().toISOString().split('T')[0],
+    channel: 'facebook',
+    channel_name: 'Cộng Đồng Facebook',
+    channel_url: 'https://facebook.com/groups/kocityvietnam',
+    followers_or_members: 6500,
+    total_views: 24000,
+    engagements: 1850,
+    new_subscribers_today: 95,
+    notes: 'Thảo luận sôi nổi về duyệt mẫu đợt 2',
+  },
+  {
+    id: 'metric-threads-1',
+    report_date: new Date().toISOString().split('T')[0],
+    channel: 'threads',
+    channel_name: 'Threads KOCity',
+    channel_url: 'https://www.threads.net/@kocity.vn',
+    followers_or_members: 4100,
+    total_views: 31000,
+    engagements: 2450,
+    new_subscribers_today: 110,
+    notes: 'Chia sẻ kinh nghiệm làm affiliate không cọc tiền',
+  },
+  {
+    id: 'metric-zalo-1',
+    report_date: new Date().toISOString().split('T')[0],
+    channel: 'zalo',
+    channel_name: 'Zalo Community',
+    channel_url: 'https://zalo.me/g/cjenmz664',
+    followers_or_members: 2150,
+    total_views: 12800,
+    engagements: 3100,
+    new_subscribers_today: 78,
+    notes: 'Group hỗ trợ KOC giải đáp thắc mắc mã vận đơn 24/7',
+  },
+];
+
+/** Lấy dữ liệu đa kênh KOCity từ Supabase (fallback về mock/localStorage) */
+export async function getKocityChannelMetricsFromSupabase(): Promise<KocityChannelMetric[]> {
+  if (!isSupabaseConfigured()) {
+    try {
+      const local = localStorage.getItem('kocity_channel_metrics_cache');
+      if (local) return JSON.parse(local);
+    } catch {}
+    return DEFAULT_OMNICHANNEL_METRICS;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('kocity_channel_metrics')
+      .select('*')
+      .order('report_date', { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.warn('Lỗi truy vấn kocity_channel_metrics từ Supabase:', error.message);
+      try {
+        const local = localStorage.getItem('kocity_channel_metrics_cache');
+        if (local) return JSON.parse(local);
+      } catch {}
+      return DEFAULT_OMNICHANNEL_METRICS;
+    }
+
+    if (data && data.length > 0) {
+      localStorage.setItem('kocity_channel_metrics_cache', JSON.stringify(data));
+      return data as KocityChannelMetric[];
+    }
+
+    return DEFAULT_OMNICHANNEL_METRICS;
+  } catch (err) {
+    console.warn('Lỗi ngoại lệ khi tải kocity_channel_metrics:', err);
+    return DEFAULT_OMNICHANNEL_METRICS;
+  }
+}
+
+/** Cập nhật hoặc thêm chỉ số cho 1 kênh trên Supabase */
+export async function upsertKocityChannelMetricOnSupabase(
+  metric: Partial<KocityChannelMetric> & { channel: KocityChannelMetric['channel'] }
+): Promise<boolean> {
+  const payload = {
+    report_date: metric.report_date || new Date().toISOString().split('T')[0],
+    channel: metric.channel,
+    channel_name: metric.channel_name || metric.channel,
+    channel_url: metric.channel_url || '',
+    followers_or_members: Number(metric.followers_or_members) || 0,
+    total_views: Number(metric.total_views) || 0,
+    engagements: Number(metric.engagements) || 0,
+    new_subscribers_today: Number(metric.new_subscribers_today) || 0,
+    notes: metric.notes || '',
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const local = localStorage.getItem('kocity_channel_metrics_cache');
+    const list: KocityChannelMetric[] = local ? JSON.parse(local) : [...DEFAULT_OMNICHANNEL_METRICS];
+    const idx = list.findIndex((m) => m.channel === metric.channel);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...payload };
+    } else {
+      list.push({ id: `metric-${Date.now()}`, ...payload } as KocityChannelMetric);
+    }
+    localStorage.setItem('kocity_channel_metrics_cache', JSON.stringify(list));
+  } catch {}
+
+  if (!isSupabaseConfigured()) return true;
+
+  try {
+    const { error } = await supabase
+      .from('kocity_channel_metrics')
+      .upsert(payload, { onConflict: 'report_date,channel' });
+
+    if (error) {
+      console.warn('Lỗi upsert kocity_channel_metrics lên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Lỗi ngoại lệ upsert kocity_channel_metrics:', err);
+    return false;
+  }
 }

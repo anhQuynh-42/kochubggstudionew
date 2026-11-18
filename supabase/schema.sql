@@ -93,3 +93,37 @@ CREATE POLICY "Cho phép xem và cập nhật đơn ứng tuyển"
   ON public.applications FOR ALL
   USING (true)
   WITH CHECK (true);
+
+-- =========================================================================
+-- 5. BẢNG CHỈ SỐ ĐA KÊNH CHÍNH CHỦ KOCITY (OMNICHANNEL METRICS)
+-- Dành cho: Website, TikTok, Facebook, Threads, Zalo
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.kocity_channel_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  channel TEXT NOT NULL CHECK (channel IN ('website', 'tiktok', 'facebook', 'threads', 'zalo')),
+  channel_name TEXT NOT NULL,
+  channel_url TEXT,
+  followers_or_members INT DEFAULT 0,
+  total_views INT DEFAULT 0,
+  engagements INT DEFAULT 0,
+  new_subscribers_today INT DEFAULT 0,
+  notes TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  CONSTRAINT kocity_channel_daily_unique UNIQUE (report_date, channel)
+);
+
+ALTER TABLE public.kocity_channel_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Cho phép xem chỉ số đa kênh KOCity"
+  ON public.kocity_channel_metrics FOR SELECT
+  USING (true);
+
+CREATE POLICY "Cho phép quản lý chỉ số đa kênh KOCity"
+  ON public.kocity_channel_metrics FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.kocity_channel_metrics;
