@@ -1,0 +1,148 @@
+{
+  "name": "KOCity - Tự Động Gửi Email Khi Duyệt / Từ Chối KOC",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kocity-koc-email",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-koc-status",
+      "name": "Webhook Nhận Lệnh Duyệt/Từ Chối (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        0
+      ],
+      "webhookId": "kocity-koc-email-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawItem = $input.first().json || {};\nlet data = {};\n\n// Hỗ trợ đọc cả JSON chuẩn và text/plain (no-cors từ trình duyệt)\nif (typeof rawItem.body === 'string') {\n  try {\n    data = JSON.parse(rawItem.body);\n  } catch (e) {\n    data = rawItem;\n  }\n} else if (rawItem.body && typeof rawItem.body === 'object') {\n  data = rawItem.body;\n} else {\n  data = rawItem;\n}\n\nconst decision = data.decision || (data.status === 'Đã duyệt gửi mẫu' ? 'approved' : 'rejected');\nconst status = data.status || (decision === 'approved' ? 'Đã duyệt gửi mẫu' : 'Từ chối');\nconst kocName = data.kocName || data.tiktokHandle || 'Bạn';\nconst rawHandle = (data.tiktokHandle || '').replace(/^@/, '');\nconst handle = rawHandle ? `@${rawHandle}` : '@koc';\nconst kocEmail = (data.kocEmail || data.email || '').trim();\nconst campaignName = data.campaignName || 'Chiến dịch Nhận Mẫu 0đ KOCity';\nconst applicationCode = data.applicationCode || data.code || '#KOC';\nconst selectedSample = data.selectedSample || 'Bộ sản phẩm mẫu 0đ';\nconst shippingCode = data.shippingCode || 'Đang cập nhật mã vận đơn';\nconst adminFeedback = data.adminFeedback || '';\n\nconst isEmailValid = Boolean(\n  kocEmail &&\n  kocEmail.includes('@') &&\n  !kocEmail.endsWith('@kocity.local') &&\n  !kocEmail.endsWith('@koctrend.local')\n);\n\nconst isApproved = decision === 'approved' || decision === 'video_approved';\n\nconst defaultSubject = isApproved\n  ? `🎉 [KOCity] Chúc mừng ${kocName}! Hồ sơ chiến dịch \"${campaignName}\" đã được DUYỆT`\n  : `📩 [KOCity] Thông báo kết quả xét duyệt chiến dịch \"${campaignName}\"`;\n\nconst emailSubject = data.emailSubject || defaultSubject;\nconst emailHtml = data.emailHtml || `<p>Xin chào <b>${kocName}</b> (${handle}),</p><p>Trạng thái hồ sơ <b>${applicationCode}</b> cho chiến dịch <b>${campaignName}</b> đã được cập nhật sang: <b>${status}</b>.</p>`;\nconst emailPlainText = data.emailPlainText || `Xin chào ${kocName}, hồ sơ ${applicationCode} (${campaignName}) đã chuyển sang trạng thái: ${status}.`;\n\nconst telegramSummary =\n  `${isApproved ? '✅ <b>[ĐÃ DUYỆT & GỬI EMAIL]</b>' : '❌ <b>[TỪ CHỐI & GỬI EMAIL]</b>'}\\n\\n` +\n  `👤 <b>KOC:</b> ${kocName} (<code>${handle}</code>)\\n` +\n  `📧 <b>Email nhận:</b> <code>${kocEmail || 'Không có email'}</code>\\n` +\n  `🎯 <b>Chiến dịch:</b> ${campaignName}\\n` +\n  `📌 <b>Trạng thái:</b> <b>${status}</b>\\n` +\n  (shippingCode && isApproved ? `🚚 <b>Mã vận đơn:</b> <code>${shippingCode}</code>\\n` : '') +\n  (adminFeedback ? `💬 <b>Phản hồi Admin:</b> <i>${adminFeedback}</i>\\n` : '') +\n  `⏰ <b>Thời gian:</b> ${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`;\n\nreturn [\n  {\n    json: {\n      isEmailValid,\n      isApproved,\n      decision,\n      status,\n      kocName,\n      handle,\n      kocEmail,\n      campaignName,\n      applicationCode,\n      selectedSample,\n      shippingCode,\n      adminFeedback,\n      emailSubject,\n      emailHtml,\n      emailPlainText,\n      telegramSummary\n    }\n  }\n];"
+      },
+      "id": "code-build-email",
+      "name": "Chuẩn Hóa & Soạn Nội Dung Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-valid-email",
+              "leftValue": "={{ $json.isEmailValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid-email",
+      "name": "Kiểm Tra KOC Có Email Hợp Lệ",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        140,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.kocEmail }}",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailHtml }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "KOCity - Nền Tảng KOC Nhận Mẫu 0đ"
+        }
+      },
+      "id": "gmail-send-koc",
+      "name": "Gửi Email Kết Quả Cho KOC (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        420,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "kocityvn@gmail.com",
+        "toEmail": "={{ $json.kocEmail }}",
+        "subject": "={{ $json.emailSubject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.emailHtml }}",
+        "options": {}
+      },
+      "id": "smtp-send-koc",
+      "name": "Hoặc Gửi Qua SMTP (Dự Phòng)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        420,
+        100
+      ],
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Webhook Nhận Lệnh Duyệt/Từ Chối (POST)": {
+      "main": [
+        [
+          {
+            "node": "Chuẩn Hóa & Soạn Nội Dung Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuẩn Hóa & Soạn Nội Dung Email": {
+      "main": [
+        [
+          {
+            "node": "Kiểm Tra KOC Có Email Hợp Lệ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kiểm Tra KOC Có Email Hợp Lệ": {
+      "main": [
+        [
+          {
+            "node": "Gửi Email Kết Quả Cho KOC (Gmail)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hoặc Gửi Qua SMTP (Dự Phòng)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}

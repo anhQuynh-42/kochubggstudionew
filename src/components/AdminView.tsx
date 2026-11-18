@@ -14,6 +14,8 @@ import { APP_LOGOS } from '../data/mockData';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { AdminBlogManager } from './AdminBlogManager';
 import { AdminBIAnalyticsTab } from './AdminBIAnalyticsTab';
+import { AdminEmailWorkflowModal } from './AdminEmailWorkflowModal';
+import { triggerKocStatusEmailWorkflow, isValidKocRealEmail } from '../services/kocEmailWorkflowService';
 
 // Hàm tính số ngày còn lại theo thời gian thực từ chuỗi ngày kết thúc
 export const calculateDaysLeftFromDate = (endDateStr?: string, fallbackDays: number = 15): number => {
@@ -108,6 +110,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Mobile sidebar drawer state
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Modal cấu hình Workflow tự động gửi Email khi Duyệt / Từ chối KOC
+  const [isEmailWorkflowModalOpen, setIsEmailWorkflowModalOpen] = useState(false);
 
   // Admin Notification Bell states
   const [isAdminNotifOpen, setIsAdminNotifOpen] = useState(false);
@@ -1156,6 +1161,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
             linkTab: notifLinkTab,
           };
           onAddNotification?.(kocNotification);
+        }
+
+        // Kích hoạt Workflow tự động gửi Email cho KOC khi Duyệt thành công hoặc Từ chối
+        if (
+          prevApp.status !== newStatus &&
+          (newStatus === 'Đã duyệt gửi mẫu' ||
+            newStatus === 'Từ chối' ||
+            newStatus === 'Đã hoàn thành' ||
+            newStatus === 'Đã lên bài' ||
+            newStatus === 'Bị từ chối')
+        ) {
+          triggerKocStatusEmailWorkflow(target, newStatus, feedback).then((emailRes) => {
+            if (emailRes.sent && isValidKocRealEmail(target.email)) {
+              onShowToast(
+                '📧 Đã gửi Email tự động cho KOC!',
+                `Đã bắn email "${newStatus}" tới hộp thư ${target.email}`,
+                'info'
+              );
+            }
+          });
         }
       }
     }
@@ -2348,6 +2373,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
         {/* Sidebar Footer: Xuất Excel & Quay lại trang KOC */}
         <div className="p-4 border-t border-slate-100 space-y-2 bg-slate-50/50">
+          <button
+            onClick={() => setIsEmailWorkflowModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50/80 px-3.5 py-2 text-xs font-bold text-violet-700 hover:bg-violet-600 hover:text-white transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">forward_to_inbox</span>
+            <span>Workflow Tự Động Gửi Email</span>
+          </button>
+
           <button
             onClick={handleExportCSV}
             className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all cursor-pointer"
@@ -4274,18 +4307,29 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </div>
 
               {/* Campaign Filter Dropdown */}
-              <select
-                value={campaignFilter}
-                onChange={(e) => setCampaignFilter(e.target.value)}
-                className="rounded-xl border border-slate-200/80 bg-slate-50/70 py-2 px-3 text-xs text-slate-700 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100/70 cursor-pointer transition-all"
-              >
-                <option value="all">Tất cả chiến dịch ({campaigns.length})</option>
-                {campaigns.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.brandName} - {c.title.slice(0, 35)}...
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={campaignFilter}
+                  onChange={(e) => setCampaignFilter(e.target.value)}
+                  className="rounded-xl border border-slate-200/80 bg-slate-50/70 py-2 px-3 text-xs text-slate-700 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100/70 cursor-pointer transition-all"
+                >
+                  <option value="all">Tất cả chiến dịch ({campaigns.length})</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.brandName} - {c.title.slice(0, 35)}...
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setIsEmailWorkflowModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 px-3 py-2 text-xs font-bold text-white shadow-xs transition-all cursor-pointer shrink-0"
+                  title="Cấu hình tự động gửi Email khi Duyệt hoặc Từ chối KOC"
+                >
+                  <span className="material-symbols-outlined text-[16px]">forward_to_inbox</span>
+                  <span className="hidden sm:inline">Cấu hình Email Tự Động</span>
+                </button>
+              </div>
             </div>
 
             {/* Applications Table */}
@@ -7487,6 +7531,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL CẤU HÌNH WORKFLOW TỰ ĐỘNG GỬI EMAIL KOC */}
+      <AdminEmailWorkflowModal
+        open={isEmailWorkflowModalOpen}
+        onClose={() => setIsEmailWorkflowModalOpen(false)}
+        onShowToast={onShowToast}
+      />
     </div>
   );
 };
