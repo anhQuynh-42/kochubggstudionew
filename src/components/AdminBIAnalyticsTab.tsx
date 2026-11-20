@@ -1,6 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { Campaign, KOCApplication } from '../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Campaign, KOCApplication, KocityChannelMetric, KocityChannelType } from '../types';
 import { copyTextToClipboard } from '../lib/clipboard';
+import {
+  DEFAULT_OMNICHANNEL_METRICS,
+  getKocityChannelMetricsFromSupabase,
+} from '../services/supabaseService';
+import syncChannelsWorkflowJson from '../../kocity_sync_social_channels_workflow.json';
 
 interface AdminBIAnalyticsTabProps {
   campaigns: Campaign[];
@@ -9,8 +14,51 @@ interface AdminBIAnalyticsTabProps {
 }
 
 const STORAGE_KEY_LOOKER_URL = 'kocity_looker_embed_url';
+const STORAGE_KEY_SYNC_WEBHOOK = 'kocity_n8n_sync_channels_webhook';
+const DEFAULT_SYNC_WEBHOOK_URL = 'http://localhost:5678/webhook/kocity-sync-channels';
 const DEFAULT_LOOKER_STUDIO_URL =
   'https://lookerstudio.google.com/embed/reporting/05a03ddb-9a1b-4ccd-b909-8b0f76d58e67/page/IxsDG';
+
+const CHANNEL_CONFIG: Record<
+  KocityChannelType,
+  { label: string; icon: string; color: string; badge: string; defaultUrl: string }
+> = {
+  website: {
+    label: 'Website KOCity',
+    icon: 'language',
+    color: 'from-violet-600 to-indigo-600',
+    badge: 'bg-violet-100 text-violet-800',
+    defaultUrl: 'https://kocity.io.vn',
+  },
+  tiktok: {
+    label: 'TikTok KOCity',
+    icon: 'music_note',
+    color: 'from-pink-600 to-rose-600',
+    badge: 'bg-pink-100 text-pink-800',
+    defaultUrl: 'https://www.tiktok.com/@kocity.vn',
+  },
+  facebook: {
+    label: 'Facebook KOCity',
+    icon: 'groups',
+    color: 'from-blue-600 to-indigo-600',
+    badge: 'bg-blue-100 text-blue-800',
+    defaultUrl: 'https://facebook.com/groups/kocityvietnam',
+  },
+  threads: {
+    label: 'Threads KOCity',
+    icon: 'alternate_email',
+    color: 'from-slate-800 to-slate-950',
+    badge: 'bg-slate-100 text-slate-800',
+    defaultUrl: 'https://www.threads.net/@kocity.vn',
+  },
+  zalo: {
+    label: 'Zalo Community',
+    icon: 'chat',
+    color: 'from-sky-500 to-blue-600',
+    badge: 'bg-sky-100 text-sky-800',
+    defaultUrl: 'https://zalo.me/g/cjenmz664',
+  },
+};
 
 /**
  * Chuẩn hóa link nhúng Looker Studio:
@@ -95,9 +143,81 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
   applications,
   onShowToast,
 }) => {
-  const [viewMode, setViewMode] = useState<'campaigns-bi' | 'looker' | 'koc-tiers' | 'sql-setup'>('campaigns-bi');
+  const [viewMode, setViewMode] = useState<'campaigns-bi' | 'ecosystem' | 'looker' | 'koc-tiers' | 'sql-setup'>('campaigns-bi');
   const [campaignSearch, setCampaignSearch] = useState('');
   const [sortBy, setSortBy] = useState<'apps' | 'approved' | 'completed' | 'reach'>('apps');
+
+  // Dữ liệu lượt xem & tăng trưởng 5 kênh hệ sinh thái (TikTok, Facebook, Threads, Zalo, Website)
+  const [channelMetrics, setChannelMetrics] = useState<KocityChannelMetric[]>(DEFAULT_OMNICHANNEL_METRICS);
+  const [syncWebhookUrl, setSyncWebhookUrl] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SYNC_WEBHOOK);
+      if (saved && saved.trim()) return saved.trim();
+    } catch {}
+    return DEFAULT_SYNC_WEBHOOK_URL;
+  });
+  const [isSyncingChannels, setIsSyncingChannels] = useState(false);
+
+  useEffect(() => {
+    getKocityChannelMetricsFromSupabase().then((data) => {
+      if (data && data.length > 0) {
+        setChannelMetrics(data);
+      }
+    });
+  }, []);
+
+  const ecosystemTotals = useMemo(() => {
+    const totalViews = channelMetrics.reduce((sum, m) => sum + (Number(m.total_views) || 0), 0);
+    const totalFollowers = channelMetrics.reduce((sum, m) => sum + (Number(m.followers_or_members) || 0), 0);
+    const totalEngagements = channelMetrics.reduce((sum, m) => sum + (Number(m.engagements) || 0), 0);
+    const totalNewToday = channelMetrics.reduce((sum, m) => sum + (Number(m.new_subscribers_today) || 0), 0);
+    const maxViews = Math.max(...channelMetrics.map((m) => Number(m.total_views) || 0), 1);
+    return { totalViews, totalFollowers, totalEngagements, totalNewToday, maxViews };
+  }, [channelMetrics]);
+
+  const handleTriggerN8nSync = async () => {
+    const cleanUrl = syncWebhookUrl.trim();
+    if (!cleanUrl) {
+      onShowToast('Chưa có link Webhook n8n', 'Vui lòng dán URL webhook n8n đồng bộ 5 kênh.', 'warning');
+      return;
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY_SYNC_WEBHOOK, cleanUrl);
+    } catch {}
+    setIsSyncingChannels(true);
+    try {
+      await fetch(cleanUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ trigger: 'admin_bi_sync', timestamp: new Date().toISOString() }),
+      });
+      setTimeout(async () => {
+        const fresh = await getKocityChannelMetricsFromSupabase();
+        if (fresh && fresh.length > 0) setChannelMetrics(fresh);
+        setIsSyncingChannels(false);
+        onShowToast(
+          'Đã kích hoạt đồng bộ tự động qua n8n!',
+          'Hệ thống đang kéo số liệu mới nhất từ TikTok, Facebook, Threads, Zalo về Supabase BI.',
+          'success'
+        );
+      }, 1200);
+    } catch {
+      setIsSyncingChannels(false);
+      onShowToast('Không kết nối được n8n', 'Kiểm tra lại n8n đã bật chưa (start-n8n.bat) hoặc URL webhook.', 'warning');
+    }
+  };
+
+  const handleDownloadSyncWorkflow = () => {
+    const blob = new Blob([JSON.stringify(syncChannelsWorkflowJson, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'kocity_sync_social_channels_workflow.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    onShowToast('Đã tải Workflow n8n đồng bộ 5 kênh!', 'Import file vào n8n để tự động kéo lượt xem TikTok, FB, Threads, Zalo lúc 08:00 hàng ngày.', 'success');
+  };
 
   const [embedUrl, setEmbedUrl] = useState<string>(() => {
     try {
@@ -415,6 +535,15 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => setViewMode('ecosystem')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'ecosystem' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
+              }`}
+            >
+              🌐 Lượt Xem TikTok / FB / Threads
+            </button>
+            <button
+              type="button"
               onClick={() => setViewMode('looker')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'looker' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
@@ -685,6 +814,153 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* VIEW 1B: HỆ SINH THÁI 5 KÊNH (LƯỢT XEM TIKTOK / FB / THREADS / ZALO) */}
+      {/* =================================================================== */}
+      {viewMode === 'ecosystem' && (
+        <div className="space-y-6">
+          {/* Thanh điều khiển đồng bộ tự động n8n (Không cần nhập tay) */}
+          <div className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-indigo-50 p-4 shadow-2xs space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>⚡ Đồng Bộ Tự Động Lượt Xem TikTok, Facebook, Threads, Zalo & Website</span>
+                </h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Số liệu được đọc trực tiếp từ bảng <code>public.kocity_channel_metrics</code> trên Supabase do workflow n8n tự động cập nhật lúc 08:00 mỗi sáng.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadSyncWorkflow}
+                  className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 cursor-pointer"
+                >
+                  📥 Tải Workflow n8n 5 Kênh (.json)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    getKocityChannelMetricsFromSupabase().then((data) => {
+                      if (data && data.length > 0) setChannelMetrics(data);
+                      onShowToast('Đã tải lại từ Supabase!', 'Số liệu 5 kênh đã được làm mới.', 'info');
+                    });
+                  }}
+                  className="rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 text-xs font-bold text-blue-700 cursor-pointer"
+                >
+                  🔄 Làm mới từ Supabase
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={syncWebhookUrl}
+                onChange={(e) => setSyncWebhookUrl(e.target.value)}
+                placeholder="URL Webhook n8n đồng bộ (VD: http://localhost:5678/webhook/kocity-sync-channels)"
+                className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-800"
+              />
+              <button
+                type="button"
+                onClick={handleTriggerN8nSync}
+                disabled={isSyncingChannels}
+                className="rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2 text-xs font-bold text-white shadow-sm cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
+              >
+                <span>{isSyncingChannels ? 'Đang đồng bộ...' : '⚡ Quét & Đồng Bộ Ngay Qua n8n'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 4 KPI Tổng Hệ Sinh Thái */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Lượt Xem Toàn Hệ Sinh Thái</p>
+              <p className="mt-1 text-2xl font-black text-pink-600">{formatCompact(ecosystemTotals.totalViews)}</p>
+              <span className="text-[11px] text-slate-500">TikTok + FB + Threads + Zalo + Web</span>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Followers / Thành Viên</p>
+              <p className="mt-1 text-2xl font-black text-violet-700">{ecosystemTotals.totalFollowers.toLocaleString('vi-VN')}</p>
+              <span className="text-[11px] text-emerald-600 font-bold">+{ecosystemTotals.totalNewToday} hôm nay</span>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Tương Tác (Engagement)</p>
+              <p className="mt-1 text-2xl font-black text-indigo-700">{ecosystemTotals.totalEngagements.toLocaleString('vi-VN')}</p>
+              <span className="text-[11px] text-slate-500">Likes, comments, shares, replies</span>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Lượt Xem Video KOC Chiến Dịch</p>
+              <p className="mt-1 text-2xl font-black text-emerald-600">{formatCompact(overview.totalVideoViews)}</p>
+              <span className="text-[11px] text-slate-500">Từ video KOC nghiệm thu</span>
+            </div>
+          </div>
+
+          {/* Biểu đồ so sánh Lượt Xem (Views) giữa 5 nền tảng */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">So Sánh Lượt Xem (Views) Giữa Các Nền Tảng</h3>
+                <p className="text-xs text-slate-500">Tỷ trọng lượt xem giữa TikTok, Threads, Facebook, Website và Zalo</p>
+              </div>
+              <span className="rounded-lg bg-pink-50 px-2.5 py-1 text-xs font-bold text-pink-700">
+                Tổng: {ecosystemTotals.totalViews.toLocaleString('vi-VN')} views
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {[...channelMetrics]
+                .sort((a, b) => (b.total_views || 0) - (a.total_views || 0))
+                .map((item) => {
+                  const cfg = CHANNEL_CONFIG[item.channel] || CHANNEL_CONFIG.website;
+                  const pct = Math.round(((item.total_views || 0) / ecosystemTotals.maxViews) * 100);
+                  const shareOfTotal =
+                    ecosystemTotals.totalViews > 0
+                      ? Math.round(((item.total_views || 0) / ecosystemTotals.totalViews) * 100)
+                      : 0;
+
+                  return (
+                    <div key={item.channel} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-800 flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold ${cfg.badge}`}>
+                            <span className="material-symbols-outlined text-[14px]">{cfg.icon}</span>
+                            {cfg.label}
+                          </span>
+                          <a
+                            href={item.channel_url || cfg.defaultUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-slate-400 hover:text-blue-600 font-normal hidden sm:inline"
+                          >
+                            {item.channel_name} ↗
+                          </a>
+                        </span>
+                        <span className="font-black text-slate-900">
+                          {(item.total_views || 0).toLocaleString('vi-VN')} views{' '}
+                          <span className="text-slate-400 font-semibold">({shareOfTotal}%)</span>
+                        </span>
+                      </div>
+                      <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full bg-gradient-to-r ${cfg.color} transition-all duration-500`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-500 px-0.5">
+                        <span>
+                          Followers/Thành viên: <b>{(item.followers_or_members || 0).toLocaleString('vi-VN')}</b> (+{item.new_subscribers_today || 0} hôm nay)
+                        </span>
+                        <span>Tương tác: <b>{(item.engagements || 0).toLocaleString('vi-VN')}</b></span>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
