@@ -54,14 +54,74 @@ const CHANNEL_CONFIG: Record<
   },
 };
 
+const STORAGE_KEY_LOOKER_URL = 'kocity_looker_embed_url';
+
+/**
+ * Chuẩn hóa link nhúng Looker Studio:
+ * - Tự động bóc tách src="..." nếu người dùng dán cả thẻ <iframe>
+ * - Tự động đổi /reporting/ -> /embed/reporting/ để hiển thị mượt trong iframe
+ */
+function normalizeEmbedUrl(raw: string): string {
+  let clean = (raw || '').trim();
+  if (!clean) return '';
+
+  // Nếu dán cả đoạn <iframe ... src="...">
+  const srcMatch = clean.match(/src=["']([^"']+)["']/i);
+  if (srcMatch && srcMatch[1]) {
+    clean = srcMatch[1].trim();
+  }
+
+  // Tự động chuyển link Looker Studio thường thành link embed
+  if (
+    (clean.includes('lookerstudio.google.com/reporting/') || clean.includes('datastudio.google.com/reporting/')) &&
+    !clean.includes('/embed/reporting/')
+  ) {
+    clean = clean.replace('/reporting/', '/embed/reporting/');
+  }
+
+  return clean;
+}
+
 export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
   campaigns,
   applications,
   onShowToast,
 }) => {
-  const [viewMode, setViewMode] = useState<'omnichannel' | 'interactive' | 'embed' | 'sql-setup'>('omnichannel');
-  const [metabaseUrl, setMetabaseUrl] = useState('http://localhost:3050');
+  const DEFAULT_LOOKER_STUDIO_URL =
+    'https://lookerstudio.google.com/embed/reporting/05a03ddb-9a1b-4ccd-b909-8b0f76d58e67/page/IxsDG';
+  const [viewMode, setViewMode] = useState<'omnichannel' | 'interactive' | 'embed' | 'sql-setup'>('embed');
+  const [metabaseUrl, setMetabaseUrl] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_LOOKER_URL);
+      if (saved && saved.trim()) return saved.trim();
+    } catch {}
+    return DEFAULT_LOOKER_STUDIO_URL;
+  });
+  const [draftEmbedUrl, setDraftEmbedUrl] = useState<string>(metabaseUrl);
+  const [iframeKey, setIframeKey] = useState<number>(0);
+  const [isTallIframe, setIsTallIframe] = useState<boolean>(false);
+  const [showDockerHelp, setShowDockerHelp] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const handleSaveEmbedUrl = (rawUrl?: string) => {
+    const normalized = normalizeEmbedUrl(rawUrl !== undefined ? rawUrl : draftEmbedUrl);
+    if (!normalized) {
+      onShowToast('Link trống', 'Vui lòng dán đường dẫn Looker Studio Embed URL hợp lệ.', 'warning');
+      return;
+    }
+    setMetabaseUrl(normalized);
+    setDraftEmbedUrl(normalized);
+    setIframeKey((k) => k + 1);
+    setShowDockerHelp(false);
+    try {
+      localStorage.setItem(STORAGE_KEY_LOOKER_URL, normalized);
+    } catch {}
+    onShowToast(
+      'Đã lưu link Dashboard vĩnh viễn!',
+      'Báo cáo Looker Studio sẽ tự động hiển thị mỗi lần bạn mở trang Admin.',
+      'success'
+    );
+  };
 
   // Dữ liệu đa kênh KOCity
   const [channelMetrics, setChannelMetrics] = useState<KocityChannelMetric[]>(DEFAULT_OMNICHANNEL_METRICS);
@@ -208,12 +268,16 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
               📊 Phễu Chuyển Đổi
             </button>
             <button
-              onClick={() => setViewMode('embed')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              onClick={() => {
+                setViewMode('embed');
+                setShowDockerHelp(false);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 viewMode === 'embed' ? 'bg-white text-blue-900 shadow-md' : 'text-white hover:bg-white/10'
               }`}
             >
-              🖥️ Metabase Iframe
+              <span>📊</span>
+              <span>Looker Studio Live</span>
             </button>
             <button
               onClick={() => setViewMode('sql-setup')}
@@ -582,67 +646,198 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
         </div>
       )}
 
-      {/* VIEW 2: EMBEDDED METABASE IFRAME */}
+      {/* VIEW 2: SONG SONG BI NỘI BỘ + LOOKER STUDIO LIVE EMBED */}
       {viewMode === 'embed' && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Metabase Live Embedded Dashboard</h3>
-              <p className="text-xs text-slate-500">Khung nhúng trực tiếp báo cáo từ container Metabase (Cổng mặc định: 3050)</p>
+        <div className="space-y-4">
+          {/* Dải chỉ số BI Realtime chạy song song từ Supabase */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Hồ Sơ KOC (Realtime)</p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className="text-xl font-black text-slate-900">{metrics.totalApps}</span>
+                <span className="text-[11px] font-bold text-emerald-600">Duyệt {metrics.approvalRate}%</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={metabaseUrl}
-                onChange={(e) => setMetabaseUrl(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-800 w-48 font-mono"
-                placeholder="http://localhost:3050"
-              />
-              <a
-                href={metabaseUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-all flex items-center gap-1"
-              >
-                <span>Mở Tab Mới</span>
-                <span>↗</span>
-              </a>
+            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Cộng Đồng 5 Kênh KOCity</p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className="text-xl font-black text-violet-700">
+                  {omnichannelTotals.totalFollowers.toLocaleString('vi-VN')}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600">+{omnichannelTotals.totalNewToday} hôm nay</span>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Lượt Xem 5 Kênh</p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className="text-xl font-black text-indigo-700">{formatCompact(omnichannelTotals.totalViews)}</span>
+                <span className="text-[11px] text-slate-500">Web + Social</span>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 shadow-2xs">
+              <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">ROI Tài Trợ Mẫu 0đ</p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <span className="text-xl font-black text-emerald-700">+{metrics.roiMultiplier}x</span>
+                <span className="text-[11px] font-bold text-emerald-700">Supabase Live</span>
+              </div>
             </div>
           </div>
 
-          <div className="relative h-[560px] w-full rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
-            <iframe
-              src={metabaseUrl}
-              title="Metabase Dashboard"
-              className="h-full w-full border-0"
-              onError={() => {}}
-            />
-            {/* Fallback overlay khi Metabase chưa chạy */}
-            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center text-center p-6 text-white pointer-events-auto">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white font-black text-xl mb-3 shadow-lg">
-                M
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Song Song: BI Web + Looker Studio
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {metabaseUrl.includes('lookerstudio') || metabaseUrl.includes('datastudio')
+                      ? 'Google Looker Studio Live Report'
+                      : 'Metabase Live Embedded Dashboard'}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Dán link Looker Studio (hoặc nguyên thẻ <code>&lt;iframe&gt;</code>) rồi bấm <b>Lưu vĩnh viễn</b> — hệ thống tự động chuẩn hóa link nhúng.
+                </p>
               </div>
-              <h4 className="text-lg font-bold">Khởi động Metabase BI Server</h4>
-              <p className="mt-1 text-xs text-slate-300 max-w-md">
-                Chạy container Docker Metabase trên máy của bạn để xem Dashboard trực tiếp tại đây hoặc kết nối với database Supabase.
-              </p>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Nút chọn nguồn nhanh */}
+                <div className="flex items-center rounded-lg bg-slate-100 p-0.5 text-xs font-medium text-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const saved = localStorage.getItem(STORAGE_KEY_LOOKER_URL) || DEFAULT_LOOKER_STUDIO_URL;
+                      const targetUrl = saved.includes('3050') ? DEFAULT_LOOKER_STUDIO_URL : saved;
+                      setMetabaseUrl(targetUrl);
+                      setDraftEmbedUrl(targetUrl);
+                      setShowDockerHelp(false);
+                    }}
+                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      metabaseUrl.includes('lookerstudio') || metabaseUrl.includes('datastudio')
+                        ? 'bg-white text-blue-700 font-bold shadow-xs'
+                        : 'hover:text-slate-900'
+                    }`}
+                  >
+                    📊 Looker Studio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMetabaseUrl('http://localhost:3050');
+                      setDraftEmbedUrl('http://localhost:3050');
+                    }}
+                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      metabaseUrl.includes('3050')
+                        ? 'bg-white text-blue-700 font-bold shadow-xs'
+                        : 'hover:text-slate-900'
+                    }`}
+                  >
+                    🐳 Metabase
+                  </button>
+                </div>
+
                 <button
-                  onClick={handleCopyDockerCmd}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-500 transition-all flex items-center gap-2"
+                  type="button"
+                  onClick={() => setIframeKey((k) => k + 1)}
+                  className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer"
+                  title="Tải lại báo cáo Looker Studio"
                 >
-                  <span>{copied ? '✓ Đã sao chép!' : '📋 Sao chép lệnh Docker Up'}</span>
+                  🔄 Làm mới
                 </button>
+
                 <button
-                  onClick={() => setViewMode('omnichannel')}
-                  className="rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2 text-xs font-bold text-white transition-all"
+                  type="button"
+                  onClick={() => setIsTallIframe((t) => !t)}
+                  className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer"
+                  title="Phóng to / Thu gọn chiều cao khung báo cáo"
                 >
-                  Xem Báo Cáo 5 Kênh KOCity
+                  {isTallIframe ? '↙ Thu gọn' : '⛶ Mở rộng'}
                 </button>
+
+                <a
+                  href={metabaseUrl.replace('/embed/reporting/', '/reporting/')}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-all flex items-center gap-1 shadow-sm"
+                >
+                  <span>Mở Looker</span>
+                  <span>↗</span>
+                </a>
               </div>
-              <p className="mt-3 text-[11px] text-slate-400 font-mono">
-                docker-compose -f docker-compose.metabase.yml up -d
-              </p>
+            </div>
+
+            {/* Thanh dán & lưu vĩnh viễn link Looker Studio */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={draftEmbedUrl}
+                onChange={(e) => setDraftEmbedUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEmbedUrl();
+                }}
+                className="flex-1 rounded-xl border border-slate-300 bg-slate-50/70 focus:bg-white px-3.5 py-2 text-xs text-slate-800 font-mono focus:border-violet-500 focus:ring-2 focus:ring-violet-200 focus:outline-none"
+                placeholder="Dán link Looker Studio (https://lookerstudio.google.com/...) hoặc mã <iframe> vào đây..."
+              />
+              <button
+                type="button"
+                onClick={() => handleSaveEmbedUrl()}
+                className="rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
+              >
+                <span>💾 Lưu Link Vĩnh Viễn</span>
+              </button>
+            </div>
+
+            <div
+              className={`relative w-full rounded-xl bg-slate-50 border border-slate-200 overflow-hidden transition-all duration-300 ${
+                isTallIframe ? 'h-[960px]' : 'h-[720px]'
+              }`}
+            >
+              <iframe
+                key={iframeKey}
+                src={metabaseUrl}
+                title="KOCity Looker Studio & BI Dashboard"
+                className="h-full w-full border-0"
+                allowFullScreen
+                sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+              />
+
+              {/* Chỉ hiện bảng hướng dẫn Docker khi người dùng chủ động bấm trợ giúp ở chế độ Metabase */}
+              {metabaseUrl.includes('localhost:3050') && showDockerHelp && (
+                <div className="absolute inset-0 bg-slate-900/85 backdrop-blur-xs flex flex-col items-center justify-center text-center p-6 text-white pointer-events-auto z-10">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white font-black text-xl mb-3 shadow-lg">
+                    M
+                  </div>
+                  <h4 className="text-lg font-bold">Khởi động Metabase BI Server</h4>
+                  <p className="mt-1 text-xs text-slate-300 max-w-md">
+                    Chạy container Docker Metabase trên máy của bạn để xem Dashboard cục bộ tại cổng 3050 hoặc chuyển sang xem báo cáo Looker Studio.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={handleCopyDockerCmd}
+                      className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-500 transition-all flex items-center gap-2"
+                    >
+                      <span>{copied ? '✓ Đã sao chép!' : '📋 Sao chép lệnh Docker Up'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleSaveEmbedUrl(DEFAULT_LOOKER_STUDIO_URL)}
+                      className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white transition-all shadow-md"
+                    >
+                      📊 Xem Báo Cáo Looker Studio
+                    </button>
+                    <button
+                      onClick={() => setShowDockerHelp(false)}
+                      className="rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2 text-xs font-bold text-white transition-all"
+                    >
+                      Đóng trợ giúp
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[11px] text-slate-400 font-mono">
+                    docker-compose -f docker-compose.metabase.yml up -d
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
