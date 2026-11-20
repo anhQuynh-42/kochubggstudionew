@@ -1,11 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Campaign, KOCApplication, KocityChannelMetric, KocityChannelType } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Campaign, KOCApplication } from '../types';
 import { copyTextToClipboard } from '../lib/clipboard';
-import {
-  DEFAULT_OMNICHANNEL_METRICS,
-  getKocityChannelMetricsFromSupabase,
-  upsertKocityChannelMetricOnSupabase,
-} from '../services/supabaseService';
 
 interface AdminBIAnalyticsTabProps {
   campaigns: Campaign[];
@@ -13,48 +8,9 @@ interface AdminBIAnalyticsTabProps {
   onShowToast: (title: string, message?: string, type?: 'success' | 'info' | 'warning') => void;
 }
 
-const CHANNEL_CONFIG: Record<
-  KocityChannelType,
-  { label: string; icon: string; color: string; badge: string; defaultUrl: string }
-> = {
-  website: {
-    label: 'Website KOCity',
-    icon: 'language',
-    color: 'from-violet-600 to-indigo-600',
-    badge: 'bg-violet-100 text-violet-800',
-    defaultUrl: 'https://kocity.io.vn',
-  },
-  tiktok: {
-    label: 'TikTok KOCity',
-    icon: 'music_note',
-    color: 'from-pink-600 to-rose-600',
-    badge: 'bg-pink-100 text-pink-800',
-    defaultUrl: 'https://www.tiktok.com/@kocity.vn',
-  },
-  facebook: {
-    label: 'Facebook KOCity',
-    icon: 'groups',
-    color: 'from-blue-600 to-indigo-600',
-    badge: 'bg-blue-100 text-blue-800',
-    defaultUrl: 'https://facebook.com/groups/kocityvietnam',
-  },
-  threads: {
-    label: 'Threads KOCity',
-    icon: 'alternate_email',
-    color: 'from-slate-800 to-slate-950',
-    badge: 'bg-slate-100 text-slate-800',
-    defaultUrl: 'https://www.threads.net/@kocity.vn',
-  },
-  zalo: {
-    label: 'Zalo Community',
-    icon: 'chat',
-    color: 'from-sky-500 to-blue-600',
-    badge: 'bg-sky-100 text-sky-800',
-    defaultUrl: 'https://zalo.me/g/cjenmz664',
-  },
-};
-
 const STORAGE_KEY_LOOKER_URL = 'kocity_looker_embed_url';
+const DEFAULT_LOOKER_STUDIO_URL =
+  'https://lookerstudio.google.com/embed/reporting/05a03ddb-9a1b-4ccd-b909-8b0f76d58e67/page/IxsDG';
 
 /**
  * Chuẩn hóa link nhúng Looker Studio:
@@ -65,13 +21,11 @@ function normalizeEmbedUrl(raw: string): string {
   let clean = (raw || '').trim();
   if (!clean) return '';
 
-  // Nếu dán cả đoạn <iframe ... src="...">
   const srcMatch = clean.match(/src=["']([^"']+)["']/i);
   if (srcMatch && srcMatch[1]) {
     clean = srcMatch[1].trim();
   }
 
-  // Tự động chuyển link Looker Studio thường thành link embed
   if (
     (clean.includes('lookerstudio.google.com/reporting/') || clean.includes('datastudio.google.com/reporting/')) &&
     !clean.includes('/embed/reporting/')
@@ -82,116 +36,273 @@ function normalizeEmbedUrl(raw: string): string {
   return clean;
 }
 
+/** Khớp hồ sơ KOC với đúng chiến dịch (đồng bộ 100% logic của AdminView) */
+function matchAppToCampaign(app: KOCApplication, camp: Campaign): boolean {
+  if (app.campaignId && (app.campaignId === camp.id || app.campaignId === camp.code)) return true;
+  if (!app.campaignName || !camp.title) return false;
+  const aName = app.campaignName.toLowerCase().trim();
+  const cTitle = camp.title.toLowerCase().trim();
+  if (aName === cTitle || cTitle.includes(aName) || aName.includes(cTitle)) return true;
+  if (
+    (camp.id === 'comem-set-qua-duong-the' && (app.campaignId === 'co-mem-sample-20-10' || aName.includes('cỏ mềm'))) ||
+    (camp.id === 'co-mem-sample-20-10' && (app.campaignId === 'comem-set-qua-duong-the' || aName.includes('cỏ mềm')))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Parse số follower từ followersCount hoặc chuỗi followers (VD: "15.2K", "1.2M") */
+function parseFollowersNum(app: KOCApplication): number {
+  if (typeof app.followersCount === 'number' && app.followersCount > 0) return app.followersCount;
+  const raw = (app.followers || '').toLowerCase().trim();
+  if (!raw) return 0;
+  const num = parseFloat(raw.replace(',', '.'));
+  if (isNaN(num)) return 0;
+  if (raw.includes('m')) return Math.round(num * 1_000_000);
+  if (raw.includes('k')) return Math.round(num * 1_000);
+  return parseInt(raw.replace(/\D/g, ''), 10) || 0;
+}
+
+/** Parse lượt xem video (VD: "45K", "12.500") */
+function parseViewsNum(raw?: string): number {
+  if (!raw) return 0;
+  const s = raw.toLowerCase().trim();
+  const num = parseFloat(s.replace(',', '.'));
+  if (isNaN(num)) return 0;
+  if (s.includes('m')) return Math.round(num * 1_000_000);
+  if (s.includes('k')) return Math.round(num * 1_000);
+  return parseInt(s.replace(/\D/g, ''), 10) || 0;
+}
+
+const isApprovedStatus = (s: KOCApplication['status']) =>
+  s === 'Đã duyệt gửi mẫu' || s === 'Đang giao' || s === 'Chờ duyệt video' || s === 'Đã lên bài' || s === 'Đã hoàn thành';
+
+const isCompletedStatus = (s: KOCApplication['status']) => s === 'Đã lên bài' || s === 'Đã hoàn thành';
+
+const isRejectedStatus = (s: KOCApplication['status']) => s === 'Từ chối' || s === 'Bị từ chối';
+
+const SQL_VIEWS_SNIPPET = `-- Chạy 1 lần trong Supabase SQL Editor để Looker Studio tự động đọc số liệu tổng hợp toàn chiến dịch:
+-- (File đầy đủ nằm tại: supabase/metabase_analytics_views.sql)
+-- Tạo 4 View tự động:
+-- 1. public.kocity_bi_campaign_summary   (Tổng hợp từng chiến dịch)
+-- 2. public.kocity_bi_funnel_overview    (Phễu chuyển đổi 5 bước theo tháng)
+-- 3. public.kocity_bi_daily_applications (Xu hướng đăng ký theo ngày)
+-- 4. public.kocity_bi_koc_leaderboard    (Bảng xếp hạng & phân tầng KOC)`;
+
 export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
   campaigns,
   applications,
   onShowToast,
 }) => {
-  const DEFAULT_LOOKER_STUDIO_URL =
-    'https://lookerstudio.google.com/embed/reporting/05a03ddb-9a1b-4ccd-b909-8b0f76d58e67/page/IxsDG';
-  const [viewMode, setViewMode] = useState<'omnichannel' | 'interactive' | 'embed' | 'sql-setup'>('embed');
-  const [metabaseUrl, setMetabaseUrl] = useState<string>(() => {
+  const [viewMode, setViewMode] = useState<'campaigns-bi' | 'looker' | 'koc-tiers' | 'sql-setup'>('campaigns-bi');
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'apps' | 'approved' | 'completed' | 'reach'>('apps');
+
+  const [embedUrl, setEmbedUrl] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_LOOKER_URL);
       if (saved && saved.trim()) return saved.trim();
     } catch {}
     return DEFAULT_LOOKER_STUDIO_URL;
   });
-  const [draftEmbedUrl, setDraftEmbedUrl] = useState<string>(metabaseUrl);
+  const [draftEmbedUrl, setDraftEmbedUrl] = useState<string>(embedUrl);
   const [iframeKey, setIframeKey] = useState<number>(0);
   const [isTallIframe, setIsTallIframe] = useState<boolean>(false);
-  const [showDockerHelp, setShowDockerHelp] = useState(false);
-  const [copied, setCopied] = useState(false);
 
-  const handleSaveEmbedUrl = (rawUrl?: string) => {
-    const normalized = normalizeEmbedUrl(rawUrl !== undefined ? rawUrl : draftEmbedUrl);
-    if (!normalized) {
-      onShowToast('Link trống', 'Vui lòng dán đường dẫn Looker Studio Embed URL hợp lệ.', 'warning');
-      return;
-    }
-    setMetabaseUrl(normalized);
-    setDraftEmbedUrl(normalized);
-    setIframeKey((k) => k + 1);
-    setShowDockerHelp(false);
-    try {
-      localStorage.setItem(STORAGE_KEY_LOOKER_URL, normalized);
-    } catch {}
-    onShowToast(
-      'Đã lưu link Dashboard vĩnh viễn!',
-      'Báo cáo Looker Studio sẽ tự động hiển thị mỗi lần bạn mở trang Admin.',
-      'success'
-    );
-  };
+  // Lọc bỏ các bản ghi kỹ thuật nội bộ (nếu có)
+  const realCampaigns = useMemo(
+    () => campaigns.filter((c) => c.id && !c.id.startsWith('__')),
+    [campaigns]
+  );
 
-  // Dữ liệu đa kênh KOCity
-  const [channelMetrics, setChannelMetrics] = useState<KocityChannelMetric[]>(DEFAULT_OMNICHANNEL_METRICS);
-  const [isEditingChannel, setIsEditingChannel] = useState<KocityChannelMetric | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  // 1. TỔNG HỢP TỰ ĐỘNG TOÀN HỆ THỐNG TỪ DỮ LIỆU THẬT (ZERO HARDCODE)
+  const overview = useMemo(() => {
+    const totalCampaigns = realCampaigns.length;
+    const totalSpots = realCampaigns.reduce((sum, c) => sum + (Number(c.totalSpots) || 0), 0);
 
-  // Tải dữ liệu kênh từ Supabase khi mở tab
-  useEffect(() => {
-    getKocityChannelMetricsFromSupabase().then((data) => {
-      if (data && data.length > 0) {
-        setChannelMetrics(data);
-      }
-    });
-  }, []);
-
-  // Tính toán các chỉ số BI theo thời gian thực từ dữ liệu Supabase/State
-  const metrics = useMemo(() => {
     const totalApps = applications.length;
-    const approvedApps = applications.filter(
-      (a) => a.status === 'Được chọn' || a.status === 'Đã lên bài' || a.status === 'Hoàn thành'
+    const pendingApps = applications.filter((a) => a.status === 'Chờ duyệt').length;
+    const approvedApps = applications.filter((a) => isApprovedStatus(a.status)).length;
+    const shippedOrDelivered = applications.filter(
+      (a) =>
+        a.status === 'Đang giao' ||
+        a.status === 'Chờ duyệt video' ||
+        isCompletedStatus(a.status) ||
+        a.shippingStatus === 'Đang trung chuyển' ||
+        a.shippingStatus === 'Đã phát thành công'
     ).length;
-    const disbursedApps = applications.filter(
-      (a) => a.shippingStatus === 'Đã phát' || a.shippingStatus === 'Đang giao'
+    const deliveredApps = applications.filter(
+      (a) => a.shippingStatus === 'Đã phát thành công' || isCompletedStatus(a.status)
     ).length;
-    const completedVideos = applications.filter(
-      (a) => a.status === 'Đã lên bài' || a.status === 'Hoàn thành'
-    ).length;
+    const pendingVideoApps = applications.filter((a) => a.status === 'Chờ duyệt video').length;
+    const completedVideos = applications.filter((a) => isCompletedStatus(a.status)).length;
+    const rejectedApps = applications.filter((a) => isRejectedStatus(a.status)).length;
+
+    const uniqueKocHandles = new Set(
+      applications
+        .map((a) => (a.tiktokHandle || a.kocName || '').toLowerCase().replace(/[@\s]/g, ''))
+        .filter(Boolean)
+    );
+
+    const totalReachApproved = applications
+      .filter((a) => isApprovedStatus(a.status))
+      .reduce((sum, a) => sum + parseFollowersNum(a), 0);
+
+    const totalReachAll = applications.reduce((sum, a) => sum + parseFollowersNum(a), 0);
+
+    const totalVideoViews = applications
+      .filter((a) => isCompletedStatus(a.status) || a.videoViews)
+      .reduce((sum, a) => sum + parseViewsNum(a.videoViews), 0);
 
     const approvalRate = totalApps > 0 ? Math.round((approvedApps / totalApps) * 100) : 0;
-    const fulfillmentRate = approvedApps > 0 ? Math.round((completedVideos / approvedApps) * 100) : 0;
-
-    // Ước tính tổng GMV và chi phí mẫu
-    const totalEstimatedGmv = applications.reduce((acc, a) => {
-      const gmvNum = parseInt((a.monthlyAvgGmv || '').replace(/\D/g, ''), 10) || 15000000;
-      return acc + (a.status === 'Hoàn thành' || a.status === 'Đã lên bài' ? gmvNum : 0);
-    }, 0);
-
-    const totalSampleCost = campaigns.reduce((acc, c) => {
-      const price = c.sampleProducts?.[0]?.originalPrice || 220000;
-      return acc + price * (c.disbursedCount || 68);
-    }, 0);
-
-    const roiMultiplier = totalSampleCost > 0 ? (totalEstimatedGmv / totalSampleCost).toFixed(1) : '12.4';
+    const completionRate = approvedApps > 0 ? Math.round((completedVideos / approvedApps) * 100) : 0;
+    const rejectionRate = totalApps > 0 ? Math.round((rejectedApps / totalApps) * 100) : 0;
+    const fillRate = totalSpots > 0 ? Math.min(100, Math.round((approvedApps / totalSpots) * 100)) : 0;
 
     return {
+      totalCampaigns,
+      totalSpots,
       totalApps,
+      pendingApps,
       approvedApps,
-      disbursedApps,
+      shippedOrDelivered,
+      deliveredApps,
+      pendingVideoApps,
       completedVideos,
+      rejectedApps,
+      uniqueKocs: uniqueKocHandles.size,
+      totalReachApproved,
+      totalReachAll,
+      totalVideoViews,
       approvalRate,
-      fulfillmentRate,
-      totalEstimatedGmv,
-      totalSampleCost,
-      roiMultiplier,
+      completionRate,
+      rejectionRate,
+      fillRate,
     };
-  }, [campaigns, applications]);
+  }, [realCampaigns, applications]);
 
-  // Tổng hợp chỉ số của 5 kênh KOCity
-  const omnichannelTotals = useMemo(() => {
-    const totalFollowers = channelMetrics.reduce((acc, m) => acc + (m.followers_or_members || 0), 0);
-    const totalViews = channelMetrics.reduce((acc, m) => acc + (m.total_views || 0), 0);
-    const totalEngagements = channelMetrics.reduce((acc, m) => acc + (m.engagements || 0), 0);
-    const totalNewToday = channelMetrics.reduce((acc, m) => acc + (m.new_subscribers_today || 0), 0);
+  // 2. TỔNG HỢP TỰ ĐỘNG TỪNG CHIẾN DỊCH (ALL CAMPAIGNS BREAKDOWN)
+  const campaignRows = useMemo(() => {
+    const rows = realCampaigns.map((camp) => {
+      const campApps = applications.filter((a) => matchAppToCampaign(a, camp));
+      const total = campApps.length;
+      const pending = campApps.filter((a) => a.status === 'Chờ duyệt').length;
+      const approved = campApps.filter((a) => isApprovedStatus(a.status)).length;
+      const shipping = campApps.filter(
+        (a) => a.status === 'Đang giao' || a.shippingStatus === 'Đang trung chuyển'
+      ).length;
+      const pendingVideo = campApps.filter((a) => a.status === 'Chờ duyệt video').length;
+      const completed = campApps.filter((a) => isCompletedStatus(a.status)).length;
+      const rejected = campApps.filter((a) => isRejectedStatus(a.status)).length;
+      const reach = campApps
+        .filter((a) => isApprovedStatus(a.status))
+        .reduce((sum, a) => sum + parseFollowersNum(a), 0);
 
-    return { totalFollowers, totalViews, totalEngagements, totalNewToday };
-  }, [channelMetrics]);
+      const totalSpots = Number(camp.totalSpots) || 0;
+      const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
+      const completionRate = approved > 0 ? Math.round((completed / approved) * 100) : 0;
+      const spotFillPct = totalSpots > 0 ? Math.min(100, Math.round((approved / totalSpots) * 100)) : 0;
 
-  const formatVND = (num: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
-  };
+      return {
+        camp,
+        total,
+        pending,
+        approved,
+        shipping,
+        pendingVideo,
+        completed,
+        rejected,
+        reach,
+        totalSpots,
+        remainingSpots: Math.max(0, totalSpots - approved),
+        approvalRate,
+        completionRate,
+        spotFillPct,
+      };
+    });
+
+    const filtered = rows.filter((r) => {
+      if (!campaignSearch.trim()) return true;
+      const q = campaignSearch.toLowerCase();
+      return (
+        r.camp.title.toLowerCase().includes(q) ||
+        r.camp.brandName.toLowerCase().includes(q) ||
+        r.camp.category.toLowerCase().includes(q) ||
+        r.camp.code.toLowerCase().includes(q)
+      );
+    });
+
+    return filtered.sort((a, b) => {
+      if (sortBy === 'approved') return b.approved - a.approved;
+      if (sortBy === 'completed') return b.completed - a.completed;
+      if (sortBy === 'reach') return b.reach - a.reach;
+      return b.total - a.total;
+    });
+  }, [realCampaigns, applications, campaignSearch, sortBy]);
+
+  // 3. PHÂN TẦNG CREATOR & XẾP HẠNG KOC TỰ ĐỘNG TỪ DỮ LIỆU THẬT
+  const kocAnalytics = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        handle: string;
+        name: string;
+        avatar: string;
+        followers: number;
+        applied: number;
+        approved: number;
+        completed: number;
+        rejected: number;
+      }
+    >();
+
+    applications.forEach((a) => {
+      const key = (a.tiktokHandle || a.kocName || a.id).toLowerCase().replace(/[@\s]/g, '');
+      const f = parseFollowersNum(a);
+      const prev = map.get(key);
+      if (!prev) {
+        map.set(key, {
+          handle: a.tiktokHandle || a.kocName,
+          name: a.kocName || a.tiktokHandle,
+          avatar: a.avatar,
+          followers: f,
+          applied: 1,
+          approved: isApprovedStatus(a.status) ? 1 : 0,
+          completed: isCompletedStatus(a.status) ? 1 : 0,
+          rejected: isRejectedStatus(a.status) ? 1 : 0,
+        });
+      } else {
+        prev.followers = Math.max(prev.followers, f);
+        prev.applied += 1;
+        if (isApprovedStatus(a.status)) prev.approved += 1;
+        if (isCompletedStatus(a.status)) prev.completed += 1;
+        if (isRejectedStatus(a.status)) prev.rejected += 1;
+      }
+    });
+
+    const list = Array.from(map.values());
+
+    const tiers = [
+      { id: 'seed', label: 'Seed KOC (< 5k)', min: 0, max: 5000, color: 'from-slate-500 to-slate-700', count: 0, approved: 0, completed: 0 },
+      { id: 'nano', label: 'Nano KOC (5k - 20k)', min: 5000, max: 20000, color: 'from-violet-500 to-indigo-600', count: 0, approved: 0, completed: 0 },
+      { id: 'micro', label: 'Micro KOC (20k - 100k)', min: 20000, max: 100000, color: 'from-blue-500 to-cyan-600', count: 0, approved: 0, completed: 0 },
+      { id: 'macro', label: 'Macro KOC (> 100k)', min: 100000, max: Infinity, color: 'from-pink-500 to-rose-600', count: 0, approved: 0, completed: 0 },
+    ];
+
+    list.forEach((k) => {
+      const tier = tiers.find((t) => k.followers >= t.min && k.followers < t.max) || tiers[0];
+      tier.count += 1;
+      tier.approved += k.approved;
+      tier.completed += k.completed;
+    });
+
+    const topKocs = [...list]
+      .sort((a, b) => b.completed - a.completed || b.approved - a.approved || b.followers - a.followers)
+      .slice(0, 15);
+
+    return { tiers, topKocs, totalUnique: list.length };
+  }, [applications]);
 
   const formatCompact = (num: number) => {
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
@@ -199,257 +310,527 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
     return num.toLocaleString('vi-VN');
   };
 
-  const handleCopyDockerCmd = async () => {
-    const cmd = 'docker-compose -f docker-compose.metabase.yml up -d';
-    const ok = await copyTextToClipboard(cmd);
-    if (ok) {
-      setCopied(true);
-      onShowToast('Đã sao chép lệnh Docker Metabase', 'Chạy lệnh trong terminal để khởi động Metabase tại cổng 3050', 'success');
-      setTimeout(() => setCopied(false), 2000);
+  const handleSaveEmbedUrl = (rawUrl?: string) => {
+    const normalized = normalizeEmbedUrl(rawUrl !== undefined ? rawUrl : draftEmbedUrl);
+    if (!normalized) {
+      onShowToast('Link trống', 'Vui lòng dán đường dẫn Looker Studio Embed URL hợp lệ.', 'warning');
+      return;
     }
+    setEmbedUrl(normalized);
+    setDraftEmbedUrl(normalized);
+    setIframeKey((k) => k + 1);
+    try {
+      localStorage.setItem(STORAGE_KEY_LOOKER_URL, normalized);
+    } catch {}
+    onShowToast(
+      'Đã lưu link Looker Studio vĩnh viễn!',
+      'Báo cáo Looker Studio sẽ tự động hiển thị mỗi lần bạn mở trang Admin.',
+      'success'
+    );
   };
 
-  const handleSaveChannelMetric = async () => {
-    if (!isEditingChannel) return;
-    setIsSaving(true);
-    const success = await upsertKocityChannelMetricOnSupabase(isEditingChannel);
-    setIsSaving(false);
-    if (success) {
-      onShowToast('Cập nhật chỉ số thành công', `Đã lưu chỉ số kênh ${isEditingChannel.channel_name} lên Supabase`, 'success');
-      setChannelMetrics((prev) =>
-        prev.map((m) => (m.channel === isEditingChannel.channel ? { ...m, ...isEditingChannel } : m))
-      );
-      setIsEditingChannel(null);
-    } else {
-      onShowToast('Đã lưu cục bộ', 'Đã lưu vào bộ nhớ đệm trình duyệt', 'info');
-      setIsEditingChannel(null);
-    }
+  // Xuất CSV tổng hợp toàn chiến dịch (1-click cho Looker Studio / Excel)
+  const handleExportCampaignSummaryCSV = () => {
+    const headers = [
+      'Mã Chiến Dịch',
+      'Nhãn Hàng',
+      'Tên Chiến Dịch',
+      'Ngành Hàng',
+      'Tổng Suất Mẫu',
+      'Tổng Đơn Nộp',
+      'Chờ Duyệt',
+      'Đã Duyệt Gửi Mẫu',
+      'Đang Giao',
+      'Chờ Duyệt Video',
+      'Đã Hoàn Thành Video',
+      'Bị Từ Chối',
+      'Tỷ Lệ Duyệt (%)',
+      'Tỷ Lệ Trả Bài (%)',
+      'Tổng Reach KOC Duyệt',
+    ];
+    const csvRows = [
+      headers.join(','),
+      ...campaignRows.map((r) =>
+        [
+          `"${r.camp.code}"`,
+          `"${(r.camp.brandName || '').replace(/"/g, '""')}"`,
+          `"${(r.camp.title || '').replace(/"/g, '""')}"`,
+          `"${(r.camp.category || '').replace(/"/g, '""')}"`,
+          r.totalSpots,
+          r.total,
+          r.pending,
+          r.approved,
+          r.shipping,
+          r.pendingVideo,
+          r.completed,
+          r.rejected,
+          r.approvalRate,
+          r.completionRate,
+          r.reach,
+        ].join(',')
+      ),
+    ];
+    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `KOCity_BI_TongHop_ChienDich_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onShowToast('Đã xuất báo cáo tổng hợp!', `Đã tải file CSV của ${campaignRows.length} chiến dịch.`, 'success');
   };
 
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="rounded-2xl bg-gradient-to-r from-violet-900 via-indigo-900 to-slate-900 p-5 sm:p-6 text-white shadow-lg flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500 text-white font-bold text-xs shadow-md">
-              M
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-400/30">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              100% Tự Động Từ Supabase Realtime
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-300">
-              Metabase BI & Omnichannel Engine
-            </span>
-            <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-400/30">
-              kocity_channel_metrics Ready
+            <span className="text-xs font-semibold text-violet-200">
+              {overview.totalCampaigns} chiến dịch · {overview.totalApps} hồ sơ thật
             </span>
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-            Báo Cáo Hiệu Quả & Dữ Liệu Đa Kênh KOCity
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            Báo Cáo BI Tổng Hợp Toàn Chiến Dịch & Looker Studio
           </h2>
           <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-2xl">
-            Hệ thống quản trị và giám sát tăng trưởng tập trung của 5 kênh chính chủ: Website, TikTok, Facebook, Threads và Zalo Community.
+            Toàn bộ số liệu được hệ thống tự động tính toán trực tiếp từ dữ liệu chiến dịch & hồ sơ KOC — không cần nhập tay thủ công.
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-xl bg-white/10 p-1 border border-white/15">
+          <div className="inline-flex flex-wrap rounded-xl bg-white/10 p-1 border border-white/15 gap-1">
             <button
-              onClick={() => setViewMode('omnichannel')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'omnichannel' ? 'bg-white text-blue-900 shadow-md' : 'text-white hover:bg-white/10'
+              type="button"
+              onClick={() => setViewMode('campaigns-bi')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'campaigns-bi' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
               }`}
             >
-              🌐 5 Kênh KOCity
+              📊 Toàn Chiến Dịch (Auto)
             </button>
             <button
-              onClick={() => setViewMode('interactive')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'interactive' ? 'bg-white text-blue-900 shadow-md' : 'text-white hover:bg-white/10'
+              type="button"
+              onClick={() => setViewMode('looker')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'looker' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
               }`}
             >
-              📊 Phễu Chuyển Đổi
+              📈 Looker Studio Live
             </button>
             <button
-              onClick={() => {
-                setViewMode('embed');
-                setShowDockerHelp(false);
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                viewMode === 'embed' ? 'bg-white text-blue-900 shadow-md' : 'text-white hover:bg-white/10'
+              type="button"
+              onClick={() => setViewMode('koc-tiers')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'koc-tiers' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
               }`}
             >
-              <span>📊</span>
-              <span>Looker Studio Live</span>
+              🏆 Xếp Hạng & Tầng KOC
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('sql-setup')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'sql-setup' ? 'bg-white text-blue-900 shadow-md' : 'text-white hover:bg-white/10'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'sql-setup' ? 'bg-white text-indigo-900 shadow-md' : 'text-white hover:bg-white/10'
               }`}
             >
-              ⚙️ SQL Schema
+              ⚙️ SQL Views Looker
             </button>
           </div>
         </div>
       </div>
 
-      {/* VIEW 0: 5 KÊNH CHÍNH CHỦ KOCITY (OMNICHANNEL TRACKER) */}
-      {viewMode === 'omnichannel' && (
+      {/* DẢI 6 KPI TỰ ĐỘNG 100% TỪ DỮ LIỆU THẬT */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Chiến Dịch</p>
+          <p className="mt-1 text-2xl font-black text-slate-900">{overview.totalCampaigns}</p>
+          <span className="text-[11px] text-slate-500">Tổng {overview.totalSpots.toLocaleString('vi-VN')} suất mẫu</span>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Hồ Sơ Nộp</p>
+          <p className="mt-1 text-2xl font-black text-violet-700">{overview.totalApps.toLocaleString('vi-VN')}</p>
+          <span className="text-[11px] text-violet-600 font-semibold">{overview.uniqueKocs} KOC độc nhất</span>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Đã Duyệt Gửi Mẫu</p>
+          <p className="mt-1 text-2xl font-black text-blue-600">{overview.approvedApps.toLocaleString('vi-VN')}</p>
+          <span className="text-[11px] text-emerald-600 font-bold">Tỷ lệ duyệt {overview.approvalRate}%</span>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Hoàn Thành Video</p>
+          <p className="mt-1 text-2xl font-black text-emerald-600">{overview.completedVideos.toLocaleString('vi-VN')}</p>
+          <span className="text-[11px] text-emerald-700 font-bold">Trả bài {overview.completionRate}%</span>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Reach KOC Duyệt</p>
+          <p className="mt-1 text-2xl font-black text-indigo-700">{formatCompact(overview.totalReachApproved)}</p>
+          <span className="text-[11px] text-slate-500">Followers tiếp cận</span>
+        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-2xs">
+          <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">Đang Chờ Xử Lý</p>
+          <p className="mt-1 text-2xl font-black text-amber-700">{overview.pendingApps + overview.pendingVideoApps}</p>
+          <span className="text-[11px] text-amber-800 font-semibold">
+            {overview.pendingApps} đơn · {overview.pendingVideoApps} video
+          </span>
+        </div>
+      </div>
+
+      {/* =================================================================== */}
+      {/* VIEW 1: TỔNG HỢP TOÀN CHIẾN DỊCH & PHỄU CHUYỂN ĐỔI (100% AUTO BI)   */}
+      {/* =================================================================== */}
+      {viewMode === 'campaigns-bi' && (
         <div className="space-y-6">
-          {/* Omnichannel Total Strip */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase">Tổng Thành Viên / Followers</p>
-              <p className="mt-1 text-2xl font-black text-violet-700">{omnichannelTotals.totalFollowers.toLocaleString('vi-VN')}</p>
-              <span className="text-[11px] text-emerald-600 font-semibold">+{omnichannelTotals.totalNewToday} hôm nay</span>
+          {/* Phễu chuyển đổi 5 bước 100% số thật */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Phễu Chuyển Đổi Toàn Hệ Thống (5 Bước Thực Tế)</h3>
+                <p className="text-xs text-slate-500">
+                  Tự động tổng hợp từ toàn bộ {overview.totalApps} hồ sơ KOC trên Supabase
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="rounded-lg bg-rose-50 px-2.5 py-1 font-bold text-rose-700">
+                  Từ chối: {overview.rejectedApps} ({overview.rejectionRate}%)
+                </span>
+                <span className="rounded-lg bg-violet-50 px-2.5 py-1 font-bold text-violet-700">
+                  Lấp đầy suất mẫu: {overview.fillRate}%
+                </span>
+              </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase">Tổng Lượt Xem / Views</p>
-              <p className="mt-1 text-2xl font-black text-slate-900">{formatCompact(omnichannelTotals.totalViews)}</p>
-              <span className="text-[11px] text-slate-500">Toàn bộ 5 nền tảng</span>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase">Tổng Tương Tác / Engagement</p>
-              <p className="mt-1 text-2xl font-black text-indigo-600">{omnichannelTotals.totalEngagements.toLocaleString('vi-VN')}</p>
-              <span className="text-[11px] text-slate-500">Likes, comments, shares</span>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase">Kênh Tăng Trưởng Nhanh Nhất</p>
-              <p className="mt-1 text-lg font-black text-pink-600">TikTok (+320)</p>
-              <span className="text-[11px] text-slate-500">Threads đứng vị trí #2 (+110)</span>
-            </div>
-          </div>
 
-          {/* 5 Cards Kênh KOCity */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {channelMetrics.map((item) => {
-              const cfg = CHANNEL_CONFIG[item.channel] || CHANNEL_CONFIG.website;
-              const pctOfTotal = omnichannelTotals.totalFollowers > 0
-                ? Math.round((item.followers_or_members / omnichannelTotals.totalFollowers) * 100)
-                : 20;
-
-              return (
-                <div key={item.channel} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold ${cfg.badge}`}>
-                        <span className="material-symbols-outlined text-[16px]">{cfg.icon}</span>
-                        <span>{cfg.label}</span>
-                      </span>
-                      <button
-                        onClick={() => setIsEditingChannel(item)}
-                        className="rounded-lg p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                        title="Chỉnh sửa số liệu"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">edit</span>
-                      </button>
-                    </div>
-
-                    <p className="text-xs text-slate-500 font-medium">Followers / Thành viên</p>
-                    <p className="text-xl font-black text-slate-900 mt-0.5">
-                      {item.followers_or_members.toLocaleString('vi-VN')}
-                    </p>
-
-                    <div className="mt-3 space-y-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
-                      <div className="flex justify-between">
-                        <span>Lượt xem:</span>
-                        <span className="font-bold text-slate-800">{formatCompact(item.total_views)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Tương tác:</span>
-                        <span className="font-bold text-slate-800">{item.engagements.toLocaleString('vi-VN')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Hôm nay:</span>
-                        <span className="font-bold text-emerald-600">+{item.new_subscribers_today}</span>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar chiếm tỷ trọng */}
-                    <div className="mt-3">
-                      <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                        <span>Tỷ trọng cộng đồng</span>
-                        <span>{pctOfTotal}%</span>
-                      </div>
-                      <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full bg-gradient-to-r ${cfg.color}`}
-                          style={{ width: `${pctOfTotal}%` }}
-                        />
-                      </div>
-                    </div>
+            <div className="grid gap-3 md:grid-cols-5 pt-1">
+              {[
+                {
+                  step: 'Bước 1',
+                  label: 'KOC Nộp Đơn',
+                  value: overview.totalApps,
+                  pct: overview.totalApps > 0 ? 100 : 0,
+                  color: 'from-violet-600 to-indigo-600',
+                },
+                {
+                  step: 'Bước 2',
+                  label: 'Đã Duyệt Gửi Mẫu',
+                  value: overview.approvedApps,
+                  pct: overview.totalApps > 0 ? Math.round((overview.approvedApps / overview.totalApps) * 100) : 0,
+                  color: 'from-blue-600 to-indigo-500',
+                },
+                {
+                  step: 'Bước 3',
+                  label: 'Đang Giao / Đã Phát',
+                  value: overview.shippedOrDelivered,
+                  pct: overview.totalApps > 0 ? Math.round((overview.shippedOrDelivered / overview.totalApps) * 100) : 0,
+                  color: 'from-sky-500 to-blue-600',
+                },
+                {
+                  step: 'Bước 4',
+                  label: 'Đã Nộp Video',
+                  value: overview.pendingVideoApps + overview.completedVideos,
+                  pct:
+                    overview.totalApps > 0
+                      ? Math.round(((overview.pendingVideoApps + overview.completedVideos) / overview.totalApps) * 100)
+                      : 0,
+                  color: 'from-teal-500 to-emerald-500',
+                },
+                {
+                  step: 'Bước 5',
+                  label: 'Hoàn Thành Nghiệm Thu',
+                  value: overview.completedVideos,
+                  pct: overview.totalApps > 0 ? Math.round((overview.completedVideos / overview.totalApps) * 100) : 0,
+                  color: 'from-emerald-500 to-green-600',
+                },
+              ].map((item) => (
+                <div key={item.step} className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                    <span>{item.step}</span>
+                    <span className="text-slate-900">{item.pct}%</span>
                   </div>
-
-                  <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                    <a
-                      href={item.channel_url || cfg.defaultUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-600 hover:underline font-bold flex items-center gap-0.5"
-                    >
-                      <span>Mở kênh</span>
-                      <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                    </a>
-                    <span className="text-slate-400">ID: {item.channel}</span>
+                  <p className="text-2xl font-black text-slate-900">{item.value.toLocaleString('vi-VN')}</p>
+                  <p className="text-xs font-semibold text-slate-700">{item.label}</p>
+                  <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-500`}
+                      style={{ width: `${item.pct}%` }}
+                    />
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
 
-          {/* Bảng tổng hợp chi tiết & Ghi chú hoạt động */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
+          {/* Bảng Tổng Hợp Chi Tiết TẤT CẢ CHIẾN DỊCH */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Chi Tiết Tình Trạng Kênh Hôm Nay</h3>
-                <p className="text-xs text-slate-500">Dữ liệu được lưu trữ trực tiếp trong bảng Supabase <code>public.kocity_channel_metrics</code></p>
+                <h3 className="text-base font-bold text-slate-900">
+                  Bảng Tổng Hợp Hiệu Suất Từng Chiến Dịch ({campaignRows.length} chiến dịch)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Số liệu tự động khớp 100% với danh sách đơn ứng tuyển trong hệ thống
+                </p>
               </div>
-              <button
-                onClick={() => {
-                  getKocityChannelMetricsFromSupabase().then(setChannelMetrics);
-                  onShowToast('Đã làm mới dữ liệu', 'Đã tải dữ liệu mới nhất từ Supabase', 'info');
-                }}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[15px]">refresh</span>
-                <span>Làm mới</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={campaignSearch}
+                  onChange={(e) => setCampaignSearch(e.target.value)}
+                  placeholder="Tìm nhãn hàng, tên chiến dịch..."
+                  className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-violet-500 focus:outline-none w-52"
+                />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="rounded-xl border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 cursor-pointer"
+                >
+                  <option value="apps">Sắp xếp: Nhiều đơn nhất</option>
+                  <option value="approved">Sắp xếp: Đã duyệt nhiều nhất</option>
+                  <option value="completed">Sắp xếp: Hoàn thành video</option>
+                  <option value="reach">Sắp xếp: Tổng Reach cao nhất</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleExportCampaignSummaryCSV}
+                  className="rounded-xl bg-slate-900 hover:bg-slate-800 px-3.5 py-1.5 text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>📥 Xuất CSV Toàn Chiến Dịch</span>
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 uppercase">
-                    <th className="pb-2">Nền tảng</th>
-                    <th className="pb-2">Tên kênh / URL</th>
-                    <th className="pb-2">Quy mô (Followers)</th>
-                    <th className="pb-2">Lượt xem (Views)</th>
-                    <th className="pb-2">Tương tác</th>
-                    <th className="pb-2">Tăng hôm nay</th>
-                    <th className="pb-2">Ghi chú hoạt động</th>
-                    <th className="pb-2 text-right">Thao tác</th>
+                  <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase bg-slate-50/70">
+                    <th className="py-2.5 px-3 rounded-l-lg">Chiến Dịch & Nhãn Hàng</th>
+                    <th className="py-2.5 px-2 text-center">Tiến Độ Suất Mẫu</th>
+                    <th className="py-2.5 px-2 text-center">Tổng Đơn</th>
+                    <th className="py-2.5 px-2 text-center">Chờ Duyệt</th>
+                    <th className="py-2.5 px-2 text-center">Đã Duyệt</th>
+                    <th className="py-2.5 px-2 text-center">Hoàn Thành</th>
+                    <th className="py-2.5 px-2 text-center">Từ Chối</th>
+                    <th className="py-2.5 px-2 text-center">Tỷ Lệ Duyệt / Trả Bài</th>
+                    <th className="py-2.5 px-3 text-right rounded-r-lg">Reach KOC Duyệt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {channelMetrics.map((row) => (
-                    <tr key={row.channel} className="hover:bg-slate-50/70">
-                      <td className="py-2.5 font-bold text-slate-900 uppercase">{row.channel}</td>
-                      <td className="py-2.5 text-slate-700">
-                        <a href={row.channel_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-semibold">
-                          {row.channel_name}
-                        </a>
+                  {campaignRows.map((r) => (
+                    <tr key={r.camp.id} className="hover:bg-violet-50/30 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={r.camp.productHeroImage}
+                            alt=""
+                            className="h-9 w-9 rounded-lg object-cover shrink-0 border border-slate-200"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 truncate max-w-[240px]" title={r.camp.title}>
+                              {r.camp.brandName} — {r.camp.title}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {r.camp.category} · HH {r.camp.commissionRate || '—'} · Mã: {r.camp.code}
+                            </p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-2.5 font-bold text-slate-900">{row.followers_or_members.toLocaleString('vi-VN')}</td>
-                      <td className="py-2.5 text-slate-600">{row.total_views.toLocaleString('vi-VN')}</td>
-                      <td className="py-2.5 text-slate-600">{row.engagements.toLocaleString('vi-VN')}</td>
-                      <td className="py-2.5 font-bold text-emerald-600">+{row.new_subscribers_today}</td>
-                      <td className="py-2.5 text-slate-500 italic max-w-xs truncate">{row.notes || '—'}</td>
-                      <td className="py-2.5 text-right">
-                        <button
-                          onClick={() => setIsEditingChannel(row)}
-                          className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100"
-                        >
-                          Cập nhật
-                        </button>
+                      <td className="py-3 px-2 min-w-[130px]">
+                        <div className="flex justify-between text-[11px] font-semibold mb-1">
+                          <span className="text-slate-700">
+                            {r.approved}/{r.totalSpots}
+                          </span>
+                          <span className="text-violet-700">{r.spotFillPct}%</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-500"
+                            style={{ width: `${r.spotFillPct}%` }}
+                          />
+                        </div>
                       </td>
+                      <td className="py-3 px-2 text-center font-black text-slate-900">{r.total}</td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="rounded-md bg-amber-50 px-2 py-0.5 font-bold text-amber-700">{r.pending}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700">{r.approved}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">
+                          {r.completed}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className="rounded-md bg-rose-50 px-2 py-0.5 font-bold text-rose-700">{r.rejected}</span>
+                      </td>
+                      <td className="py-3 px-2 text-center whitespace-nowrap">
+                        <span className="font-bold text-blue-700">{r.approvalRate}%</span>
+                        <span className="text-slate-300 mx-1">/</span>
+                        <span className="font-bold text-emerald-700">{r.completionRate}%</span>
+                      </td>
+                      <td className="py-3 px-3 text-right font-black text-indigo-700">
+                        {formatCompact(r.reach)}
+                      </td>
+                    </tr>
+                  ))}
+                  {campaignRows.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-slate-400">
+                        Không tìm thấy chiến dịch nào khớp với từ khóa "{campaignSearch}".
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* VIEW 2: LOOKER STUDIO LIVE EMBED (SONG SONG VỚI 6 KPI THẬT Ở TRÊN) */}
+      {/* =================================================================== */}
+      {viewMode === 'looker' && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Looker Studio Live Embed
+                </span>
+                <h3 className="text-base font-bold text-slate-900">Báo Cáo Google Looker Studio</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Dán link Looker Studio (hoặc nguyên mã <code>&lt;iframe&gt;</code>) rồi bấm <b>Lưu Link Vĩnh Viễn</b>.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIframeKey((k) => k + 1)}
+                className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer"
+              >
+                🔄 Làm mới
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsTallIframe((t) => !t)}
+                className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer"
+              >
+                {isTallIframe ? '↙ Thu gọn' : '⛶ Mở rộng'}
+              </button>
+              <a
+                href={embedUrl.replace('/embed/reporting/', '/reporting/')}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-all flex items-center gap-1 shadow-sm"
+              >
+                <span>Mở Looker</span>
+                <span>↗</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={draftEmbedUrl}
+              onChange={(e) => setDraftEmbedUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveEmbedUrl();
+              }}
+              className="flex-1 rounded-xl border border-slate-300 bg-slate-50/70 focus:bg-white px-3.5 py-2 text-xs text-slate-800 font-mono focus:border-violet-500 focus:ring-2 focus:ring-violet-200 focus:outline-none"
+              placeholder="Dán link Looker Studio (https://lookerstudio.google.com/...) hoặc mã <iframe> vào đây..."
+            />
+            <button
+              type="button"
+              onClick={() => handleSaveEmbedUrl()}
+              className="rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all cursor-pointer shrink-0"
+            >
+              💾 Lưu Link Vĩnh Viễn
+            </button>
+          </div>
+
+          <div
+            className={`relative w-full rounded-xl bg-slate-50 border border-slate-200 overflow-hidden transition-all duration-300 ${
+              isTallIframe ? 'h-[960px]' : 'h-[740px]'
+            }`}
+          >
+            <iframe
+              key={iframeKey}
+              src={embedUrl}
+              title="KOCity Looker Studio Live"
+              className="h-full w-full border-0"
+              allowFullScreen
+              sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* VIEW 3: XẾP HẠNG KOC & PHÂN TẦNG CREATOR TỰ ĐỘNG                    */}
+      {/* =================================================================== */}
+      {viewMode === 'koc-tiers' && (
+        <div className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {kocAnalytics.tiers.map((tier) => {
+              const share =
+                kocAnalytics.totalUnique > 0 ? Math.round((tier.count / kocAnalytics.totalUnique) * 100) : 0;
+              return (
+                <div key={tier.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700">{tier.label}</span>
+                    <span className="text-xs font-black text-violet-700">{share}%</span>
+                  </div>
+                  <p className="text-2xl font-black text-slate-900">{tier.count} KOC</p>
+                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${tier.color}`}
+                      style={{ width: `${share}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Đã duyệt: <b>{tier.approved}</b> · Hoàn thành: <b className="text-emerald-600">{tier.completed}</b>
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+            <h3 className="text-base font-bold text-slate-900">Top 15 KOC Đóng Góp Nổi Bật Nhất (Tự Động)</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
+                    <th className="py-2">#</th>
+                    <th className="py-2">KOC / Kênh TikTok</th>
+                    <th className="py-2 text-right">Followers</th>
+                    <th className="py-2 text-center">Đã Đăng Ký</th>
+                    <th className="py-2 text-center">Đã Duyệt</th>
+                    <th className="py-2 text-center">Video Hoàn Thành</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {kocAnalytics.topKocs.map((k, idx) => (
+                    <tr key={k.handle + idx} className="hover:bg-slate-50">
+                      <td className="py-2.5 font-bold text-slate-400">#{idx + 1}</td>
+                      <td className="py-2.5 font-bold text-slate-900">
+                        {k.name}{' '}
+                        <span className="font-mono text-violet-600 font-normal">
+                          ({k.handle.startsWith('@') ? k.handle : `@${k.handle}`})
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right font-bold text-slate-700">{formatCompact(k.followers)}</td>
+                      <td className="py-2.5 text-center">{k.applied}</td>
+                      <td className="py-2.5 text-center font-bold text-blue-600">{k.approved}</td>
+                      <td className="py-2.5 text-center font-black text-emerald-600">{k.completed}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -459,433 +840,60 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
         </div>
       )}
 
-      {/* MODAL CẬP NHẬT CHỈ SỐ KÊNH */}
-      {isEditingChannel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-100 p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">
-                Cập Nhật Chỉ Số Kênh: <span className="text-blue-600 uppercase">{isEditingChannel.channel}</span>
-              </h3>
-              <button
-                onClick={() => setIsEditingChannel(null)}
-                className="rounded-lg p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Tên kênh hiển thị</label>
-                <input
-                  type="text"
-                  value={isEditingChannel.channel_name}
-                  onChange={(e) => setIsEditingChannel({ ...isEditingChannel, channel_name: e.target.value })}
-                  className="w-full rounded-xl border border-slate-300 p-2 text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Đường dẫn kênh (URL)</label>
-                <input
-                  type="text"
-                  value={isEditingChannel.channel_url || ''}
-                  onChange={(e) => setIsEditingChannel({ ...isEditingChannel, channel_url: e.target.value })}
-                  className="w-full rounded-xl border border-slate-300 p-2 text-slate-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Followers / Thành viên</label>
-                  <input
-                    type="number"
-                    value={isEditingChannel.followers_or_members}
-                    onChange={(e) => setIsEditingChannel({ ...isEditingChannel, followers_or_members: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-300 p-2 text-slate-900 font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tăng trưởng hôm nay</label>
-                  <input
-                    type="number"
-                    value={isEditingChannel.new_subscribers_today}
-                    onChange={(e) => setIsEditingChannel({ ...isEditingChannel, new_subscribers_today: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-300 p-2 text-emerald-600 font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Lượt xem (Views)</label>
-                  <input
-                    type="number"
-                    value={isEditingChannel.total_views}
-                    onChange={(e) => setIsEditingChannel({ ...isEditingChannel, total_views: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-300 p-2 text-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Lượt tương tác</label>
-                  <input
-                    type="number"
-                    value={isEditingChannel.engagements}
-                    onChange={(e) => setIsEditingChannel({ ...isEditingChannel, engagements: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-300 p-2 text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Ghi chú hoạt động</label>
-                <textarea
-                  rows={2}
-                  value={isEditingChannel.notes || ''}
-                  onChange={(e) => setIsEditingChannel({ ...isEditingChannel, notes: e.target.value })}
-                  className="w-full rounded-xl border border-slate-300 p-2 text-slate-900"
-                  placeholder="Ghi chú bài đăng hoặc chiến dịch chạy trong ngày..."
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setIsEditingChannel(null)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveChannelMetric}
-                disabled={isSaving}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-md flex items-center gap-1.5"
-              >
-                {isSaving && <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />}
-                <span>Lưu Lên Supabase</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW 1: INTERACTIVE PHỄU CHUYỂN ĐỔI */}
-      {viewMode === 'interactive' && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Funnel Chuyển Đổi */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Phễu Chuyển Đổi 4 Bước (Conversion Funnel)</h3>
-                <p className="text-xs text-slate-500">Hành trình từ KOC nộp đơn nhận mẫu đến khi xuất bản video nghiệm thu</p>
-              </div>
-              <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700">Metabase View</span>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              {[
-                { label: '1. KOC nộp đơn nhận mẫu', value: metrics.totalApps || 120, pct: 100, color: 'from-blue-500 to-indigo-500' },
-                { label: '2. Brand duyệt chọn hồ sơ', value: metrics.approvedApps || 85, pct: 71, color: 'from-indigo-500 to-violet-500' },
-                { label: '3. ADFI xuất kho & gửi mẫu', value: metrics.disbursedApps || 68, pct: 57, color: 'from-violet-500 to-purple-500' },
-                { label: '4. Video TikTok đã lên bài & gắn link', value: metrics.completedVideos || 62, pct: 52, color: 'from-purple-500 to-pink-500' },
-              ].map((step, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-slate-700">
-                    <span>{step.label}</span>
-                    <span className="font-bold text-slate-900">{step.value} KOC ({step.pct}%)</span>
-                  </div>
-                  <div className="h-3.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${step.color} transition-all duration-500`}
-                      style={{ width: `${step.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 flex items-center justify-between">
-              <span>Tỷ lệ hoàn thành cam kết trả bài:</span>
-              <span className="font-bold text-emerald-700 text-sm">91.2% (Vượt mức trung bình ngành 65%)</span>
-            </div>
-          </div>
-
-          {/* Hiệu Quả Từng Chiến Dịch */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Hiệu Suất Theo Chiến Dịch</h3>
-                <p className="text-xs text-slate-500">So sánh chỉ số phát mẫu và nghiệm thu giữa các nhãn hàng</p>
-              </div>
-              <span className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Live Campaigns</span>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              {campaigns.slice(0, 4).map((c) => (
-                <div key={c.id} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img src={c.productHeroImage} alt="" className="h-10 w-10 rounded-lg object-cover" />
-                    <div>
-                      <p className="text-xs font-bold text-slate-900 line-clamp-1">{c.brandName} - {c.title}</p>
-                      <p className="text-[11px] text-slate-500">
-                        Đã phát: <b>{c.disbursedCount || 68}</b>/{c.targetCount || 100} suất · Hoa hồng: <b>{c.commissionRate || 15}%</b>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="inline-block rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
-                      Đang chạy
-                    </span>
-                    <p className="text-[10px] text-slate-400 mt-1">Đồng bộ Sheet</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW 2: SONG SONG BI NỘI BỘ + LOOKER STUDIO LIVE EMBED */}
-      {viewMode === 'embed' && (
-        <div className="space-y-4">
-          {/* Dải chỉ số BI Realtime chạy song song từ Supabase */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Hồ Sơ KOC (Realtime)</p>
-              <div className="mt-1 flex items-baseline justify-between">
-                <span className="text-xl font-black text-slate-900">{metrics.totalApps}</span>
-                <span className="text-[11px] font-bold text-emerald-600">Duyệt {metrics.approvalRate}%</span>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Cộng Đồng 5 Kênh KOCity</p>
-              <div className="mt-1 flex items-baseline justify-between">
-                <span className="text-xl font-black text-violet-700">
-                  {omnichannelTotals.totalFollowers.toLocaleString('vi-VN')}
-                </span>
-                <span className="text-[11px] font-bold text-emerald-600">+{omnichannelTotals.totalNewToday} hôm nay</span>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Lượt Xem 5 Kênh</p>
-              <div className="mt-1 flex items-baseline justify-between">
-                <span className="text-xl font-black text-indigo-700">{formatCompact(omnichannelTotals.totalViews)}</span>
-                <span className="text-[11px] text-slate-500">Web + Social</span>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 shadow-2xs">
-              <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">ROI Tài Trợ Mẫu 0đ</p>
-              <div className="mt-1 flex items-baseline justify-between">
-                <span className="text-xl font-black text-emerald-700">+{metrics.roiMultiplier}x</span>
-                <span className="text-[11px] font-bold text-emerald-700">Supabase Live</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Song Song: BI Web + Looker Studio
-                  </span>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {metabaseUrl.includes('lookerstudio') || metabaseUrl.includes('datastudio')
-                      ? 'Google Looker Studio Live Report'
-                      : 'Metabase Live Embedded Dashboard'}
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Dán link Looker Studio (hoặc nguyên thẻ <code>&lt;iframe&gt;</code>) rồi bấm <b>Lưu vĩnh viễn</b> — hệ thống tự động chuẩn hóa link nhúng.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Nút chọn nguồn nhanh */}
-                <div className="flex items-center rounded-lg bg-slate-100 p-0.5 text-xs font-medium text-slate-600">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const saved = localStorage.getItem(STORAGE_KEY_LOOKER_URL) || DEFAULT_LOOKER_STUDIO_URL;
-                      const targetUrl = saved.includes('3050') ? DEFAULT_LOOKER_STUDIO_URL : saved;
-                      setMetabaseUrl(targetUrl);
-                      setDraftEmbedUrl(targetUrl);
-                      setShowDockerHelp(false);
-                    }}
-                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                      metabaseUrl.includes('lookerstudio') || metabaseUrl.includes('datastudio')
-                        ? 'bg-white text-blue-700 font-bold shadow-xs'
-                        : 'hover:text-slate-900'
-                    }`}
-                  >
-                    📊 Looker Studio
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMetabaseUrl('http://localhost:3050');
-                      setDraftEmbedUrl('http://localhost:3050');
-                    }}
-                    className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                      metabaseUrl.includes('3050')
-                        ? 'bg-white text-blue-700 font-bold shadow-xs'
-                        : 'hover:text-slate-900'
-                    }`}
-                  >
-                    🐳 Metabase
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIframeKey((k) => k + 1)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer"
-                  title="Tải lại báo cáo Looker Studio"
-                >
-                  🔄 Làm mới
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsTallIframe((t) => !t)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-all cursor-pointer"
-                  title="Phóng to / Thu gọn chiều cao khung báo cáo"
-                >
-                  {isTallIframe ? '↙ Thu gọn' : '⛶ Mở rộng'}
-                </button>
-
-                <a
-                  href={metabaseUrl.replace('/embed/reporting/', '/reporting/')}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-all flex items-center gap-1 shadow-sm"
-                >
-                  <span>Mở Looker</span>
-                  <span>↗</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Thanh dán & lưu vĩnh viễn link Looker Studio */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={draftEmbedUrl}
-                onChange={(e) => setDraftEmbedUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveEmbedUrl();
-                }}
-                className="flex-1 rounded-xl border border-slate-300 bg-slate-50/70 focus:bg-white px-3.5 py-2 text-xs text-slate-800 font-mono focus:border-violet-500 focus:ring-2 focus:ring-violet-200 focus:outline-none"
-                placeholder="Dán link Looker Studio (https://lookerstudio.google.com/...) hoặc mã <iframe> vào đây..."
-              />
-              <button
-                type="button"
-                onClick={() => handleSaveEmbedUrl()}
-                className="rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
-              >
-                <span>💾 Lưu Link Vĩnh Viễn</span>
-              </button>
-            </div>
-
-            <div
-              className={`relative w-full rounded-xl bg-slate-50 border border-slate-200 overflow-hidden transition-all duration-300 ${
-                isTallIframe ? 'h-[960px]' : 'h-[720px]'
-              }`}
-            >
-              <iframe
-                key={iframeKey}
-                src={metabaseUrl}
-                title="KOCity Looker Studio & BI Dashboard"
-                className="h-full w-full border-0"
-                allowFullScreen
-                sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-              />
-
-              {/* Chỉ hiện bảng hướng dẫn Docker khi người dùng chủ động bấm trợ giúp ở chế độ Metabase */}
-              {metabaseUrl.includes('localhost:3050') && showDockerHelp && (
-                <div className="absolute inset-0 bg-slate-900/85 backdrop-blur-xs flex flex-col items-center justify-center text-center p-6 text-white pointer-events-auto z-10">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white font-black text-xl mb-3 shadow-lg">
-                    M
-                  </div>
-                  <h4 className="text-lg font-bold">Khởi động Metabase BI Server</h4>
-                  <p className="mt-1 text-xs text-slate-300 max-w-md">
-                    Chạy container Docker Metabase trên máy của bạn để xem Dashboard cục bộ tại cổng 3050 hoặc chuyển sang xem báo cáo Looker Studio.
-                  </p>
-                  <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                    <button
-                      onClick={handleCopyDockerCmd}
-                      className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-500 transition-all flex items-center gap-2"
-                    >
-                      <span>{copied ? '✓ Đã sao chép!' : '📋 Sao chép lệnh Docker Up'}</span>
-                    </button>
-                    <button
-                      onClick={() => handleSaveEmbedUrl(DEFAULT_LOOKER_STUDIO_URL)}
-                      className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white transition-all shadow-md"
-                    >
-                      📊 Xem Báo Cáo Looker Studio
-                    </button>
-                    <button
-                      onClick={() => setShowDockerHelp(false)}
-                      className="rounded-xl bg-white/10 hover:bg-white/20 px-4 py-2 text-xs font-bold text-white transition-all"
-                    >
-                      Đóng trợ giúp
-                    </button>
-                  </div>
-                  <p className="mt-3 text-[11px] text-slate-400 font-mono">
-                    docker-compose -f docker-compose.metabase.yml up -d
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW 3: DOCKER & SQL SETUP HELPER */}
+      {/* =================================================================== */}
+      {/* VIEW 4: HƯỚNG DẪN NỐI SUPABASE SQL VIEWS VÀO LOOKER STUDIO          */}
+      {/* =================================================================== */}
       {viewMode === 'sql-setup' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">Cơ Sở Dữ Liệu Supabase & Bảng Đa Kênh</h3>
-            <p className="text-xs text-slate-500">Các bảng SQL đã tạo sẵn trong mã nguồn để bạn chạy trong SQL Editor của Supabase</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Đồng Bộ Tự Động Sang Google Looker Studio (100% Không Nhập Tay)
+              </h3>
+              <p className="text-xs text-slate-500">
+                Chạy file <code>supabase/metabase_analytics_views.sql</code> trên Supabase để Looker Studio đọc trực tiếp 4 bảng tổng hợp tự động.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await copyTextToClipboard(SQL_VIEWS_SNIPPET);
+                onShowToast('Đã sao chép ghi chú Views!', 'Mở file supabase/metabase_analytics_views.sql để chạy trong Supabase SQL Editor.', 'info');
+              }}
+              className="rounded-xl bg-violet-600 hover:bg-violet-700 px-3.5 py-2 text-xs font-bold text-white cursor-pointer"
+            >
+              📋 Chép Danh Sách Views
+            </button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs mb-2">1</span>
-              <h4 className="text-xs font-bold text-slate-900">Bảng Đa Kênh KOCity</h4>
-              <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                Tệp <code className="text-blue-600">supabase/create_kocity_channel_metrics.sql</code> tạo bảng <code className="text-slate-800 font-bold">kocity_channel_metrics</code> lưu trữ số liệu 5 kênh.
-              </p>
-              <span className="inline-block mt-3 text-[11px] font-mono text-emerald-600 font-bold">
-                ✓ Sẵn sàng trong repository
-              </span>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2 text-xs">
+              <p className="font-bold text-slate-900">4 Bảng Tự Động Sẽ Xuất Hiện Trong Looker Studio:</p>
+              <ul className="space-y-1.5 text-slate-700 list-disc pl-4">
+                <li>
+                  <code className="font-bold text-violet-700">kocity_bi_campaign_summary</code>: Tổng hợp toàn bộ chiến dịch (số đơn, chờ duyệt, đã duyệt, hoàn thành, tỷ lệ %, reach).
+                </li>
+                <li>
+                  <code className="font-bold text-blue-700">kocity_bi_funnel_overview</code>: Phễu chuyển đổi 5 bước theo tháng.
+                </li>
+                <li>
+                  <code className="font-bold text-emerald-700">kocity_bi_daily_applications</code>: Biểu đồ đường đơn đăng ký & duyệt mẫu theo từng ngày.
+                </li>
+                <li>
+                  <code className="font-bold text-indigo-700">kocity_bi_koc_leaderboard</code>: Xếp hạng KOC & phân tầng Seed/Nano/Micro/Macro.
+                </li>
+              </ul>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white font-bold text-xs mb-2">2</span>
-              <h4 className="text-xs font-bold text-slate-900">Metabase Analytics Views</h4>
-              <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                Tệp <code className="text-indigo-600">supabase/metabase_analytics_views.sql</code> chứa sẵn các view phân tích ROI, Leaderboard KOC và Conversion Funnel.
-              </p>
-              <span className="inline-block mt-3 text-[11px] font-mono text-emerald-600 font-bold">
-                ✓ Sẵn sàng trong repository
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs mb-2">3</span>
-              <h4 className="text-xs font-bold text-slate-900">Khởi Động Metabase Docker</h4>
-              <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                Chạy lệnh <code className="text-slate-800 font-mono">docker-compose -f docker-compose.metabase.yml up -d</code> để mở cổng 3050.
-              </p>
-              <button
-                onClick={handleCopyDockerCmd}
-                className="mt-3 w-full rounded-lg bg-white border border-slate-300 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all"
-              >
-                {copied ? '✓ Đã chép' : 'Sao chép lệnh Docker'}
-              </button>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2 text-xs">
+              <p className="font-bold text-slate-900">Thông Số Kết Nối PostgreSQL Trên Looker Studio:</p>
+              <ul className="space-y-1.5 text-slate-700">
+                <li>• <b>Host (Session Pooler IPv4):</b> <code>aws-0-ap-southeast-1.pooler.supabase.com</code></li>
+                <li>• <b>Port:</b> <code>5432</code></li>
+                <li>• <b>Database:</b> <code>postgres</code></li>
+                <li>• <b>Username:</b> <code>postgres.mjsmnkelreniasahhfkf</code></li>
+                <li>• <b>Bật SSL:</b> Không tích</li>
+              </ul>
             </div>
           </div>
         </div>
