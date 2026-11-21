@@ -152,27 +152,33 @@
     },
     {
       "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "16HWYJ3w8x2k_lLvOnB7OGdtWe2KhAAVmNNG6SNkYuZo",
-          "mode": "id"
+        "method": "POST",
+        "url": "https://script.google.com/macros/s/AKfycbyDTBfP3lg84ai94rBegPYIaCd6Jtu51fzKtbL6A8Rk7JGNwdDRId2WlMHAO0hZktNv6Q/exec",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "BI_He_Sinh_Thai",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {}
-        },
-        "options": {}
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          },
+          "timeout": 30000
+        }
       },
-      "id": "gsheets-append",
+      "id": "gsheets-apps-script-post",
       "name": "4. Ghi Tự Động Vào Tab BI_He_Sinh_Thai",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         580,
         10
