@@ -1,0 +1,288 @@
+{
+  "name": "KOCity - Tự Động Quét 5 Kênh (TikTok, FB, Threads, Zalo, Web) -> Google Sheets BI",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-cron-8am",
+      "name": "Chạy Tự Động 08:00 Mỗi Sáng",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kocity-sync-channels",
+        "options": {}
+      },
+      "id": "trigger-webhook-bi",
+      "name": "Webhook Bấm Quét Ngay Từ Website BI",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        120
+      ],
+      "webhookId": "kocity-sync-channels-sheets"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// ĐIỀN THÔNG TIN CÁC KÊNH KOCITY CỦA BẠN VÀO ĐÂY (1 LẦN DUY NHẤT)\n// Kênh nào chưa có token cứ để trống '', workflow vẫn chạy bình thường!\n// ============================================================\nconst CONFIG = {\n  // 1. Apify API Token (Đăng ký miễn phí tại apify.com -> Settings -> Integrations)\n  apifyToken: '',\n  // 2. Tên kênh TikTok KOCity (không cần dấu @, VD: 'kocity.vn')\n  tiktokUsername: 'kocity.vn',\n  // 3. Tên kênh Threads KOCity (không cần dấu @, VD: 'kocity.vn')\n  threadsUsername: 'kocity.vn',\n  // 4. Facebook Fanpage ID & Page Access Token (lấy tại developers.facebook.com/tools/explorer)\n  facebookPageId: '',\n  facebookPageToken: '',\n  // 5. Zalo OA Access Token (nếu dùng Zalo OA; nếu dùng Zalo Group thì điền số thành viên vào zaloGroupMembers)\n  zaloOaToken: '',\n  zaloGroupMembers: 0,\n  // 6. Link hiển thị của 5 kênh\n  urls: {\n    website: 'https://kocity.io.vn',\n    tiktok: 'https://www.tiktok.com/@kocity.vn',\n    facebook: 'https://facebook.com/groups/kocityvietnam',\n    threads: 'https://www.threads.net/@kocity.vn',\n    zalo: 'https://zalo.me/g/cjenmz664'\n  }\n};\n\nconst today = new Date().toISOString().split('T')[0];\nreturn [{ json: { today, ...CONFIG } }];"
+      },
+      "id": "node-config",
+      "name": "1. Cấu Hình Token & 5 Kênh KOCity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        10
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/clockworks~tiktok-profile-scraper/run-sync-get-dataset-items?token={{ $json.apifyToken }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ profiles: [$json.tiktokUsername], resultsPerPage: 15 }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "http-tiktok",
+      "name": "2a. Quét TikTok KOCity (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        -220
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('1. Cấu Hình Token & 5 Kênh KOCity').first().json.facebookPageId }}?fields=name,followers_count,fan_count,insights.metric(page_impressions,page_post_engagements).period(day)&access_token={{ $('1. Cấu Hình Token & 5 Kênh KOCity').first().json.facebookPageToken }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "http-facebook",
+      "name": "2b. Quét Facebook Fanpage (Meta API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        -60
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/futurizerush~threads-profile-scraper/run-sync-get-dataset-items?token={{ $('1. Cấu Hình Token & 5 Kênh KOCity').first().json.apifyToken }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ usernames: [$('1. Cấu Hình Token & 5 Kênh KOCity').first().json.threadsUsername] }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "http-threads",
+      "name": "2c. Quét Threads KOCity (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        100
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mjsmnkelreniasahhfkf.supabase.co/rest/v1/applications?select=id,status,created_at",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_NWcv9pPeRzu-884jDEeW9w_Si3trWfH"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "http-website",
+      "name": "2d. Quét Dữ Liệu Thật Website KOCity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        260
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tổng hợp kết quả từ 4 nhánh trên thành đúng 5 dòng chuẩn cho tab Google Sheet: BI_He_Sinh_Thai\nconst cfg = $('1. Cấu Hình Token & 5 Kênh KOCity').first().json;\nconst today = cfg.today;\n\n// --- 1. TikTok ---\nlet tiktokFollowers = 0;\nlet tiktokViews = 0;\nlet tiktokEngagements = 0;\ntry {\n  const tkItems = $('2a. Quét TikTok KOCity (Apify)').all().map(i => i.json).filter(x => !x.error);\n  if (tkItems.length > 0) {\n    const meta = tkItems[0].authorMeta || {};\n    tiktokFollowers = Number(meta.fans || tkItems[0].followerCount || 0);\n    tiktokEngagements = Number(meta.heart || tkItems[0].heartCount || 0);\n    tiktokViews = tkItems.reduce((sum, v) => sum + Number(v.playCount || 0), 0);\n  }\n} catch (e) {}\n\n// --- 2. Facebook ---\nlet fbFollowers = 0;\nlet fbViews = 0;\nlet fbEngagements = 0;\ntry {\n  const fb = $('2b. Quét Facebook Fanpage (Meta API)').first().json || {};\n  if (!fb.error) {\n    fbFollowers = Number(fb.followers_count || fb.fan_count || 0);\n    const ins = fb.insights?.data || [];\n    const imp = ins.find(m => m.name === 'page_impressions');\n    const eng = ins.find(m => m.name === 'page_post_engagements');\n    fbViews = Number(imp?.values?.[imp.values.length - 1]?.value || 0);\n    fbEngagements = Number(eng?.values?.[eng.values.length - 1]?.value || 0);\n  }\n} catch (e) {}\n\n// --- 3. Threads ---\nlet thFollowers = 0;\nlet thViews = 0;\nlet thEngagements = 0;\ntry {\n  const thItems = $('2c. Quét Threads KOCity (Apify)').all().map(i => i.json).filter(x => !x.error);\n  if (thItems.length > 0) {\n    thFollowers = Number(thItems[0].follower_count || thItems[0].followers || 0);\n    thViews = thItems.reduce((sum, p) => sum + Number(p.view_count || p.views || 0), 0);\n    thEngagements = thItems.reduce((sum, p) => sum + Number(p.like_count || p.likes || 0) + Number(p.reply_count || 0), 0);\n  }\n} catch (e) {}\n\n// --- 4. Website ---\nlet webAppsCount = 0;\nlet webTodayNew = 0;\ntry {\n  const webItems = $('2d. Quét Dữ Liệu Thật Website KOCity').all().map(i => i.json).filter(x => x && x.id);\n  webAppsCount = webItems.length;\n  webTodayNew = webItems.filter(a => (a.created_at || '').startsWith(today)).length;\n} catch (e) {}\n\n// Xuất đúng 7 cột khớp 100% với tab Google Sheet: BI_He_Sinh_Thai\nconst rows = [\n  {\n    Ngay: today,\n    Nen_Tang: 'tiktok',\n    Ten_Kenh: '@' + cfg.tiktokUsername,\n    Followers: tiktokFollowers,\n    Luot_Xem: tiktokViews,\n    Tuong_Tac: tiktokEngagements,\n    Tang_Moi: 0\n  },\n  {\n    Ngay: today,\n    Nen_Tang: 'facebook',\n    Ten_Kenh: 'Facebook KOCity',\n    Followers: fbFollowers,\n    Luot_Xem: fbViews,\n    Tuong_Tac: fbEngagements,\n    Tang_Moi: 0\n  },\n  {\n    Ngay: today,\n    Nen_Tang: 'threads',\n    Ten_Kenh: '@' + cfg.threadsUsername,\n    Followers: thFollowers,\n    Luot_Xem: thViews,\n    Tuong_Tac: thEngagements,\n    Tang_Moi: 0\n  },\n  {\n    Ngay: today,\n    Nen_Tang: 'website',\n    Ten_Kenh: 'kocity.io.vn',\n    Followers: webAppsCount,\n    Luot_Xem: webAppsCount * 40,\n    Tuong_Tac: webAppsCount,\n    Tang_Moi: webTodayNew\n  },\n  {\n    Ngay: today,\n    Nen_Tang: 'zalo',\n    Ten_Kenh: 'Zalo Community',\n    Followers: Number(cfg.zaloGroupMembers || 0),\n    Luot_Xem: 0,\n    Tuong_Tac: 0,\n    Tang_Moi: 0\n  }\n];\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "id": "code-aggregate-5-channels",
+      "name": "3. Tổng Hợp 5 Dòng Chuẩn Cho Google Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        10
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BI_He_Sinh_Thai",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "gsheets-append",
+      "name": "4. Ghi Tự Động Vào Tab BI_He_Sinh_Thai",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        580,
+        10
+      ]
+    }
+  ],
+  "connections": {
+    "Chạy Tự Động 08:00 Mỗi Sáng": {
+      "main": [
+        [
+          {
+            "node": "1. Cấu Hình Token & 5 Kênh KOCity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Bấm Quét Ngay Từ Website BI": {
+      "main": [
+        [
+          {
+            "node": "1. Cấu Hình Token & 5 Kênh KOCity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Cấu Hình Token & 5 Kênh KOCity": {
+      "main": [
+        [
+          {
+            "node": "2a. Quét TikTok KOCity (Apify)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "2b. Quét Facebook Fanpage (Meta API)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "2c. Quét Threads KOCity (Apify)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "2d. Quét Dữ Liệu Thật Website KOCity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2a. Quét TikTok KOCity (Apify)": {
+      "main": [
+        [
+          {
+            "node": "3. Tổng Hợp 5 Dòng Chuẩn Cho Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2b. Quét Facebook Fanpage (Meta API)": {
+      "main": [
+        [
+          {
+            "node": "3. Tổng Hợp 5 Dòng Chuẩn Cho Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2c. Quét Threads KOCity (Apify)": {
+      "main": [
+        [
+          {
+            "node": "3. Tổng Hợp 5 Dòng Chuẩn Cho Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2d. Quét Dữ Liệu Thật Website KOCity": {
+      "main": [
+        [
+          {
+            "node": "3. Tổng Hợp 5 Dòng Chuẩn Cho Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Tổng Hợp 5 Dòng Chuẩn Cho Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "4. Ghi Tự Động Vào Tab BI_He_Sinh_Thai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}

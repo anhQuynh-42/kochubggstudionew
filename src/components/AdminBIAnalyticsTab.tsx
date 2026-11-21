@@ -5,7 +5,7 @@ import {
   DEFAULT_OMNICHANNEL_METRICS,
   getKocityChannelMetricsFromSupabase,
 } from '../services/supabaseService';
-import syncChannelsWorkflowJson from '../../kocity_sync_social_channels_workflow.json';
+import syncChannelsWorkflowJson from '../../kocity_sync_5_channels_to_sheets_workflow.json';
 
 interface AdminBIAnalyticsTabProps {
   campaigns: Campaign[];
@@ -15,9 +15,110 @@ interface AdminBIAnalyticsTabProps {
 
 const STORAGE_KEY_LOOKER_URL = 'kocity_looker_embed_url';
 const STORAGE_KEY_SYNC_WEBHOOK = 'kocity_n8n_sync_channels_webhook';
+const STORAGE_KEY_SHEET_URL = 'kocity_bi_sheet_csv_url';
 const DEFAULT_SYNC_WEBHOOK_URL = 'http://localhost:5678/webhook/kocity-sync-channels';
 const DEFAULT_LOOKER_STUDIO_URL =
-  'https://lookerstudio.google.com/embed/reporting/05a03ddb-9a1b-4ccd-b909-8b0f76d58e67/page/IxsDG';
+  'https://lookerstudio.google.com/embed/reporting/7c66d251-1403-49ac-b050-96ca6efd6763/page/4B6DG';
+
+/**
+ * Chuyển mọi link Google Sheet (link thường hoặc link Publish CSV) thành link xuất CSV đọc trực tiếp trên trình duyệt
+ */
+function normalizeGoogleSheetCsvUrl(raw: string): string {
+  const clean = (raw || '').trim();
+  if (!clean) return '';
+  if (clean.includes('output=csv') || clean.includes('format=csv')) return clean;
+
+  const idMatch = clean.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (idMatch && idMatch[1]) {
+    const gidMatch = clean.match(/[?#&]gid=(\d+)/);
+    const gidParam = gidMatch ? `&gid=${gidMatch[1]}` : '';
+    return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv${gidParam}`;
+  }
+  return clean;
+}
+
+/** Parse 1 dòng CSV có hỗ trợ dấu ngoặc kép */
+function splitCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(cur.trim());
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+/** Đọc CSV tab BI_He_Sinh_Thai (Ngay, Nen_Tang, Ten_Kenh, Followers, Luot_Xem, Tuong_Tac, Tang_Moi) -> KocityChannelMetric[] */
+function parseSheetCsvToChannelMetrics(csvText: string): KocityChannelMetric[] {
+  const lines = csvText
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return [];
+
+  const headers = splitCsvLine(lines[0]).map((h) =>
+    h
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_')
+  );
+
+  const findCol = (candidates: string[], fallbackIdx: number) => {
+    const idx = headers.findIndex((h) => candidates.some((c) => h.includes(c)));
+    return idx >= 0 ? idx : fallbackIdx;
+  };
+
+  const iDate = findCol(['ngay', 'date'], 0);
+  const iPlatform = findCol(['nen_tang', 'kenh', 'channel', 'platform'], 1);
+  const iName = findCol(['ten_kenh', 'name'], 2);
+  const iFollowers = findCol(['follower', 'thanh_vien', 'member'], 3);
+  const iViews = findCol(['luot_xem', 'view', 'impression'], 4);
+  const iEngage = findCol(['tuong_tac', 'engage', 'like'], 5);
+  const iNew = findCol(['tang_moi', 'new', 'hom_nay'], 6);
+
+  const byChannel = new Map<KocityChannelType, KocityChannelMetric>();
+  const validChannels: KocityChannelType[] = ['website', 'tiktok', 'facebook', 'threads', 'zalo'];
+
+  for (let r = 1; r < lines.length; r++) {
+    const cols = splitCsvLine(lines[r]);
+    const rawPlat = (cols[iPlatform] || '').toLowerCase().trim();
+    const matchedChannel = validChannels.find((c) => rawPlat.includes(c));
+    if (!matchedChannel) continue;
+
+    const toNum = (v?: string) => parseInt((v || '').replace(/[^\d-]/g, ''), 10) || 0;
+    // Ghi đè theo thứ tự từ trên xuống để luôn lấy dòng mới nhất cho từng kênh
+    byChannel.set(matchedChannel, {
+      id: `sheet-${matchedChannel}-${r}`,
+      report_date: cols[iDate] || new Date().toISOString().split('T')[0],
+      channel: matchedChannel,
+      channel_name: cols[iName] || CHANNEL_CONFIG[matchedChannel].label,
+      channel_url: CHANNEL_CONFIG[matchedChannel].defaultUrl,
+      followers_or_members: toNum(cols[iFollowers]),
+      total_views: toNum(cols[iViews]),
+      engagements: toNum(cols[iEngage]),
+      new_subscribers_today: toNum(cols[iNew]),
+      notes: 'Đồng bộ trực tiếp từ Google Sheet BI_He_Sinh_Thai',
+    });
+  }
+
+  return Array.from(byChannel.values());
+}
 
 const CHANNEL_CONFIG: Record<
   KocityChannelType,
@@ -149,6 +250,14 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
 
   // Dữ liệu lượt xem & tăng trưởng 5 kênh hệ sinh thái (TikTok, Facebook, Threads, Zalo, Website)
   const [channelMetrics, setChannelMetrics] = useState<KocityChannelMetric[]>(DEFAULT_OMNICHANNEL_METRICS);
+  const [dataSourceLabel, setDataSourceLabel] = useState<'sheet' | 'supabase' | 'sample'>('sample');
+  const [sheetUrl, setSheetUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY_SHEET_URL) || '';
+    } catch {
+      return '';
+    }
+  });
   const [syncWebhookUrl, setSyncWebhookUrl] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SYNC_WEBHOOK);
@@ -158,12 +267,71 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
   });
   const [isSyncingChannels, setIsSyncingChannels] = useState(false);
 
+  const loadFromGoogleSheet = async (rawUrl: string, showFeedback = false): Promise<boolean> => {
+    const csvUrl = normalizeGoogleSheetCsvUrl(rawUrl);
+    if (!csvUrl) return false;
+    try {
+      const res = await fetch(csvUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        if (showFeedback) {
+          onShowToast(
+            'Google Sheet chưa mở quyền xem!',
+            'Vào Google Sheet -> Chia sẻ -> Bất kỳ ai có đường liên kết (Người xem) rồi thử lại.',
+            'warning'
+          );
+        }
+        return false;
+      }
+      const parsed = parseSheetCsvToChannelMetrics(text);
+      if (parsed.length > 0) {
+        setChannelMetrics(parsed);
+        setDataSourceLabel('sheet');
+        try {
+          localStorage.setItem(STORAGE_KEY_SHEET_URL, rawUrl.trim());
+        } catch {}
+        if (showFeedback) {
+          onShowToast(
+            'Đã đồng bộ số liệu thật từ Google Sheet!',
+            `Đã đọc thành công ${parsed.length} nền tảng từ tab BI_He_Sinh_Thai.`,
+            'success'
+          );
+        }
+        return true;
+      }
+      if (showFeedback) {
+        onShowToast(
+          'Sheet chưa có dữ liệu kênh hợp lệ',
+          'Đảm bảo cột Nen_Tang có giá trị: tiktok, facebook, threads, zalo, website.',
+          'warning'
+        );
+      }
+      return false;
+    } catch {
+      if (showFeedback) {
+        onShowToast(
+          'Không đọc được Google Sheet',
+          'Hãy bật "Tệp -> Chia sẻ -> Xuất bản lên web -> CSV" hoặc mở quyền xem công khai cho Sheet.',
+          'warning'
+        );
+      }
+      return false;
+    }
+  };
+
   useEffect(() => {
-    getKocityChannelMetricsFromSupabase().then((data) => {
+    (async () => {
+      if (sheetUrl.trim()) {
+        const ok = await loadFromGoogleSheet(sheetUrl, false);
+        if (ok) return;
+      }
+      const data = await getKocityChannelMetricsFromSupabase();
       if (data && data.length > 0) {
         setChannelMetrics(data);
+        setDataSourceLabel('supabase');
       }
-    });
+    })();
   }, []);
 
   const ecosystemTotals = useMemo(() => {
@@ -193,15 +361,16 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
         body: JSON.stringify({ trigger: 'admin_bi_sync', timestamp: new Date().toISOString() }),
       });
       setTimeout(async () => {
-        const fresh = await getKocityChannelMetricsFromSupabase();
-        if (fresh && fresh.length > 0) setChannelMetrics(fresh);
+        if (sheetUrl.trim()) {
+          await loadFromGoogleSheet(sheetUrl, false);
+        }
         setIsSyncingChannels(false);
         onShowToast(
-          'Đã kích hoạt đồng bộ tự động qua n8n!',
-          'Hệ thống đang kéo số liệu mới nhất từ TikTok, Facebook, Threads, Zalo về Supabase BI.',
+          'Đã kích hoạt n8n quét 5 kênh!',
+          'n8n đang kéo số liệu mới nhất từ TikTok, Facebook, Threads, Zalo vào Google Sheet BI_He_Sinh_Thai.',
           'success'
         );
-      }, 1200);
+      }, 2000);
     } catch {
       setIsSyncingChannels(false);
       onShowToast('Không kết nối được n8n', 'Kiểm tra lại n8n đã bật chưa (start-n8n.bat) hoặc URL webhook.', 'warning');
@@ -213,10 +382,14 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'kocity_sync_social_channels_workflow.json';
+    a.download = 'kocity_sync_5_channels_to_sheets_workflow.json';
     a.click();
     URL.revokeObjectURL(url);
-    onShowToast('Đã tải Workflow n8n đồng bộ 5 kênh!', 'Import file vào n8n để tự động kéo lượt xem TikTok, FB, Threads, Zalo lúc 08:00 hàng ngày.', 'success');
+    onShowToast(
+      'Đã tải Workflow n8n -> Google Sheets!',
+      'Import vào n8n -> điền Token ở Node 1 -> chọn file Google Sheet ở Node 4 -> bật Active.',
+      'success'
+    );
   };
 
   const [embedUrl, setEmbedUrl] = useState<string>(() => {
@@ -824,15 +997,28 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
       {/* =================================================================== */}
       {viewMode === 'ecosystem' && (
         <div className="space-y-6">
-          {/* Thanh điều khiển đồng bộ tự động n8n (Không cần nhập tay) */}
+          {/* Thanh kết nối trực tiếp Google Sheet + n8n Auto-Sync (Không cần Supabase cũ!) */}
           <div className="rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-indigo-50 p-4 shadow-2xs space-y-3">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <span>⚡ Đồng Bộ Tự Động Lượt Xem TikTok, Facebook, Threads, Zalo & Website</span>
-                </h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    ⚡ Kết Nối Trực Tiếp Google Sheet (n8n ➔ Sheet ➔ Website BI)
+                  </h3>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      dataSourceLabel === 'sheet'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {dataSourceLabel === 'sheet'
+                      ? '🟢 Đang đọc số thật từ Google Sheet'
+                      : '🟡 Chưa nối Sheet (đang hiện dữ liệu mẫu)'}
+                  </span>
+                </div>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Số liệu được đọc trực tiếp từ bảng <code>public.kocity_channel_metrics</code> trên Supabase do workflow n8n tự động cập nhật lúc 08:00 mỗi sáng.
+                  Dán link tab <code>BI_He_Sinh_Thai</code> trong Google Sheet của bạn (mở quyền <i>Bất kỳ ai có đường liên kết đều có thể xem</i>) — Website BI sẽ tự đọc số thật do n8n đổ về hàng ngày.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -841,29 +1027,39 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                   onClick={handleDownloadSyncWorkflow}
                   className="rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 cursor-pointer"
                 >
-                  📥 Tải Workflow n8n 5 Kênh (.json)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    getKocityChannelMetricsFromSupabase().then((data) => {
-                      if (data && data.length > 0) setChannelMetrics(data);
-                      onShowToast('Đã tải lại từ Supabase!', 'Số liệu 5 kênh đã được làm mới.', 'info');
-                    });
-                  }}
-                  className="rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 text-xs font-bold text-blue-700 cursor-pointer"
-                >
-                  🔄 Làm mới từ Supabase
+                  📥 Tải Workflow n8n ➔ Sheets (.json)
                 </button>
               </div>
             </div>
 
+            {/* Ô 1: Kết nối Google Sheet đọc trực tiếp */}
             <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={sheetUrl}
+                onChange={(e) => setSheetUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') loadFromGoogleSheet(sheetUrl, true);
+                }}
+                placeholder="Dán link Google Sheet tab BI_He_Sinh_Thai (https://docs.google.com/spreadsheets/d/.../edit#gid=...)"
+                className="flex-1 rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-mono text-slate-800 focus:border-emerald-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => loadFromGoogleSheet(sheetUrl, true)}
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-sm cursor-pointer shrink-0"
+              >
+                🔗 Kết Nối & Đọc Số Thật
+              </button>
+            </div>
+
+            {/* Ô 2: Kích hoạt n8n quét tức thì */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-violet-100">
               <input
                 type="text"
                 value={syncWebhookUrl}
                 onChange={(e) => setSyncWebhookUrl(e.target.value)}
-                placeholder="URL Webhook n8n đồng bộ (VD: http://localhost:5678/webhook/kocity-sync-channels)"
+                placeholder="URL Webhook n8n quét 5 kênh (VD: http://localhost:5678/webhook/kocity-sync-channels)"
                 className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-800"
               />
               <button
@@ -872,7 +1068,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                 disabled={isSyncingChannels}
                 className="rounded-xl bg-violet-600 hover:bg-violet-700 px-4 py-2 text-xs font-bold text-white shadow-sm cursor-pointer shrink-0 flex items-center justify-center gap-1.5"
               >
-                <span>{isSyncingChannels ? 'Đang đồng bộ...' : '⚡ Quét & Đồng Bộ Ngay Qua n8n'}</span>
+                <span>{isSyncingChannels ? 'Đang quét...' : '⚡ Bấm Quét Ngay Qua n8n'}</span>
               </button>
             </div>
           </div>
