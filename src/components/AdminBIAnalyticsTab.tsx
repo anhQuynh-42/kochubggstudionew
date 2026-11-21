@@ -17,22 +17,27 @@ const STORAGE_KEY_LOOKER_URL = 'kocity_looker_embed_url';
 const STORAGE_KEY_SYNC_WEBHOOK = 'kocity_n8n_sync_channels_webhook';
 const STORAGE_KEY_SHEET_URL = 'kocity_bi_sheet_csv_url';
 const DEFAULT_SYNC_WEBHOOK_URL = 'http://localhost:5678/webhook/kocity-sync-channels';
+const DEFAULT_BI_SHEET_URL =
+  'https://docs.google.com/spreadsheets/d/16HWYJ3w8x2k_lLvOnB7OGdtWe2KhAAVmNNG6SNkYuZo/edit?usp=sharing';
 const DEFAULT_LOOKER_STUDIO_URL =
   'https://lookerstudio.google.com/embed/reporting/7c66d251-1403-49ac-b050-96ca6efd6763/page/4B6DG';
 
 /**
- * Chuyển mọi link Google Sheet (link thường hoặc link Publish CSV) thành link xuất CSV đọc trực tiếp trên trình duyệt
+ * Chuyển mọi link Google Sheet (link thường hoặc link Publish CSV) thành link xuất CSV đọc trực tiếp tab BI_He_Sinh_Thai
  */
 function normalizeGoogleSheetCsvUrl(raw: string): string {
   const clean = (raw || '').trim();
   if (!clean) return '';
-  if (clean.includes('output=csv') || clean.includes('format=csv')) return clean;
+  if (clean.includes('output=csv') || clean.includes('format=csv') || clean.includes('tqx=out:csv')) return clean;
 
   const idMatch = clean.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   if (idMatch && idMatch[1]) {
     const gidMatch = clean.match(/[?#&]gid=(\d+)/);
-    const gidParam = gidMatch ? `&gid=${gidMatch[1]}` : '';
-    return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv${gidParam}`;
+    if (gidMatch && gidMatch[1]) {
+      return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv&gid=${gidMatch[1]}`;
+    }
+    // Nếu link không có #gid=... -> đọc thẳng theo đúng tên tab BI_He_Sinh_Thai
+    return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/gviz/tq?tqx=out:csv&sheet=BI_He_Sinh_Thai`;
   }
   return clean;
 }
@@ -253,10 +258,10 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
   const [dataSourceLabel, setDataSourceLabel] = useState<'sheet' | 'supabase' | 'sample'>('sample');
   const [sheetUrl, setSheetUrl] = useState<string>(() => {
     try {
-      return localStorage.getItem(STORAGE_KEY_SHEET_URL) || '';
-    } catch {
-      return '';
-    }
+      const saved = localStorage.getItem(STORAGE_KEY_SHEET_URL);
+      if (saved && saved.trim()) return saved.trim();
+    } catch {}
+    return DEFAULT_BI_SHEET_URL;
   });
   const [syncWebhookUrl, setSyncWebhookUrl] = useState<string>(() => {
     try {
