@@ -9,3 +9,4 @@ coverage/
 .vercel
 backups_db/
 .vscode/
+*_local.json

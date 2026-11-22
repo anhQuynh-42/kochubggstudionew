@@ -39,7 +39,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// ĐIỀN THÔNG TIN CÁC KÊNH KOCITY CỦA BẠN VÀO ĐÂY (1 LẦN DUY NHẤT)\n// Kênh nào chưa có token cứ để trống '', workflow vẫn chạy bình thường!\n// ============================================================\nconst CONFIG = {\n  // 1. Apify API Token (Đăng ký miễn phí tại apify.com -> Settings -> Integrations)\n  apifyToken: '',\n  // 2. Tên kênh TikTok KOCity (không cần dấu @, VD: 'kocity.vn')\n  tiktokUsername: 'kocity.vn',\n  // 3. Tên kênh Threads KOCity (không cần dấu @, VD: 'kocity.vn')\n  threadsUsername: 'kocity.vn',\n  // 4. Facebook Fanpage ID & Page Access Token (lấy tại developers.facebook.com/tools/explorer)\n  facebookPageId: '',\n  facebookPageToken: '',\n  // 5. Zalo OA Access Token (nếu dùng Zalo OA; nếu dùng Zalo Group thì điền số thành viên vào zaloGroupMembers)\n  zaloOaToken: '',\n  zaloGroupMembers: 0,\n  // 6. Link hiển thị của 5 kênh\n  urls: {\n    website: 'https://kocity.io.vn',\n    tiktok: 'https://www.tiktok.com/@kocity.vn',\n    facebook: 'https://facebook.com/groups/kocityvietnam',\n    threads: 'https://www.threads.net/@kocity.vn',\n    zalo: 'https://zalo.me/g/cjenmz664'\n  }\n};\n\nconst today = new Date().toISOString().split('T')[0];\nreturn [{ json: { today, ...CONFIG } }];"
+        "jsCode": "// ============================================================\n// ĐIỀN THÔNG TIN CÁC KÊNH KOCITY CỦA BẠN VÀO ĐÂY (1 LẦN DUY NHẤT)\n// Kênh nào chưa có token cứ để trống '', workflow vẫn chạy bình thường!\n// ============================================================\nconst CONFIG = {\n  // 1. Apify API Token (Đăng ký miễn phí tại apify.com -> Settings -> Integrations)\n  apifyToken: '',\n  // 2. Tên kênh TikTok KOCity (không cần dấu @, VD: 'kocity.vn')\n  tiktokUsername: 'kocityvn',\n  // 3. Tên kênh Threads KOCity (không cần dấu @, VD: 'kocity.vn')\n  threadsUsername: 'kocity_booking',\n  // 4. Facebook Fanpage ID & Page Access Token (lấy tại developers.facebook.com/tools/explorer)\n  facebookPageId: '61595490457487',\n  facebookPageToken: '',\n  // 5. Zalo OA Access Token (nếu dùng Zalo OA; nếu dùng Zalo Group thì điền số thành viên vào zaloGroupMembers)\n  zaloOaToken: '',\n  zaloGroupMembers: 329,\n  // 6. Link hiển thị của 5 kênh\n  urls: {\n    website: 'https://kocity.io.vn',\n    tiktok: 'https://www.tiktok.com/@kocityvn',\n    facebook: 'https://www.facebook.com/profile.php?id=61595490457487',\n    threads: 'https://www.threads.net/@kocity_booking',\n    zalo: 'https://zalo.me/g/cjenmz664'\n  }\n};\n\nconst today = new Date().toISOString().split('T')[0];\nreturn [{ json: { today, ...CONFIG } }];"
       },
       "id": "node-config",
       "name": "1. Cấu Hình Token & 5 Kênh KOCity",
@@ -92,7 +92,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.apify.com/v2/acts/futurizerush~threads-profile-scraper/run-sync-get-dataset-items?token={{ $('1. Cấu Hình Token & 5 Kênh KOCity').first().json.apifyToken }}",
+        "url": "=https://api.apify.com/v2/acts/apify~threads-profile-api-scraper/run-sync-get-dataset-items?token={{ $('1. Cấu Hình Token & 5 Kênh KOCity').first().json.apifyToken }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ usernames: [$('1. Cấu Hình Token & 5 Kênh KOCity').first().json.threadsUsername] }) }}",
