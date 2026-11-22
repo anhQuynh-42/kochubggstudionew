@@ -1001,42 +1001,6 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
         </div>
       </div>
 
-      {/* DẢI 6 KPI TỰ ĐỘNG 100% TỪ DỮ LIỆU THẬT */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Chiến Dịch</p>
-          <p className="mt-1 text-2xl font-black text-slate-900">{overview.totalCampaigns}</p>
-          <span className="text-[11px] text-slate-500">Tổng {overview.totalSpots.toLocaleString('vi-VN')} suất mẫu</span>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Hồ Sơ Nộp</p>
-          <p className="mt-1 text-2xl font-black text-violet-700">{overview.totalApps.toLocaleString('vi-VN')}</p>
-          <span className="text-[11px] text-violet-600 font-semibold">{overview.uniqueKocs} KOC độc nhất</span>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Đã Duyệt Gửi Mẫu</p>
-          <p className="mt-1 text-2xl font-black text-blue-600">{overview.approvedApps.toLocaleString('vi-VN')}</p>
-          <span className="text-[11px] text-emerald-600 font-bold">Tỷ lệ duyệt {overview.approvalRate}%</span>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Hoàn Thành Video</p>
-          <p className="mt-1 text-2xl font-black text-emerald-600">{overview.completedVideos.toLocaleString('vi-VN')}</p>
-          <span className="text-[11px] text-emerald-700 font-bold">Trả bài {overview.completionRate}%</span>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Tổng Reach KOC Duyệt</p>
-          <p className="mt-1 text-2xl font-black text-indigo-700">{formatCompact(overview.totalReachApproved)}</p>
-          <span className="text-[11px] text-slate-500">Followers tiếp cận</span>
-        </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-2xs">
-          <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">Đang Chờ Xử Lý</p>
-          <p className="mt-1 text-2xl font-black text-amber-700">{overview.pendingApps + overview.pendingVideoApps}</p>
-          <span className="text-[11px] text-amber-800 font-semibold">
-            {overview.pendingApps} đơn · {overview.pendingVideoApps} video
-          </span>
-        </div>
-      </div>
-
       {/* =================================================================== */}
       {/* VIEW 1: TỔNG HỢP TOÀN CHIẾN DỊCH & PHỄU CHUYỂN ĐỔI (100% AUTO BI)   */}
       {/* =================================================================== */}
