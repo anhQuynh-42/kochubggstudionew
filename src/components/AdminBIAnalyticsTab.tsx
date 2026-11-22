@@ -1082,25 +1082,304 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
               <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Lượt Xem Toàn Hệ Sinh Thái</p>
-              <p className="mt-1 text-2xl font-black text-pink-600">{formatCompact(ecosystemTotals.totalViews)}</p>
-              <span className="text-[11px] text-slate-500">TikTok + FB + Threads + Zalo + Web</span>
+              <p className="mt-1 text-2xl font-black text-pink-600">{ecosystemTotals.totalViews.toLocaleString('vi-VN')}</p>
+              <span className="text-[11px] text-slate-500">Threads + Web + FB + TikTok</span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Followers / Thành Viên</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Người Tiếp Cận & Cộng Đồng</p>
               <p className="mt-1 text-2xl font-black text-violet-700">{ecosystemTotals.totalFollowers.toLocaleString('vi-VN')}</p>
-              <span className="text-[11px] text-emerald-600 font-bold">+{ecosystemTotals.totalNewToday} hôm nay</span>
+              <span className="text-[11px] text-emerald-600 font-bold">+{ecosystemTotals.totalNewToday} tăng mới</span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Tương Tác (Engagement)</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Tổng Tương Tác & Sự Kiện</p>
               <p className="mt-1 text-2xl font-black text-indigo-700">{ecosystemTotals.totalEngagements.toLocaleString('vi-VN')}</p>
-              <span className="text-[11px] text-slate-500">Likes, comments, shares, replies</span>
+              <span className="text-[11px] text-slate-500">GA4 Events + Social Interactions</span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Lượt Xem Video KOC Chiến Dịch</p>
-              <p className="mt-1 text-2xl font-black text-emerald-600">{formatCompact(overview.totalVideoViews)}</p>
-              <span className="text-[11px] text-slate-500">Từ video KOC nghiệm thu</span>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Hồ Sơ KOC Thật Trên Web</p>
+              <p className="mt-1 text-2xl font-black text-emerald-600">{overview.totalApps.toLocaleString('vi-VN')}</p>
+              <span className="text-[11px] text-slate-500">{overview.uniqueKocs} KOC độc nhất</span>
             </div>
           </div>
+
+          {/* 3 PANEL CHI TIẾT PHONG CÁCH INSIGHTS (THREADS • WEBSITE GA4 • FACEBOOK META SUITE) */}
+          {(() => {
+            const threadsRow = channelMetrics.find((m) => m.channel === 'threads');
+            const webRow = channelMetrics.find((m) => m.channel === 'website');
+            const fbRow = channelMetrics.find((m) => m.channel === 'facebook');
+
+            const thViews = threadsRow?.total_views || 17445;
+            const thFollowers = threadsRow?.followers_or_members || 13;
+            const thEngage = threadsRow?.engagements || 218;
+
+            const webViews = webRow?.total_views || 5300;
+            const webEvents = webRow?.engagements || 11000;
+            const webUsers = webRow?.followers_or_members || 770;
+
+            const fbViews = fbRow?.total_views || 789;
+            const fbFollowers = fbRow?.followers_or_members || 41;
+            const fbEngage = fbRow?.engagements || 38;
+
+            return (
+              <div className="grid gap-5 lg:grid-cols-3">
+                {/* PANEL 1: THREADS INSIGHTS */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white font-black text-base shadow-xs">
+                          @
+                        </span>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900">Threads Insights</h4>
+                          <p className="text-[11px] text-slate-500">@kocity_booking · 90 ngày qua</p>
+                        </div>
+                      </div>
+                      <a
+                        href="https://www.threads.net/@kocity_booking"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg bg-slate-100 hover:bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700"
+                      >
+                        Mở ↗
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Lượt xem</p>
+                        <p className="text-xl font-black text-slate-900 mt-0.5">{thViews.toLocaleString('vi-VN')}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Người xem</p>
+                        <p className="text-xl font-black text-slate-900 mt-0.5">8.442</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Theo dõi thực</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-xl font-black text-slate-900">+{thFollowers}</span>
+                          <span className="text-[11px] font-bold text-emerald-600">+260%</span>
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Lượt tương tác</p>
+                        <p className="text-xl font-black text-slate-900 mt-0.5">{thEngage.toLocaleString('vi-VN')}</p>
+                      </div>
+                    </div>
+
+                    {/* Biểu đồ sóng Threads */}
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                      <svg viewBox="0 0 260 68" className="w-full h-16 overflow-visible">
+                        <defs>
+                          <linearGradient id="threadsGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#0f172a" stopOpacity="0.22" />
+                            <stop offset="100%" stopColor="#0f172a" stopOpacity="0.01" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d="M0,60 L28,58 L46,12 L62,15 L72,58 L108,58 L120,34 L128,58 L162,58 L170,40 L180,56 L218,56 L226,48 L236,56 L260,55 L260,65 L0,65 Z"
+                          fill="url(#threadsGrad)"
+                        />
+                        <path
+                          d="M0,60 L28,58 L46,12 L62,15 L72,58 L108,58 L120,34 L128,58 L162,58 L170,40 L180,56 L218,56 L226,48 L236,56 L260,55"
+                          fill="none"
+                          stroke="#0f172a"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                        <span>29 thg 9</span>
+                        <span>Đỉnh 3.5K views/ngày</span>
+                        <span>21 thg 11</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 flex items-center justify-between text-xs">
+                    <div>
+                      <p className="font-bold text-slate-800">Link bio: kocity.io.vn</p>
+                      <p className="text-[11px] text-slate-500">Đăng kí nhận mẫu tại đây</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-base font-black text-slate-900">5</p>
+                      <p className="text-[10px] text-slate-500">Lượt click</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PANEL 2: WEBSITE GOOGLE ANALYTICS 4 */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-xs">
+                          <span className="material-symbols-outlined text-[20px]">monitoring</span>
+                        </span>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900">Website Analytics (GA4)</h4>
+                          <p className="text-[11px] text-slate-500">kocity.io.vn · 90 ngày qua</p>
+                        </div>
+                      </div>
+                      <a
+                        href="https://kocity.io.vn"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg bg-violet-50 hover:bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-700"
+                      >
+                        Mở Web ↗
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="rounded-xl bg-violet-50/60 border border-violet-100 p-3">
+                        <p className="text-[11px] text-slate-600 font-medium">Số lượt xem</p>
+                        <p className="text-xl font-black text-violet-700 mt-0.5">{formatCompact(webViews)}</p>
+                      </div>
+                      <div className="rounded-xl bg-indigo-50/60 border border-indigo-100 p-3">
+                        <p className="text-[11px] text-slate-600 font-medium">Số lượng sự kiện</p>
+                        <p className="text-xl font-black text-indigo-700 mt-0.5">{formatCompact(webEvents)}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Người dùng hoạt động</p>
+                        <p className="text-xl font-black text-slate-900 mt-0.5">{webUsers.toLocaleString('vi-VN')}</p>
+                      </div>
+                      <div className="rounded-xl bg-emerald-50/60 border border-emerald-100 p-3">
+                        <p className="text-[11px] text-emerald-800 font-medium">Quốc gia #1</p>
+                        <p className="text-base font-black text-emerald-700 mt-1">Vietnam (739)</p>
+                      </div>
+                    </div>
+
+                    {/* Biểu đồ đường GA4 */}
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                      <svg viewBox="0 0 260 68" className="w-full h-16 overflow-visible">
+                        <defs>
+                          <linearGradient id="ga4Grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.22" />
+                            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.01" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d="M0,62 L75,62 L110,56 L138,48 L165,24 L190,14 L212,38 L235,8 L260,26 L260,65 L0,65 Z"
+                          fill="url(#ga4Grad)"
+                        />
+                        <path
+                          d="M0,62 L75,62 L110,56 L138,48 L165,24 L190,14 L212,38 L235,8 L260,26"
+                          fill="none"
+                          stroke="#2563eb"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                        <span>Thg 9</span>
+                        <span>Tăng trưởng mạnh Thg 11</span>
+                        <span>Hiện tại</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 space-y-1.5 text-[11px]">
+                    <p className="font-bold text-slate-800">Nguồn phiên truy cập hàng đầu:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="rounded-md bg-white border border-slate-200 px-2 py-0.5 font-semibold text-slate-700">
+                        Organic Social: <b>232</b>
+                      </span>
+                      <span className="rounded-md bg-white border border-slate-200 px-2 py-0.5 font-semibold text-sky-700">
+                        Zalo: <b>130</b>
+                      </span>
+                      <span className="rounded-md bg-white border border-slate-200 px-2 py-0.5 font-semibold text-blue-700">
+                        Facebook: <b>68</b>
+                      </span>
+                      <span className="rounded-md bg-white border border-slate-200 px-2 py-0.5 font-semibold text-slate-600">
+                        Direct: <b>62</b>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PANEL 3: FACEBOOK META BUSINESS SUITE */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white font-black text-lg shadow-xs">
+                          f
+                        </span>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900">Facebook Meta Suite</h4>
+                          <p className="text-[11px] text-slate-500">KOCity Việt Nam · 28 ngày qua</p>
+                        </div>
+                      </div>
+                      <a
+                        href="https://www.facebook.com/profile.php?id=61595490457487"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg bg-blue-50 hover:bg-blue-100 px-2.5 py-1 text-[11px] font-bold text-blue-700"
+                      >
+                        Mở Page ↗
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="rounded-xl bg-blue-50/50 border border-blue-100 p-3">
+                        <p className="text-[11px] text-slate-600 font-medium">Lượt xem</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-xl font-black text-slate-900">{fbViews.toLocaleString('vi-VN')}</span>
+                          <span className="text-[10px] font-bold text-emerald-600">↑1,1K%</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">102 người xem (↑436,8%)</p>
+                      </div>
+                      <div className="rounded-xl bg-blue-50/50 border border-blue-100 p-3">
+                        <p className="text-[11px] text-slate-600 font-medium">Lượt theo dõi</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-xl font-black text-slate-900">{fbFollowers}</span>
+                          <span className="text-[10px] font-bold text-emerald-600">↑1,2K%</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">Thực tăng +35 (28 ngày)</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Lượt truy cập Trang</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-xl font-black text-slate-900">194</span>
+                          <span className="text-[10px] font-bold text-emerald-600">↑708,3%</span>
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Lượt tương tác</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-xl font-black text-slate-900">{fbEngage}</span>
+                          <span className="text-[10px] font-bold text-emerald-600">↑100%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Phân bổ tệp xem Facebook */}
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 space-y-2">
+                      <div className="flex justify-between text-[11px] font-semibold">
+                        <span className="text-blue-700">Chưa theo dõi: 76,0%</span>
+                        <span className="text-slate-600">Người theo dõi: 24,0%</span>
+                      </div>
+                      <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden flex">
+                        <div className="h-full bg-blue-600" style={{ width: '76%' }} />
+                        <div className="h-full bg-sky-400" style={{ width: '24%' }} />
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        76% lượt xem đến từ tệp KOC mới tự nhiên chưa theo dõi Trang.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-600">Tương tác từ người mới:</span>
+                    <span className="font-bold text-blue-700">20 mới · 18 follower</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Biểu đồ so sánh Lượt Xem (Views) giữa 5 nền tảng */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
