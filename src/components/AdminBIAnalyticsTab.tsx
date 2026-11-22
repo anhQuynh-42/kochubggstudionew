@@ -136,6 +136,16 @@ const COMEM_WAVE_TABS = [
   { id: 'campaign-moi', label: 'Cỏ Mềm Campaign mới', sheetTab: 'Cỏ Mềm Campaign mớii', gid: '557155338' },
 ] as const;
 
+interface CoMemProductWaveRow {
+  productName: string;
+  waveId: string;
+  waveLabel: string;
+  totalSelected: number;
+  brandApproved: number;
+  adfiApproved: number;
+  approvedReach: number;
+}
+
 interface LiveWaveReport {
   id: string;
   label: string;
@@ -146,6 +156,7 @@ interface LiveWaveReport {
   approvedReach: number;
   approvalRatePct: number;
   adfiRatePct: number;
+  products: CoMemProductWaveRow[];
 }
 
 interface LiveGoogleSheetsReport {
@@ -342,7 +353,8 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<'campaigns-bi' | 'ecosystem' | 'looker' | 'koc-tiers' | 'sql-setup'>('campaigns-bi');
   const [campaignSearch, setCampaignSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'apps' | 'approved' | 'completed' | 'reach'>('apps');
+  const [waveFilter, setWaveFilter] = useState<'all' | 'dot-1' | 'dot-2' | 'campaign-moi'>('all');
+  const [sortBy, setSortBy] = useState<'apps' | 'approved' | 'completed' | 'reach'>('approved');
 
   // Dữ liệu lượt xem & tăng trưởng 5 kênh hệ sinh thái (TikTok, Facebook, Threads, Zalo, Website)
   const [channelMetrics, setChannelMetrics] = useState<KocityChannelMetric[]>(DEFAULT_OMNICHANNEL_METRICS);
@@ -394,9 +406,11 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             approvedReach: 0,
             approvalRatePct: 0,
             adfiRatePct: 0,
+            products: [],
           };
         }
         const hdr = matrix[0].map((h) => h.toLowerCase().trim());
+        const iProduct = hdr.findIndex((h) => h.includes('sản phẩm') || h.includes('muốn nhận'));
         const iHandle = hdr.findIndex((h) => h.includes('id name') || h.includes('tiktok'));
         const iFollowers = hdr.findIndex((h) => h.includes('follower'));
         const iBrand = hdr.findIndex((h) => h.includes('brand duyệt'));
@@ -410,17 +424,42 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
         let brandApproved = 0;
         let adfiApproved = 0;
         let approvedReach = 0;
+        const prodMap = new Map<string, CoMemProductWaveRow>();
 
         dataRows.forEach((r) => {
+          const rawProd = (iProduct >= 0 ? r[iProduct] : r[0] || '').replace(/\s+/g, ' ').trim() || 'Sản phẩm Cỏ Mềm khác';
+          const prodKey = rawProd.toLowerCase();
           const brandVal = (iBrand >= 0 ? r[iBrand] : r[4] || '').toUpperCase().trim();
           const adfiVal = (iAdfi >= 0 ? r[iAdfi] : r[5] || '').toUpperCase().trim();
           const isBrandOk = brandVal === 'TRUE' || brandVal.includes('DUYỆT') || brandVal === 'OK' || brandVal === 'X';
           const isAdfiOk = adfiVal === 'TRUE' || adfiVal.includes('DUYỆT') || adfiVal === 'OK' || adfiVal === 'X';
+          const rowFollowers = parseSheetFollowerCount(iFollowers >= 0 ? r[iFollowers] : r[3]);
+
           if (isBrandOk) {
             brandApproved += 1;
-            approvedReach += parseSheetFollowerCount(iFollowers >= 0 ? r[iFollowers] : r[3]);
+            approvedReach += rowFollowers;
           }
           if (isAdfiOk) adfiApproved += 1;
+
+          const existing = prodMap.get(prodKey);
+          if (!existing) {
+            prodMap.set(prodKey, {
+              productName: rawProd,
+              waveId: tab.id,
+              waveLabel: tab.label,
+              totalSelected: 1,
+              brandApproved: isBrandOk ? 1 : 0,
+              adfiApproved: isAdfiOk ? 1 : 0,
+              approvedReach: isBrandOk ? rowFollowers : 0,
+            });
+          } else {
+            existing.totalSelected += 1;
+            if (isBrandOk) {
+              existing.brandApproved += 1;
+              existing.approvedReach += rowFollowers;
+            }
+            if (isAdfiOk) existing.adfiApproved += 1;
+          }
         });
 
         const totalReviewed = dataRows.length;
@@ -434,6 +473,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
           approvedReach,
           approvalRatePct: totalReviewed > 0 ? Math.round((brandApproved / totalReviewed) * 100) : 0,
           adfiRatePct: brandApproved > 0 ? Math.round((adfiApproved / brandApproved) * 100) : 0,
+          products: Array.from(prodMap.values()),
         };
       });
 
@@ -1163,208 +1203,327 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             );
           })()}
 
-          {/* Phễu chuyển đổi 5 bước 100% số thật */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Phễu Chuyển Đổi Toàn Hệ Thống (5 Bước Thực Tế)</h3>
-                <p className="text-xs text-slate-500">
-                  Tự động tổng hợp từ toàn bộ {overview.totalApps} hồ sơ KOC trên Supabase
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="rounded-lg bg-rose-50 px-2.5 py-1 font-bold text-rose-700">
-                  Từ chối: {overview.rejectedApps} ({overview.rejectionRate}%)
-                </span>
-                <span className="rounded-lg bg-violet-50 px-2.5 py-1 font-bold text-violet-700">
-                  Lấp đầy suất mẫu: {overview.fillRate}%
-                </span>
-              </div>
-            </div>
+          {/* PHỄU CHUYỂN ĐỔI CHIẾN DỊCH CỎ MỀM (4 BƯỚC THỰC TẾ TỪ GOOGLE SHEETS) */}
+          {(() => {
+            const totalWaveReviewed = sheetsReport.waves.reduce((s, w) => s + w.totalReviewed, 0);
+            const totalWaveBrandApproved = sheetsReport.waves.reduce((s, w) => s + w.brandApproved, 0);
+            const totalWaveAdfiApproved = sheetsReport.waves.reduce((s, w) => s + w.adfiApproved, 0);
+            const baseCount = Math.max(sheetsReport.registeredTotal, totalWaveReviewed, 1);
+            const brandNotApproved = Math.max(0, totalWaveReviewed - totalWaveBrandApproved);
+            const notApprovedPct = totalWaveReviewed > 0 ? Math.round((brandNotApproved / totalWaveReviewed) * 100) : 0;
+            const brandPctOfReviewed =
+              totalWaveReviewed > 0 ? Math.round((totalWaveBrandApproved / totalWaveReviewed) * 100) : 0;
 
-            <div className="grid gap-3 md:grid-cols-5 pt-1">
-              {[
-                {
-                  step: 'Bước 1',
-                  label: 'KOC Nộp Đơn',
-                  value: overview.totalApps,
-                  pct: overview.totalApps > 0 ? 100 : 0,
-                  color: 'from-violet-600 to-indigo-600',
-                },
-                {
-                  step: 'Bước 2',
-                  label: 'Đã Duyệt Gửi Mẫu',
-                  value: overview.approvedApps,
-                  pct: overview.totalApps > 0 ? Math.round((overview.approvedApps / overview.totalApps) * 100) : 0,
-                  color: 'from-blue-600 to-indigo-500',
-                },
-                {
-                  step: 'Bước 3',
-                  label: 'Đang Giao / Đã Phát',
-                  value: overview.shippedOrDelivered,
-                  pct: overview.totalApps > 0 ? Math.round((overview.shippedOrDelivered / overview.totalApps) * 100) : 0,
-                  color: 'from-sky-500 to-blue-600',
-                },
-                {
-                  step: 'Bước 4',
-                  label: 'Đã Nộp Video',
-                  value: overview.pendingVideoApps + overview.completedVideos,
-                  pct:
-                    overview.totalApps > 0
-                      ? Math.round(((overview.pendingVideoApps + overview.completedVideos) / overview.totalApps) * 100)
-                      : 0,
-                  color: 'from-teal-500 to-emerald-500',
-                },
-                {
-                  step: 'Bước 5',
-                  label: 'Hoàn Thành Nghiệm Thu',
-                  value: overview.completedVideos,
-                  pct: overview.totalApps > 0 ? Math.round((overview.completedVideos / overview.totalApps) * 100) : 0,
-                  color: 'from-emerald-500 to-green-600',
-                },
-              ].map((item) => (
-                <div key={item.step} className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
-                    <span>{item.step}</span>
-                    <span className="text-slate-900">{item.pct}%</span>
+            return (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Phễu Chuyển Đổi Chiến Dịch Cỏ Mềm (Thực Tế 3 Đợt)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Tự động tổng hợp live từ file KOC đăng ký & file kết quả duyệt Cỏ Mềm (Đợt 1, Đợt 2, Campaign mới)
+                    </p>
                   </div>
-                  <p className="text-2xl font-black text-slate-900">{item.value.toLocaleString('vi-VN')}</p>
-                  <p className="text-xs font-semibold text-slate-700">{item.label}</p>
-                  <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-500`}
-                      style={{ width: `${item.pct}%` }}
-                    />
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="rounded-lg bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700">
+                      Tỷ lệ Brand duyệt: {brandPctOfReviewed}%
+                    </span>
+                    <span className="rounded-lg bg-slate-100 px-2.5 py-1 font-bold text-slate-600">
+                      Chưa duyệt: {brandNotApproved} ({notApprovedPct}%)
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Bảng Tổng Hợp Chi Tiết TẤT CẢ CHIẾN DỊCH */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Bảng Tổng Hợp Hiệu Suất Từng Chiến Dịch ({campaignRows.length} chiến dịch)
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Số liệu tự động khớp 100% với danh sách đơn ứng tuyển trong hệ thống
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="text"
-                  value={campaignSearch}
-                  onChange={(e) => setCampaignSearch(e.target.value)}
-                  placeholder="Tìm nhãn hàng, tên chiến dịch..."
-                  className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-violet-500 focus:outline-none w-52"
-                />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="rounded-xl border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 cursor-pointer"
-                >
-                  <option value="apps">Sắp xếp: Nhiều đơn nhất</option>
-                  <option value="approved">Sắp xếp: Đã duyệt nhiều nhất</option>
-                  <option value="completed">Sắp xếp: Hoàn thành video</option>
-                  <option value="reach">Sắp xếp: Tổng Reach cao nhất</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={handleExportCampaignSummaryCSV}
-                  className="rounded-xl bg-slate-900 hover:bg-slate-800 px-3.5 py-1.5 text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <span>📥 Xuất CSV Toàn Chiến Dịch</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase bg-slate-50/70">
-                    <th className="py-2.5 px-3 rounded-l-lg">Chiến Dịch & Nhãn Hàng</th>
-                    <th className="py-2.5 px-2 text-center">Tiến Độ Suất Mẫu</th>
-                    <th className="py-2.5 px-2 text-center">Tổng Đơn</th>
-                    <th className="py-2.5 px-2 text-center">Chờ Duyệt</th>
-                    <th className="py-2.5 px-2 text-center">Đã Duyệt</th>
-                    <th className="py-2.5 px-2 text-center">Hoàn Thành</th>
-                    <th className="py-2.5 px-2 text-center">Từ Chối</th>
-                    <th className="py-2.5 px-2 text-center">Tỷ Lệ Duyệt / Trả Bài</th>
-                    <th className="py-2.5 px-3 text-right rounded-r-lg">Reach KOC Duyệt</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {campaignRows.map((r) => (
-                    <tr key={r.camp.id} className="hover:bg-violet-50/30 transition-colors">
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2.5">
-                          <img
-                            src={r.camp.productHeroImage}
-                            alt=""
-                            className="h-9 w-9 rounded-lg object-cover shrink-0 border border-slate-200"
-                          />
-                          <div className="min-w-0">
-                            <p className="font-bold text-slate-900 truncate max-w-[240px]" title={r.camp.title}>
-                              {r.camp.brandName} — {r.camp.title}
-                            </p>
-                            <p className="text-[11px] text-slate-500">
-                              {r.camp.category} · HH {r.camp.commissionRate || '—'} · Mã: {r.camp.code}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 min-w-[130px]">
-                        <div className="flex justify-between text-[11px] font-semibold mb-1">
-                          <span className="text-slate-700">
-                            {r.approved}/{r.totalSpots}
-                          </span>
-                          <span className="text-violet-700">{r.spotFillPct}%</span>
-                        </div>
-                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-500"
-                            style={{ width: `${r.spotFillPct}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-slate-900">{r.total}</td>
-                      <td className="py-3 px-2 text-center">
-                        <span className="rounded-md bg-amber-50 px-2 py-0.5 font-bold text-amber-700">{r.pending}</span>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <span className="rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700">{r.approved}</span>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">
-                          {r.completed}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <span className="rounded-md bg-rose-50 px-2 py-0.5 font-bold text-rose-700">{r.rejected}</span>
-                      </td>
-                      <td className="py-3 px-2 text-center whitespace-nowrap">
-                        <span className="font-bold text-blue-700">{r.approvalRate}%</span>
-                        <span className="text-slate-300 mx-1">/</span>
-                        <span className="font-bold text-emerald-700">{r.completionRate}%</span>
-                      </td>
-                      <td className="py-3 px-3 text-right font-black text-indigo-700">
-                        {formatCompact(r.reach)}
-                      </td>
-                    </tr>
+                <div className="grid gap-3 md:grid-cols-4 pt-1">
+                  {[
+                    {
+                      step: 'Bước 1',
+                      label: 'KOC Đăng Ký (File 1)',
+                      value: sheetsReport.registeredTotal,
+                      pct: sheetsReport.registeredTotal > 0 ? 100 : 0,
+                      sub: `${sheetsReport.registeredUniqueKocs} kênh TikTok độc nhất`,
+                      color: 'from-violet-600 to-indigo-600',
+                    },
+                    {
+                      step: 'Bước 2',
+                      label: 'Đưa Vào Xét Duyệt (3 Đợt)',
+                      value: totalWaveReviewed,
+                      pct: Math.min(100, Math.round((totalWaveReviewed / baseCount) * 100)),
+                      sub: 'Đợt 1 + Đợt 2 + Campaign mới',
+                      color: 'from-blue-600 to-indigo-500',
+                    },
+                    {
+                      step: 'Bước 3',
+                      label: 'Brand Đã Duyệt KOC (TRUE)',
+                      value: totalWaveBrandApproved,
+                      pct: brandPctOfReviewed,
+                      sub: `${brandPctOfReviewed}% trên tổng hồ sơ xét duyệt`,
+                      color: 'from-emerald-500 to-teal-600',
+                    },
+                    {
+                      step: 'Bước 4',
+                      label: 'ADFI Duyệt Gửi Sample (TRUE)',
+                      value: totalWaveAdfiApproved,
+                      pct:
+                        totalWaveBrandApproved > 0
+                          ? Math.min(100, Math.round((totalWaveAdfiApproved / totalWaveBrandApproved) * 100))
+                          : 0,
+                      sub: 'Xác nhận xuất kho gửi mẫu 0đ',
+                      color: 'from-green-500 to-emerald-600',
+                    },
+                  ].map((item) => (
+                    <div key={item.step} className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                        <span>{item.step}</span>
+                        <span className="text-slate-900">{item.pct}%</span>
+                      </div>
+                      <p className="text-2xl font-black text-slate-900">
+                        {sheetsReport.loading ? '...' : item.value.toLocaleString('vi-VN')}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-800">{item.label}</p>
+                      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-500`}
+                          style={{ width: `${item.pct}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-500">{item.sub}</p>
+                    </div>
                   ))}
-                  {campaignRows.length === 0 && (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-400">
-                        Không tìm thấy chiến dịch nào khớp với từ khóa "{campaignSearch}".
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* BẢNG TỔNG HỢP HIỆU SUẤT TỪNG SẢN PHẨM CỦA CỎ MỀM (DỰA TRÊN FILE KẾT QUẢ KOC ĐÃ DUYỆT) */}
+          {(() => {
+            const selectedWaves =
+              waveFilter === 'all' ? sheetsReport.waves : sheetsReport.waves.filter((w) => w.id === waveFilter);
+
+            const mergedMap = new Map<
+              string,
+              {
+                productName: string;
+                waveLabels: Set<string>;
+                totalSelected: number;
+                brandApproved: number;
+                adfiApproved: number;
+                approvedReach: number;
+              }
+            >();
+
+            selectedWaves.forEach((w) => {
+              w.products.forEach((p) => {
+                const key = p.productName.toLowerCase();
+                const cur = mergedMap.get(key);
+                if (!cur) {
+                  mergedMap.set(key, {
+                    productName: p.productName,
+                    waveLabels: new Set([p.waveLabel]),
+                    totalSelected: p.totalSelected,
+                    brandApproved: p.brandApproved,
+                    adfiApproved: p.adfiApproved,
+                    approvedReach: p.approvedReach,
+                  });
+                } else {
+                  cur.waveLabels.add(p.waveLabel);
+                  cur.totalSelected += p.totalSelected;
+                  cur.brandApproved += p.brandApproved;
+                  cur.adfiApproved += p.adfiApproved;
+                  cur.approvedReach += p.approvedReach;
+                }
+              });
+            });
+
+            const productRows = Array.from(mergedMap.values())
+              .map((p) => ({
+                ...p,
+                wavesArr: Array.from(p.waveLabels),
+                notApproved: Math.max(0, p.totalSelected - p.brandApproved),
+                approvalRate: p.totalSelected > 0 ? Math.round((p.brandApproved / p.totalSelected) * 100) : 0,
+              }))
+              .filter((p) => {
+                if (!campaignSearch.trim()) return true;
+                return p.productName.toLowerCase().includes(campaignSearch.toLowerCase());
+              })
+              .sort((a, b) => {
+                if (sortBy === 'apps') return b.totalSelected - a.totalSelected;
+                if (sortBy === 'completed') return b.adfiApproved - a.adfiApproved;
+                if (sortBy === 'reach') return b.approvedReach - a.approvedReach;
+                return b.brandApproved - a.brandApproved || b.totalSelected - a.totalSelected;
+              });
+
+            const maxApproved = Math.max(...productRows.map((p) => p.brandApproved), 1);
+
+            const handleExportProductsCSV = () => {
+              const headers = [
+                'Sản Phẩm Cỏ Mềm',
+                'Đợt Chiến Dịch',
+                'Tổng KOC Chọn',
+                'Brand Đã Duyệt (TRUE)',
+                'ADFI Duyệt Sample (TRUE)',
+                'Chưa Duyệt',
+                'Tỷ Lệ Brand Duyệt (%)',
+                'Tổng Reach Followers Duyệt',
+              ];
+              const csvRows = [
+                headers.join(','),
+                ...productRows.map((p) =>
+                  [
+                    `"${p.productName.replace(/"/g, '""')}"`,
+                    `"${p.wavesArr.join(' | ')}"`,
+                    p.totalSelected,
+                    p.brandApproved,
+                    p.adfiApproved,
+                    p.notApproved,
+                    p.approvalRate,
+                    p.approvedReach,
+                  ].join(',')
+                ),
+              ];
+              const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `KOCity_CoMem_HieuSuat_SanPham_${new Date().toISOString().split('T')[0]}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              onShowToast(
+                'Đã xuất CSV sản phẩm Cỏ Mềm!',
+                `Đã tải bảng hiệu suất của ${productRows.length} sản phẩm Cỏ Mềm.`,
+                'success'
+              );
+            };
+
+            return (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Bảng Tổng Hợp Hiệu Suất Từng Sản Phẩm Cỏ Mềm ({productRows.length} sản phẩm)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Tự động gom nhóm theo từng sản phẩm từ file kết quả KOC đã được duyệt (3 đợt Cỏ Mềm)
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={waveFilter}
+                      onChange={(e) => setWaveFilter(e.target.value as any)}
+                      className="rounded-xl border border-emerald-300 bg-emerald-50/70 px-2.5 py-1.5 text-xs font-bold text-emerald-800 cursor-pointer"
+                    >
+                      <option value="all">Tất cả 3 đợt Cỏ Mềm</option>
+                      <option value="dot-1">Cỏ Mềm đợt 1</option>
+                      <option value="dot-2">Cỏ Mềm đợt 2</option>
+                      <option value="campaign-moi">Cỏ Mềm Campaign mới</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={campaignSearch}
+                      onChange={(e) => setCampaignSearch(e.target.value)}
+                      placeholder="Tìm tên sản phẩm Cỏ Mềm..."
+                      className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-violet-500 focus:outline-none w-48"
+                    />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="rounded-xl border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 cursor-pointer"
+                    >
+                      <option value="approved">Sắp xếp: Brand duyệt nhiều nhất</option>
+                      <option value="apps">Sắp xếp: KOC chọn nhiều nhất</option>
+                      <option value="completed">Sắp xếp: ADFI duyệt mẫu</option>
+                      <option value="reach">Sắp xếp: Reach KOC cao nhất</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleExportProductsCSV}
+                      className="rounded-xl bg-slate-900 hover:bg-slate-800 px-3.5 py-1.5 text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>📥 Xuất CSV Sản Phẩm</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase bg-slate-50/70">
+                        <th className="py-2.5 px-3 rounded-l-lg">Sản Phẩm Cỏ Mềm</th>
+                        <th className="py-2.5 px-2 text-center">Tổng KOC Chọn</th>
+                        <th className="py-2.5 px-2 text-center">Brand Đã Duyệt (TRUE)</th>
+                        <th className="py-2.5 px-2 text-center">ADFI Duyệt Sample</th>
+                        <th className="py-2.5 px-2 text-center">Chưa Duyệt</th>
+                        <th className="py-2.5 px-2 text-center">Tỷ Lệ Duyệt</th>
+                        <th className="py-2.5 px-3 text-right rounded-r-lg">Reach KOC Duyệt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {productRows.map((p, idx) => {
+                        const barWidth = Math.round((p.brandApproved / maxApproved) * 100);
+                        return (
+                          <tr key={p.productName + idx} className="hover:bg-emerald-50/30 transition-colors">
+                            <td className="py-3 px-3 max-w-[340px]">
+                              <p className="font-bold text-slate-900 leading-snug" title={p.productName}>
+                                {p.productName}
+                              </p>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {p.wavesArr.map((wl) => (
+                                  <span
+                                    key={wl}
+                                    className="rounded bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-700"
+                                  >
+                                    {wl}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 text-center font-black text-slate-900">{p.totalSelected}</td>
+                            <td className="py-3 px-2 min-w-[140px]">
+                              <div className="flex items-center justify-center gap-2 mb-1">
+                                <span className="rounded-md bg-emerald-100 px-2 py-0.5 font-black text-emerald-800">
+                                  {p.brandApproved} KOC
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <span className="rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700">
+                                {p.adfiApproved}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+                                {p.notApproved}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-center font-bold text-violet-700">{p.approvalRate}%</td>
+                            <td className="py-3 px-3 text-right font-black text-indigo-700">
+                              {formatCompact(p.approvedReach)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {productRows.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-slate-400">
+                            {sheetsReport.loading
+                              ? 'Đang tải danh sách sản phẩm Cỏ Mềm từ Google Sheet...'
+                              : `Không tìm thấy sản phẩm nào khớp với từ khóa "${campaignSearch}".`}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
