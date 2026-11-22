@@ -67,6 +67,97 @@ function splitCsvLine(line: string): string[] {
   return result;
 }
 
+/** Parser CSV chuẩn RFC-4180 hỗ trợ ô chứa ký tự xuống dòng bên trong dấu ngoặc kép */
+function parseCsvMatrix(csvText: string): string[][] {
+  const text = csvText.replace(/^\uFEFF/, '');
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cell += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      row.push(cell.trim());
+      cell = '';
+    } else if (ch === '\n') {
+      row.push(cell.trim());
+      if (row.some((c) => c !== '')) rows.push(row);
+      row = [];
+      cell = '';
+    } else if (ch !== '\r') {
+      cell += ch;
+    }
+  }
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell.trim());
+    if (row.some((c) => c !== '')) rows.push(row);
+  }
+  return rows;
+}
+
+/** Parse số followers từ chuỗi Google Sheet (VD: "46.700", "15,2K", "1.2M") */
+function parseSheetFollowerCount(raw?: string): number {
+  if (!raw) return 0;
+  const s = raw.toLowerCase().trim();
+  if (!s) return 0;
+  if (s.includes('m')) {
+    const n = parseFloat(s.replace(',', '.'));
+    return isNaN(n) ? 0 : Math.round(n * 1_000_000);
+  }
+  if (s.includes('k')) {
+    const n = parseFloat(s.replace(',', '.'));
+    return isNaN(n) ? 0 : Math.round(n * 1_000);
+  }
+  const digits = s.replace(/\D/g, '');
+  return parseInt(digits, 10) || 0;
+}
+
+const SHEET_REGISTERED_ID = '1oDyaZtnnVIe5Nv6sAsolml2-w-1m_-UZ8spKSDmrS1M';
+const SHEET_COMEM_WAVES_ID = '16HWYJ3w8x2k_lLvOnB7OGdtWe2KhAAVmNNG6SNkYuZo';
+const ZALO_GROUP_MEMBERS_COUNT = 329;
+
+const COMEM_WAVE_TABS = [
+  { id: 'dot-1', label: 'Cỏ Mềm đợt 1', sheetTab: 'Lộc - Cỏ Mềm đợt 1', gid: '1896058750' },
+  { id: 'dot-2', label: 'Cỏ Mềm đợt 2', sheetTab: 'Lộc - Cỏ Mềm đợt 2', gid: '459414595' },
+  { id: 'campaign-moi', label: 'Cỏ Mềm Campaign mới', sheetTab: 'Cỏ Mềm Campaign mớii', gid: '557155338' },
+] as const;
+
+interface LiveWaveReport {
+  id: string;
+  label: string;
+  gid: string;
+  totalReviewed: number;
+  brandApproved: number;
+  adfiApproved: number;
+  approvedReach: number;
+  approvalRatePct: number;
+  adfiRatePct: number;
+}
+
+interface LiveGoogleSheetsReport {
+  loaded: boolean;
+  loading: boolean;
+  registeredTotal: number;
+  registeredUniqueKocs: number;
+  registeredTotalReach: number;
+  waves: LiveWaveReport[];
+  lastSyncedAt: string;
+}
+
 /** Đọc CSV tab BI_He_Sinh_Thai (Ngay, Nen_Tang, Ten_Kenh, Followers, Luot_Xem, Tuong_Tac, Tang_Moi) -> KocityChannelMetric[] */
 function parseSheetCsvToChannelMetrics(csvText: string): KocityChannelMetric[] {
   const lines = csvText
@@ -272,6 +363,124 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
   });
   const [isSyncingChannels, setIsSyncingChannels] = useState(false);
 
+  // Báo cáo live từ 2 file Google Sheet (File KOC đăng ký + File 3 đợt Cỏ Mềm) & Zalo Group 329 TV
+  const [sheetsReport, setSheetsReport] = useState<LiveGoogleSheetsReport>({
+    loaded: false,
+    loading: true,
+    registeredTotal: 0,
+    registeredUniqueKocs: 0,
+    registeredTotalReach: 0,
+    waves: [],
+    lastSyncedAt: '',
+  });
+
+  const loadLiveGoogleSheetsReport = async (notify = false) => {
+    setSheetsReport((prev) => ({ ...prev, loading: true }));
+    try {
+      const regUrl = `https://docs.google.com/spreadsheets/d/${SHEET_REGISTERED_ID}/gviz/tq?tqx=out:csv`;
+      const wavePromises = COMEM_WAVE_TABS.map(async (tab) => {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_COMEM_WAVES_ID}/export?format=csv&gid=${tab.gid}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        const matrix = parseCsvMatrix(text);
+        if (matrix.length < 2) {
+          return {
+            id: tab.id,
+            label: tab.label,
+            gid: tab.gid,
+            totalReviewed: 0,
+            brandApproved: 0,
+            adfiApproved: 0,
+            approvedReach: 0,
+            approvalRatePct: 0,
+            adfiRatePct: 0,
+          };
+        }
+        const hdr = matrix[0].map((h) => h.toLowerCase().trim());
+        const iHandle = hdr.findIndex((h) => h.includes('id name') || h.includes('tiktok'));
+        const iFollowers = hdr.findIndex((h) => h.includes('follower'));
+        const iBrand = hdr.findIndex((h) => h.includes('brand duyệt'));
+        const iAdfi = hdr.findIndex((h) => h.includes('adfi'));
+
+        const dataRows = matrix.slice(1).filter((r) => {
+          const handleVal = iHandle >= 0 ? r[iHandle] : r[1];
+          return Boolean((handleVal || '').trim() || (r[0] || '').trim());
+        });
+
+        let brandApproved = 0;
+        let adfiApproved = 0;
+        let approvedReach = 0;
+
+        dataRows.forEach((r) => {
+          const brandVal = (iBrand >= 0 ? r[iBrand] : r[4] || '').toUpperCase().trim();
+          const adfiVal = (iAdfi >= 0 ? r[iAdfi] : r[5] || '').toUpperCase().trim();
+          const isBrandOk = brandVal === 'TRUE' || brandVal.includes('DUYỆT') || brandVal === 'OK' || brandVal === 'X';
+          const isAdfiOk = adfiVal === 'TRUE' || adfiVal.includes('DUYỆT') || adfiVal === 'OK' || adfiVal === 'X';
+          if (isBrandOk) {
+            brandApproved += 1;
+            approvedReach += parseSheetFollowerCount(iFollowers >= 0 ? r[iFollowers] : r[3]);
+          }
+          if (isAdfiOk) adfiApproved += 1;
+        });
+
+        const totalReviewed = dataRows.length;
+        return {
+          id: tab.id,
+          label: tab.label,
+          gid: tab.gid,
+          totalReviewed,
+          brandApproved,
+          adfiApproved,
+          approvedReach,
+          approvalRatePct: totalReviewed > 0 ? Math.round((brandApproved / totalReviewed) * 100) : 0,
+          adfiRatePct: brandApproved > 0 ? Math.round((adfiApproved / brandApproved) * 100) : 0,
+        };
+      });
+
+      const [regRes, waves] = await Promise.all([fetch(regUrl), Promise.all(wavePromises)]);
+      const regMatrix = parseCsvMatrix(await regRes.text());
+      let registeredTotal = 0;
+      let registeredTotalReach = 0;
+      const uniqueHandles = new Set<string>();
+
+      if (regMatrix.length >= 2) {
+        const hdr = regMatrix[0].map((h) => h.toLowerCase().trim());
+        const iHandle = hdr.findIndex((h) => h.includes('id name') || h.includes('tiktok'));
+        const iFollowers = hdr.findIndex((h) => h.includes('follower'));
+        const rows = regMatrix.slice(1).filter((r) => Boolean((r[0] || '').trim() || (r[2] || '').trim()));
+        registeredTotal = rows.length;
+        rows.forEach((r) => {
+          const h = (iHandle >= 0 ? r[iHandle] : r[2] || '').toLowerCase().replace(/[@\s]/g, '');
+          if (h) uniqueHandles.add(h);
+          registeredTotalReach += parseSheetFollowerCount(iFollowers >= 0 ? r[iFollowers] : r[4]);
+        });
+      }
+
+      setSheetsReport({
+        loaded: true,
+        loading: false,
+        registeredTotal,
+        registeredUniqueKocs: uniqueHandles.size,
+        registeredTotalReach,
+        waves,
+        lastSyncedAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      });
+
+      if (notify) {
+        onShowToast(
+          'Đã đồng bộ live từ 2 file Google Sheet!',
+          `Đã cập nhật ${registeredTotal} KOC đăng ký & 3 đợt duyệt Cỏ Mềm.`,
+          'success'
+        );
+      }
+    } catch {
+      setSheetsReport((prev) => ({ ...prev, loading: false }));
+      if (notify) {
+        onShowToast('Lỗi đọc Google Sheet', 'Kiểm tra kết nối mạng hoặc quyền xem công khai của 2 file Sheet.', 'warning');
+      }
+    }
+  };
+
   const loadFromGoogleSheet = async (rawUrl: string, showFeedback = false): Promise<boolean> => {
     const csvUrl = normalizeGoogleSheetCsvUrl(rawUrl);
     if (!csvUrl) return false;
@@ -326,6 +535,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
   };
 
   useEffect(() => {
+    loadLiveGoogleSheetsReport(false);
     (async () => {
       if (sheetUrl.trim()) {
         const ok = await loadFromGoogleSheet(sheetUrl, false);
@@ -792,6 +1002,167 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
       {/* =================================================================== */}
       {viewMode === 'campaigns-bi' && (
         <div className="space-y-6">
+          {/* BÁO CÁO LIVE TỪ 2 FILE GOOGLE SHEET (KOC ĐĂNG KÝ + 3 ĐỢT CỎ MỀM) & ZALO GROUP 329 TV */}
+          {(() => {
+            const totalWaveReviewed = sheetsReport.waves.reduce((s, w) => s + w.totalReviewed, 0);
+            const totalWaveBrandApproved = sheetsReport.waves.reduce((s, w) => s + w.brandApproved, 0);
+            const totalWaveAdfiApproved = sheetsReport.waves.reduce((s, w) => s + w.adfiApproved, 0);
+            const totalWaveReach = sheetsReport.waves.reduce((s, w) => s + w.approvedReach, 0);
+            const totalApprovalPct =
+              totalWaveReviewed > 0 ? Math.round((totalWaveBrandApproved / totalWaveReviewed) * 100) : 0;
+
+            return (
+              <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/60 via-white to-violet-50/50 p-5 shadow-sm space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Live Google Sheets Sync
+                      </span>
+                      <h3 className="text-base font-extrabold text-slate-900">
+                        Tổng Hợp Thực Tế: Zalo Group (329 TV) & 2 File Google Sheet Cỏ Mềm
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Đọc trực tiếp theo thời gian thực từ file <b>KOC đã đăng ký</b> và file <b>3 đợt duyệt Cỏ Mềm</b> (Đợt 1, Đợt 2, Campaign mới)
+                      {sheetsReport.lastSyncedAt ? ` · Cập nhật lúc ${sheetsReport.lastSyncedAt}` : ''}.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={`https://docs.google.com/spreadsheets/d/${SHEET_REGISTERED_ID}/edit?usp=sharing`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700"
+                    >
+                      📄 Sheet Đăng Ký ↗
+                    </a>
+                    <a
+                      href={`https://docs.google.com/spreadsheets/d/${SHEET_COMEM_WAVES_ID}/edit?usp=sharing`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700"
+                    >
+                      📊 Sheet 3 Đợt Cỏ Mềm ↗
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => loadLiveGoogleSheetsReport(true)}
+                      disabled={sheetsReport.loading}
+                      className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs cursor-pointer"
+                    >
+                      {sheetsReport.loading ? 'Đang tải...' : '🔄 Đồng Bộ Live'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5 Thẻ tổng hợp nhanh từ Zalo + 2 Sheet */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                  <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3.5">
+                    <p className="text-[10px] font-bold text-sky-800 uppercase">Group Zalo KOCity</p>
+                    <p className="mt-1 text-2xl font-black text-sky-700">{ZALO_GROUP_MEMBERS_COUNT}</p>
+                    <span className="text-[11px] text-sky-700 font-semibold">Thành viên cộng đồng</span>
+                  </div>
+                  <div className="rounded-xl border border-violet-200 bg-white p-3.5">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">KOC Đã Đăng Ký (File 1)</p>
+                    <p className="mt-1 text-2xl font-black text-violet-700">
+                      {sheetsReport.loading ? '...' : sheetsReport.registeredTotal.toLocaleString('vi-VN')}
+                    </p>
+                    <span className="text-[11px] text-slate-500">
+                      {sheetsReport.registeredUniqueKocs} kênh TikTok độc nhất
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3.5">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">Xét Duyệt 3 Đợt Cỏ Mềm</p>
+                    <p className="mt-1 text-2xl font-black text-slate-900">
+                      {sheetsReport.loading ? '...' : totalWaveReviewed.toLocaleString('vi-VN')}
+                    </p>
+                    <span className="text-[11px] text-slate-500">Đợt 1 + Đợt 2 + Mới</span>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3.5">
+                    <p className="text-[10px] font-bold text-emerald-800 uppercase">Brand Đã Duyệt (TRUE)</p>
+                    <p className="mt-1 text-2xl font-black text-emerald-700">
+                      {sheetsReport.loading ? '...' : totalWaveBrandApproved.toLocaleString('vi-VN')}
+                    </p>
+                    <span className="text-[11px] text-emerald-700 font-bold">
+                      Tỷ lệ duyệt {totalApprovalPct}% · ADFI: {totalWaveAdfiApproved}
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-indigo-200 bg-white p-3.5">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">Reach KOC Được Duyệt</p>
+                    <p className="mt-1 text-2xl font-black text-indigo-700">
+                      {sheetsReport.loading ? '...' : formatCompact(totalWaveReach)}
+                    </p>
+                    <span className="text-[11px] text-slate-500">Tổng Followers 3 đợt</span>
+                  </div>
+                </div>
+
+                {/* Bảng chi tiết từng đợt Cỏ Mềm */}
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase">
+                        <th className="py-2.5 px-4">Đợt Chiến Dịch Cỏ Mềm</th>
+                        <th className="py-2.5 px-3 text-center">Tổng Hồ Sơ Xét Duyệt</th>
+                        <th className="py-2.5 px-3 text-center">Brand Duyệt KOC (TRUE)</th>
+                        <th className="py-2.5 px-3 text-center">ADFI Duyệt Sample (TRUE)</th>
+                        <th className="py-2.5 px-3 text-center">Tỷ Lệ Brand Duyệt</th>
+                        <th className="py-2.5 px-3 text-right">Tổng Reach Followers Duyệt</th>
+                        <th className="py-2.5 px-4 text-right">Link Sheet</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {sheetsReport.waves.map((w) => (
+                        <tr key={w.id} className="hover:bg-emerald-50/30">
+                          <td className="py-2.5 px-4 font-bold text-slate-900">{w.label}</td>
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-700">
+                            {w.totalReviewed.toLocaleString('vi-VN')}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className="rounded-md bg-emerald-100 px-2.5 py-0.5 font-black text-emerald-800">
+                              {w.brandApproved} KOC
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className="rounded-md bg-blue-50 px-2.5 py-0.5 font-bold text-blue-700">
+                              {w.adfiApproved} mẫu
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-bold text-violet-700">{w.approvalRatePct}%</td>
+                          <td className="py-2.5 px-3 text-right font-black text-indigo-700">
+                            {formatCompact(w.approvedReach)}
+                          </td>
+                          <td className="py-2.5 px-4 text-right">
+                            <a
+                              href={`https://docs.google.com/spreadsheets/d/${SHEET_COMEM_WAVES_ID}/edit#gid=${w.gid}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-600 hover:underline font-bold"
+                            >
+                              Mở tab ↗
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                      {sheetsReport.waves.length > 0 && (
+                        <tr className="bg-slate-50/90 font-black text-slate-900">
+                          <td className="py-2.5 px-4">TỔNG CỘNG 3 ĐỢT CỎ MỀM</td>
+                          <td className="py-2.5 px-3 text-center">{totalWaveReviewed.toLocaleString('vi-VN')}</td>
+                          <td className="py-2.5 px-3 text-center text-emerald-700">{totalWaveBrandApproved} KOC</td>
+                          <td className="py-2.5 px-3 text-center text-blue-700">{totalWaveAdfiApproved} mẫu</td>
+                          <td className="py-2.5 px-3 text-center text-violet-700">{totalApprovalPct}%</td>
+                          <td className="py-2.5 px-3 text-right text-indigo-700">{formatCompact(totalWaveReach)}</td>
+                          <td className="py-2.5 px-4 text-right text-[11px] text-slate-400">100% Live</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Phễu chuyển đổi 5 bước 100% số thật */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
