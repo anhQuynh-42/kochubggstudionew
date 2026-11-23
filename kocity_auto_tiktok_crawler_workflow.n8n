@@ -1,5 +1,5 @@
 {
-  "name": "KOCity - Tự Động Quét Ngầm TikTok Phát Hiện Video KOC Lên Bài",
+  "name": "KOCity - Theo Dõi KOC Cỏ Mềm Lên Video TikTok (100% Miễn Phí 0đ)",
   "nodes": [
     {
       "parameters": {
@@ -17,8 +17,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -300,
-        100
+        -640,
+        80
       ]
     },
     {
@@ -28,20 +28,42 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -300,
+        -640,
         280
       ]
     },
     {
       "parameters": {
-        "jsCode": "// 1. Danh sách KOC trọng điểm cần theo dõi chiến dịch Cỏ Mềm\nconst targetKocs = [\n  'embes.bii',\n  'dh.t172',\n  'muoi2021.pe',\n  'sunnynguyen09',\n  'Oanh.thu1408',\n  'yyuunnii03',\n  'yenlamme',\n  'gaoiu2511',\n  'me.emleo',\n  'hathilan0711'\n];\n\n// 2. Bộ lọc Hashtag & Từ khóa bắt buộc trong Caption\nconst campaignHashtags = ['#comem', '#comemhomelab', '#adfi', '#kocity', '#myphamthiennhien'];\nconst campaignKeywords = ['cỏ mềm', 'comem', 'son dưỡng gạo', 'sâm 1700'];\n\nreturn targetKocs.map(koc => ({\n  json: {\n    kocHandle: koc.replace(/^@/, '').trim(),\n    channelUrl: `https://www.tiktok.com/@${koc.replace(/^@/, '').trim()}`,\n    campaignHashtags,\n    campaignKeywords,\n    scanTime: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })\n  }\n}));"
+        "method": "GET",
+        "url": "https://docs.google.com/spreadsheets/d/16HWYJ3w8x2k_lLvOnB7OGdtWe2KhAAVmNNG6SNkYuZo/export?format=csv&gid=557155338",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 20000
+        }
       },
-      "id": "config-kocs",
-      "name": "Cấu Hình KOC & Bộ Lọc Hashtag",
+      "id": "fetch-sheet-csv",
+      "name": "Tải Danh Sách KOC Cỏ Mềm (CSV 0đ)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -380,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse RFC-4180 CSV (hỗ trợ ô có xuống dòng trong Google Sheets)\nconst raw = $input.first().json.data ?? $input.first().json;\nconst text = typeof raw === 'string' ? raw : String(raw || '');\n\nconst rows = [];\nlet cur = [];\nlet field = '';\nlet inQuotes = false;\nfor (let i = 0; i < text.length; i++) {\n  const c = text[i];\n  if (inQuotes) {\n    if (c === '\"' && text[i + 1] === '\"') {\n      field += '\"';\n      i++;\n    } else if (c === '\"') {\n      inQuotes = false;\n    } else {\n      field += c;\n    }\n  } else {\n    if (c === '\"') {\n      inQuotes = true;\n    } else if (c === ',') {\n      cur.push(field);\n      field = '';\n    } else if (c === '\\r') {\n      // bỏ qua CR\n    } else if (c === '\\n') {\n      cur.push(field);\n      rows.push(cur);\n      cur = [];\n      field = '';\n    } else {\n      field += c;\n    }\n  }\n}\nif (field || cur.length) {\n  cur.push(field);\n  rows.push(cur);\n}\n\nif (rows.length < 2) return [];\n\nconst headers = rows[0].map(h => String(h || '').trim().toLowerCase());\nconst idxProduct = headers.findIndex(h => h.includes('sản phẩm') || h.includes('san pham'));\nconst idxId = headers.findIndex(h => h.includes('id name') || h.includes('tiktok của bạn') && !h.includes('link'));\nconst idxLink = headers.findIndex(h => h.includes('link kênh') || h.includes('link kenh'));\nconst idxFollowers = headers.findIndex(h => h.includes('follower'));\nconst idxApproved = headers.findIndex(h => h.includes('brand duyệt') || h.includes('brand duyet'));\n\nconst colProduct = idxProduct >= 0 ? idxProduct : 0;\nconst colId = idxId >= 0 ? idxId : 1;\nconst colLink = idxLink >= 0 ? idxLink : 2;\nconst colFollowers = idxFollowers >= 0 ? idxFollowers : 3;\nconst colApproved = idxApproved >= 0 ? idxApproved : 4;\n\nconst cleanHandle = (linkVal, idVal) => {\n  const link = String(linkVal || '').trim();\n  const m = link.match(/tiktok\\.com\\/@([a-zA-Z0-9._]+)/i);\n  if (m && m[1]) return m[1].trim();\n  let id = String(idVal || '').trim();\n  id = id.replace(/^https?:\\/\\/(www\\.)?tiktok\\.com\\/@?/i, '').replace(/^@+/, '').split(/[/?\\s]/)[0];\n  return id.trim();\n};\n\nconst seen = new Set();\nconst kocs = [];\n\nfor (let r = 1; r < rows.length; r++) {\n  const row = rows[r];\n  const approved = String(row[colApproved] || '').trim().toUpperCase();\n  if (approved !== 'TRUE') continue;\n\n  const kocHandle = cleanHandle(row[colLink], row[colId]);\n  if (!kocHandle) continue;\n\n  const key = kocHandle.toLowerCase();\n  if (seen.has(key)) continue;\n  seen.add(key);\n\n  kocs.push({\n    kocHandle,\n    product: String(row[colProduct] || 'Cỏ Mềm Homelab').trim().replace(/\\s+/g, ' ').slice(0, 80),\n    sheetFollowers: String(row[colFollowers] || '').trim(),\n    channelUrl: `https://www.tiktok.com/@${kocHandle}`\n  });\n}\n\nconst totalTarget = kocs.length;\nreturn kocs.map((k, idx) => ({\n  json: {\n    ...k,\n    index: idx + 1,\n    totalTarget\n  }\n}));"
+      },
+      "id": "parse-approved-kocs",
+      "name": "Lọc KOC Đã Duyệt (Brand = TRUE)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -40,
+        -120,
         180
       ]
     },
@@ -55,21 +77,90 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        200,
+        140,
         180
       ]
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst koc = item.kocHandle;\n\n// n8n Static Data lưu trữ các video ID đã từng phát hiện và danh sách KOC độc nhất đã đăng clip\nconst staticData = $getWorkflowStaticData('global');\nif (!Array.isArray(staticData.detectedVideoIds)) {\n  staticData.detectedVideoIds = [];\n}\nif (!Array.isArray(staticData.postedKocs)) {\n  staticData.postedKocs = [];\n}\n\n// Module phân tích & thẩm định video tự động\n// (Trong thực tế sẽ nhận dữ liệu video mới nhất từ TikTok API/Scraper)\nconst mockRecentVideos = [\n  {\n    videoId: `vid_${koc}_01`,\n    caption: `Trải nghiệm bộ sản phẩm thiên nhiên siêu ưng ý cùng #CoMem và #KOCity nè mn ơi! Cảm ơn brand #ADFI đã gửi mẫu nhé ❤️`,\n    postedAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),\n    videoUrl: `https://www.tiktok.com/@${koc}/video/7328192837492`,\n    views: '12.5K'\n  }\n];\n\nconst matchedVideos = [];\n\nfor (const vid of mockRecentVideos) {\n  const captionLower = vid.caption.toLowerCase();\n  const matchedTags = item.campaignHashtags.filter(tag => captionLower.includes(tag.toLowerCase()));\n  const matchedWords = item.campaignKeywords.filter(w => captionLower.includes(w.toLowerCase()));\n  \n  const isCampaignVideo = matchedTags.length > 0 || matchedWords.length > 0;\n  const isAlreadyReported = staticData.detectedVideoIds.includes(vid.videoId);\n\n  if (isCampaignVideo && !isAlreadyReported) {\n    // 1. Lưu video ID để không gửi lại video này lần sau\n    staticData.detectedVideoIds.push(vid.videoId);\n\n    // 2. Cập nhật danh sách KOC độc nhất đã lên video (không trùng lặp tên KOC)\n    const kocLower = koc.toLowerCase();\n    const isNewPoster = !staticData.postedKocs.some(k => k.toLowerCase() === kocLower);\n    if (isNewPoster) {\n      staticData.postedKocs.push(koc);\n    }\n\n    const totalPosted = staticData.postedKocs.length;\n    const totalTarget = 68;\n    const percent = Math.round((totalPosted / totalTarget) * 100);\n    const remaining = Math.max(0, totalTarget - totalPosted);\n\n    // Danh sách KOC đã lên bài dạng tag\n    let postedListText = '';\n    if (totalPosted === 0) {\n      postedListText = '<i>(Chưa có KOC nào lên bài)</i>';\n    } else if (totalPosted <= 25) {\n      postedListText = staticData.postedKocs.map((name, idx) => `${idx + 1}. <code>@${name}</code>`).join('\\n');\n    } else {\n      postedListText = staticData.postedKocs.map(name => `<code>@${name}</code>`).join(' • ');\n    }\n\n    const posterTag = isNewPoster ? '✨ <b>[KOC MỚI LÊN BÀI LẦN ĐẦU]</b>' : '🎬 <i>(KOC này đăng thêm video mới)</i>';\n\n    const telegramMessage = \n      `🎬 <b>[KOCITY AUTO-CRAWLER] PHÁT HIỆN KOC VỪA LÊN VIDEO!</b>\\n\\n` +\n      `👤 <b>KOC:</b> <code>@${koc}</code> ${posterTag}\\n` +\n      `📦 <b>Chiến dịch:</b> Cỏ Mềm Homelab (Mẫu 0đ)\\n` +\n      `🔗 <b>Link video TikTok:</b> <a href=\"${vid.videoUrl}\">${vid.videoUrl}</a>\\n` +\n      `📝 <b>Caption trích đoạn:</b> <i>\"${vid.caption}\"</i>\\n` +\n      `⏰ <b>Thời gian phát hiện:</b> ${vid.postedAt}\\n` +\n      `🏷️ <b>Hashtag khớp:</b> ${matchedTags.join(' ') || '#CoMem'}\\n\\n` +\n      `━━━━━━━━━━━━━━━━━━━━\\n` +\n      `📊 <b>TỔNG HỢP TIẾN ĐỘ KOC LÊN VIDEO:</b>\\n` +\n      `🔥 <b>Đã đăng clip:</b> <b>${totalPosted}/${totalTarget} KOC</b> (${percent}%)\\n` +\n      `⏳ <b>Chưa lên video:</b> <b>${remaining} KOC</b>\\n` +\n      `👥 <b>Tổng số KOC độc nhất đã đăng:</b> <b>${totalPosted} KOC</b>\\n` +\n      `📋 <b>Danh sách KOC đã lên bài:</b>\\n${postedListText}\\n` +\n      `━━━━━━━━━━━━━━━━━━━━\\n\\n` +\n      `✅ <b>Trạng thái:</b> Tự động nhận diện 100% — KOC không cần nộp link!\\n` +\n      `💡 <i>Nhắc nhở: Hãy vào TikTok Shop Seller Center kiểm tra gắn giỏ hàng và nghiệm thu nhé!</i>`;\n\n    matchedVideos.push({\n      koc,\n      videoUrl: vid.videoUrl,\n      caption: vid.caption,\n      matchedTags,\n      postedAt: vid.postedAt,\n      totalPosted,\n      totalTarget,\n      percent,\n      remaining,\n      telegramMessage\n    });\n  }\n}\n\nreturn matchedVideos.map(v => ({ json: v }));"
+        "method": "GET",
+        "url": "={{ 'https://www.tiktok.com/@' + encodeURIComponent($json.kocHandle) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "vi-VN,vi;q=0.9,en-US;q=0.8"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 20000
+        }
       },
-      "id": "detect-and-validate",
-      "name": "Phân Tích & Thẩm Định Video",
+      "id": "fetch-tiktok-profile",
+      "name": "Lấy Thông Tin Kênh TikTok (0đ)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        280
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const meta = $('Lặp Từng KOC').first().json;\nconst koc = meta.kocHandle;\nconst key = koc.toLowerCase();\nconst htmlRaw = $input.first().json.data ?? '';\nconst html = typeof htmlRaw === 'string' ? htmlRaw : '';\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.kocVideoCounts || typeof staticData.kocVideoCounts !== 'object') {\n  staticData.kocVideoCounts = {};\n}\nif (!Array.isArray(staticData.postedKocs)) {\n  staticData.postedKocs = [];\n}\n\nconst esc = (s) => String(s ?? '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\n// Đọc JSON nhúng sẵn trong trang công khai của TikTok (không cần API trả phí)\nlet videoCount = null;\nlet followerCount = null;\nlet nickname = '';\n\nconst marker = '__UNIVERSAL_DATA_FOR_REHYDRATION__';\nconst idx = html.indexOf(marker);\nif (idx !== -1) {\n  const start = html.indexOf('>', idx) + 1;\n  const end = html.indexOf('</script>', start);\n  if (start > 0 && end > start) {\n    try {\n      const parsed = JSON.parse(html.slice(start, end));\n      const userInfo = parsed?.__DEFAULT_SCOPE__?.['webapp.user-detail']?.userInfo;\n      if (userInfo?.stats && typeof userInfo.stats.videoCount === 'number') {\n        videoCount = userInfo.stats.videoCount;\n        followerCount = userInfo.stats.followerCount ?? null;\n        nickname = userInfo.user?.nickname || '';\n      }\n    } catch (e) {\n      // bỏ qua nếu trang không parse được\n    }\n  }\n}\n\nif (videoCount === null) {\n  return [{ json: { hasAlert: false, status: 'skip', kocHandle: koc } }];\n}\n\nconst prevCount = staticData.kocVideoCounts[key];\n\n// Lần đầu tiên ghi nhận KOC này -> lưu mốc ban đầu, không spam Telegram\nif (typeof prevCount !== 'number') {\n  staticData.kocVideoCounts[key] = videoCount;\n  return [{ json: { hasAlert: false, status: 'baseline', kocHandle: koc, videoCount } }];\n}\n\n// Phát hiện số lượng video tăng lên!\nif (videoCount > prevCount) {\n  const diff = videoCount - prevCount;\n  staticData.kocVideoCounts[key] = videoCount;\n\n  const isNewPoster = !staticData.postedKocs.some(k => k.toLowerCase() === key);\n  if (isNewPoster) {\n    staticData.postedKocs.push(koc);\n  }\n\n  const totalPosted = staticData.postedKocs.length;\n  const totalTarget = meta.totalTarget || totalPosted;\n  const percent = totalTarget ? Math.round((totalPosted / totalTarget) * 100) : 0;\n  const remaining = Math.max(0, totalTarget - totalPosted);\n  const nowVN = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });\n  const followersText = followerCount !== null\n    ? followerCount.toLocaleString('vi-VN')\n    : (meta.sheetFollowers || 'không rõ');\n\n  const posterTag = isNewPoster\n    ? '✨ <b>[LẦN ĐẦU LÊN VIDEO]</b>'\n    : '🎬 <i>(đăng thêm video mới)</i>';\n\n  const telegramMessage =\n    `🎬 <b>[KOCITY TRACKER 0Đ] KOC VỪA ĐĂNG VIDEO MỚI!</b>\\n\\n` +\n    `👤 <b>KOC:</b> <code>@${esc(koc)}</code>` + (nickname ? ` (${esc(nickname)})` : '') + ` ${posterTag}\\n` +\n    `📦 <b>Sản phẩm nhận mẫu:</b> ${esc(meta.product)}\\n` +\n    `📈 <b>Số video kênh:</b> <b>${prevCount} → ${videoCount} (+${diff} video mới)</b>\\n` +\n    `👥 <b>Followers:</b> ${esc(followersText)}\\n` +\n    `🔗 <b>Mở kênh xem video đầu trang:</b> <a href=\"${esc(meta.channelUrl)}\">${esc(meta.channelUrl)}</a>\\n` +\n    `⏰ <b>Phát hiện lúc:</b> ${nowVN}\\n\\n` +\n    `━━━━━━━━━━━━━━━━━━━━\\n` +\n    `📊 <b>Tiến độ KOC lên bài:</b> <b>${totalPosted}/${totalTarget} KOC</b> (${percent}%)\\n` +\n    `⏳ <b>Chưa phát hiện video mới:</b> <b>${remaining} KOC</b>\\n` +\n    `━━━━━━━━━━━━━━━━━━━━`;\n\n  return [{\n    json: {\n      hasAlert: true,\n      status: 'new_video',\n      kocHandle: koc,\n      prevCount,\n      videoCount,\n      diff,\n      telegramMessage\n    }\n  }];\n}\n\n// Nếu KOC xóa bớt video cũ -> cập nhật lại mốc mới\nif (videoCount < prevCount) {\n  staticData.kocVideoCounts[key] = videoCount;\n}\n\nreturn [{ json: { hasAlert: false, status: 'no_change', kocHandle: koc, videoCount } }];"
+      },
+      "id": "detect-new-video",
+      "name": "Kiểm Tra Video Mới (So Sánh Mốc)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
-        180
+        660,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-alert",
+              "leftValue": "={{ $json.hasAlert }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-new-video",
+      "name": "Có Video Mới?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        920,
+        280
       ]
     },
     {
@@ -85,12 +176,64 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        720,
+        1180,
         180
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "plkCDjWQ4FVlZDxe",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1.5,
+        "unit": "seconds"
+      },
+      "id": "wait-throttle",
+      "name": "Chờ 1.5s Chống Chặn",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1420,
+        320
+      ],
+      "webhookId": "kocity-tiktok-wait-1500ms"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst trackedCount = Object.keys(staticData.kocVideoCounts || {}).length;\n\n// Chỉ gửi 1 tin xác nhận duy nhất ở lần chạy đầu tiên để bạn biết hệ thống đã lưu mốc thành công\nif (staticData.initializedNotified) {\n  return [];\n}\n\nstaticData.initializedNotified = true;\nconst nowVN = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });\n\nconst msg =\n  `✅ <b>[KOCITY TRACKER 0Đ] ĐÃ KHỞI TẠO THEO DÕI THÀNH CÔNG!</b>\\n\\n` +\n  `📋 <b>Chiến dịch:</b> Cỏ Mềm Campaign mới (Brand duyệt = TRUE)\\n` +\n  `👥 <b>Đã lưu mốc video ban đầu:</b> <b>${trackedCount} KOC</b>\\n` +\n  `⏰ <b>Thời gian:</b> ${nowVN}\\n\\n` +\n  `🔔 Từ lần quét tiếp theo (tự động 12h & 20h hàng ngày hoặc khi bấm Quét Ngay), hễ KOC nào đăng video mới trên TikTok, Bot sẽ báo ngay về nhóm này!`;\n\nreturn [{ json: { telegramMessage: msg } }];"
+      },
+      "id": "init-summary",
+      "name": "Báo Cáo Khởi Tạo Lần Đầu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-5348405193",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-init-alert",
+      "name": "Bắn Xác Nhận Khởi Tạo (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        40
       ],
       "credentials": {
         "telegramApi": {
-          "id": "8YlUcAebdBbqEpKr",
+          "id": "plkCDjWQ4FVlZDxe",
           "name": "Telegram account"
         }
       }
@@ -101,7 +244,7 @@
       "main": [
         [
           {
-            "node": "Cấu Hình KOC & Bộ Lọc Hashtag",
+            "node": "Tải Danh Sách KOC Cỏ Mềm (CSV 0đ)",
             "type": "main",
             "index": 0
           }
@@ -112,14 +255,25 @@
       "main": [
         [
           {
-            "node": "Cấu Hình KOC & Bộ Lọc Hashtag",
+            "node": "Tải Danh Sách KOC Cỏ Mềm (CSV 0đ)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Cấu Hình KOC & Bộ Lọc Hashtag": {
+    "Tải Danh Sách KOC Cỏ Mềm (CSV 0đ)": {
+      "main": [
+        [
+          {
+            "node": "Lọc KOC Đã Duyệt (Brand = TRUE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lọc KOC Đã Duyệt (Brand = TRUE)": {
       "main": [
         [
           {
@@ -134,18 +288,87 @@
       "main": [
         [
           {
-            "node": "Phân Tích & Thẩm Định Video",
+            "node": "Báo Cáo Khởi Tạo Lần Đầu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lấy Thông Tin Kênh TikTok (0đ)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Phân Tích & Thẩm Định Video": {
+    "Lấy Thông Tin Kênh TikTok (0đ)": {
+      "main": [
+        [
+          {
+            "node": "Kiểm Tra Video Mới (So Sánh Mốc)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kiểm Tra Video Mới (So Sánh Mốc)": {
+      "main": [
+        [
+          {
+            "node": "Có Video Mới?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Có Video Mới?": {
       "main": [
         [
           {
             "node": "Bắn Báo Cáo Về Telegram Admin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chờ 1.5s Chống Chặn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bắn Báo Cáo Về Telegram Admin": {
+      "main": [
+        [
+          {
+            "node": "Chờ 1.5s Chống Chặn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chờ 1.5s Chống Chặn": {
+      "main": [
+        [
+          {
+            "node": "Lặp Từng KOC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Báo Cáo Khởi Tạo Lần Đầu": {
+      "main": [
+        [
+          {
+            "node": "Bắn Xác Nhận Khởi Tạo (Telegram)",
             "type": "main",
             "index": 0
           }
