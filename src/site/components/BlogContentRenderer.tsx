@@ -5,12 +5,73 @@ interface BlogContentRendererProps {
   className?: string;
 }
 
+const ACTIVE_KOC_CLAIM_WEBHOOK = 'https://thanhloc2005.app.n8n.cloud/webhook/koc-sample-claim';
+
+const normalizeBeaconUrl = (rawUrl: string): string => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return '';
+  // Tự động nâng cấp các link webhook cũ còn lưu trong Supabase / localStorage về n8n Cloud mới
+  return trimmed
+    .replace(
+      /^https?:\/\/[^/?#]+\.app\.n8n\.cloud\/webhook\/koc-sample-claim/i,
+      ACTIVE_KOC_CLAIM_WEBHOOK
+    )
+    .replace(
+      /^https?:\/\/script\.google\.com\/macros\/s\/AKfycbyDTBfP3lg84ai94rBegPYIaCd6Jtu51fzKtbL6A8Rk7JGNwdDRId2WlMHAO0hZktNv6Q\/exec/i,
+      ACTIVE_KOC_CLAIM_WEBHOOK
+    );
+};
+
 export const BlogContentRenderer: React.FC<BlogContentRendererProps> = ({ content, className = '' }) => {
   const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [tableRowCount, setTableRowCount] = useState<number | null>(null);
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Chuyển thuộc tính ping -> data-koc-beacon để tránh bị trình duyệt chặn <a ping> hoặc bắn trùng 2 lần
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const pingLinks = containerRef.current.querySelectorAll('a[ping]');
+    pingLinks.forEach((a) => {
+      const pingVal = a.getAttribute('ping');
+      if (pingVal) {
+        a.setAttribute('data-koc-beacon', normalizeBeaconUrl(pingVal));
+        a.removeAttribute('ping');
+      }
+    });
+  }, [content]);
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    const anchor = target?.closest('a') as HTMLAnchorElement | null;
+    if (!anchor) return;
+
+    const rawBeacon = anchor.getAttribute('data-koc-beacon') || anchor.getAttribute('ping');
+    if (!rawBeacon) return;
+
+    const beaconUrl = normalizeBeaconUrl(rawBeacon);
+    if (!beaconUrl) return;
+
+    try {
+      // Dùng fetch keepalive + no-cors để luôn bắn được trên mọi trình duyệt (kể cả Safari, Zalo, TikTok)
+      fetch(beaconUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        keepalive: true,
+        headers: { 'Content-Type': 'text/plain' },
+        body: 'PING',
+      }).catch(() => {
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+          navigator.sendBeacon(beaconUrl);
+        }
+      });
+    } catch {
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        navigator.sendBeacon(beaconUrl);
+      }
+    }
+  };
 
   // Detect if content contains a table and count rows
   useEffect(() => {
@@ -78,7 +139,11 @@ export const BlogContentRenderer: React.FC<BlogContentRendererProps> = ({ conten
   const blocks = content.split(/\n\n+/);
 
   return (
-    <div ref={containerRef} className={`space-y-4 text-slate-700 leading-relaxed ${className}`}>
+    <div
+      ref={containerRef}
+      onClick={handleContainerClick}
+      className={`space-y-4 text-slate-700 leading-relaxed ${className}`}
+    >
       {/* Thanh tìm kiếm nhanh KOC & sản phẩm khi bài viết có bảng danh sách */}
       {tableRowCount && tableRowCount > 3 && (
         <div className="sticky top-2 z-10 my-4 p-3 sm:p-4 rounded-2xl bg-white/95 backdrop-blur-md border border-violet-200 shadow-md flex flex-col sm:flex-row items-center gap-3 animate-fade-in">
