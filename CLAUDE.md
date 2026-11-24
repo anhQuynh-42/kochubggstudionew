@@ -199,9 +199,9 @@ Mục tiêu giao diện: **Thu hút KOC ngay trong 3 giây đầu và giữ châ
 
 ---
 
-## 9. 🤖 Đội ngũ 8 AI Agents KOCity (Claude Code & Claude Team Dashboard)
+## 9. 🤖 Đội ngũ 10 AI Agents KOCity (Claude Code & Claude Team Dashboard)
 
-Dự án KOCity được trang bị đội ngũ 8 AI Agents chuyên trách. Khi làm việc trong **Claude Code CLI** hoặc theo dõi qua **Claude Team Dashboard (`http://localhost:3001`)**, hãy tham chiếu và điều phối các agents sau:
+Dự án KOCity được trang bị đội ngũ 10 AI Agents chuyên trách. Khi làm việc trong **Claude Code CLI** hoặc theo dõi qua **Claude Team Dashboard (`http://localhost:3001`)**, hãy tham chiếu và điều phối các agents sau:
 
 | STT | Tên Agent (`name`) | Vai trò (Role) | Chuyên môn cốt lõi | File Skill tham chiếu |
 | :--- | :--- | :--- | :--- | :--- |
@@ -213,6 +213,8 @@ Dự án KOCity được trang bị đội ngũ 8 AI Agents chuyên trách. Khi 
 | 6 | `safe-deploy-guardian` | QA & Release Engineer | Giám sát zero-regression, chạy `npm run check:seo` & `npm run build`, bảo vệ quy trình release an toàn | `.agents/skills/kocity-safe-deploy/SKILL.md` |
 | 7 | `seo-content-editor` | Content & Editorial Lead | Biên soạn bài viết SEO / cẩm nang KOC 2026 với cấu trúc Citability Block 130-170 từ | `.agents/skills/kocity-seo-editorial/SKILL.md` |
 | 8 | `wysiwyg-cms-engineer` | Admin CMS Specialist | Bảo vệ bộ soạn thảo CMS, ngăn ngừa vỡ định dạng HTML/CSS và bảo toàn mã code khi xuất bản | `.agents/skills/kocity-wysiwyg-cms/SKILL.md` |
+| 9 | `koc-strategic-matcher` | KOC Matching & MCDA Specialist | Tuyển chọn, đánh giá & chấm điểm ứng viên KOC theo mô hình MCDA đa tiêu chí (Khán giả, Nội dung, Hiệu suất, Ngân sách, Độ tin cậy) | `.agents/skills/kocity-koc-strategic-matching/SKILL.md` |
+| 10 | `tiktok-sla-auditor` | TikTok SLA & Fulfillment Auditor | Giám sát tiến độ giao nộp video review TikTok (SLA 5-7 ngày), kiểm tra hashtag/nhãn hàng/giỏ hàng vàng & tự động nhắc nhở | `.agents/skills/kocity-tiktok-fulfillment-sla-auditor/SKILL.md` |
 
 ### Cách gọi và phân quyền trong Claude Code:
 - **Kích hoạt Agent:** Bạn có thể yêu cầu Claude Code đóng vai hoặc giao việc trực tiếp cho từng Agent bằng cú pháp:  
