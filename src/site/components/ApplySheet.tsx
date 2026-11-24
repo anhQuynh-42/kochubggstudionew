@@ -246,6 +246,37 @@ export const ApplySheet: React.FC<ApplySheetProps> = ({ campaign, onClose, onVie
       }).catch((err) => console.error('Lỗi khi gửi data đến Google Sheets', err));
     }
 
+    // Tự động kích hoạt n8n Workflow gửi Email xác nhận đăng ký thành công về thẳng email của KOC
+    if (appEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(appEmail)) {
+      const DEFAULT_REGISTER_EMAIL_WEBHOOK =
+        'https://thanhloc2005.app.n8n.cloud/webhook/kocity-application-registered';
+      const registerEmailWebhookUrl =
+        import.meta.env.VITE_N8N_REGISTER_EMAIL_WEBHOOK_URL || DEFAULT_REGISTER_EMAIL_WEBHOOK;
+
+      const emailPayload = {
+        email: appEmail,
+        kocEmail: appEmail,
+        kocName: app.kocName,
+        tiktokHandle: cleanHandle,
+        followers: app.followers,
+        brandName: campaign.brandName,
+        campaignName: campaign.title,
+        registeredSample: product
+          ? `${product.code} - ${product.name}`
+          : (app.selectedSampleName || campaign.title),
+        code,
+        submittedAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      };
+
+      fetch(registerEmailWebhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        keepalive: true,
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(emailPayload),
+      }).catch((err) => console.warn('Không thể gọi webhook gửi email xác nhận KOC:', err));
+    }
+
     submitApplication(app);
     if (currentUser) {
       rememberFromApplication({
