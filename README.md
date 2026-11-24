@@ -11,7 +11,7 @@
 | STT | Hạng mục yêu cầu | Tài liệu chi tiết | Thư mục nguồn liên quan |
 | :---: | :--- | :--- | :--- |
 | **1** | **AI Prompt Engineering** *(dùng để xây website & xây AI Agents)* | 👉 [docs/AI_PROMPT_ENGINEERING.md](docs/AI_PROMPT_ENGINEERING.md) | [CLAUDE.md](CLAUDE.md), [KocityAiChatWidget.tsx](src/site/components/KocityAiChatWidget.tsx), các file `kocity_*.n8n` |
-| **2** | **Bộ AI Skills dùng trong BTL** *(8 Skills chuyên biệt + 14 file tham chiếu)* | 👉 [docs/AI_SKILLS_BTL.md](docs/AI_SKILLS_BTL.md) | [.agents/skills/](.agents/skills/) |
+| **2** | **Bộ AI Skills dùng trong BTL** *(10 Skills chuyên biệt + 18 file tham chiếu + file tổng hợp `SKILL.md`)* | 👉 [SKILL.md](SKILL.md) & [docs/AI_SKILLS_BTL.md](docs/AI_SKILLS_BTL.md) | [.agents/skills/](.agents/skills/) |
 
 ---
 

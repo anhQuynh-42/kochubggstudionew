@@ -1,8 +1,8 @@
-# 🧩 Bộ 8 AI Skills chuyên biệt dùng trong BTL — Dự án KOCity
+# 🧩 Bộ 10 AI Skills chuyên biệt dùng trong BTL — Dự án KOCity
 
-> **Vị trí lưu trữ trong Repository:** [`.agents/skills/`](../.agents/skills/)  
-> **Tổng số lượng:** **8 Skills chuyên môn** + **14 tài liệu tham chiếu (`references/`)** = **22 file tri thức chuẩn hóa**  
-> **Mục đích:** Chuẩn hóa quy trình làm việc của AI Coding Assistants & AI Agents để đảm bảo chất lượng đồng nhất về giao diện, chuyển đổi, SEO/GEO, quản trị nội dung và triển khai an toàn cho [kocity.io.vn](https://kocity.io.vn).
+> **Vị trí lưu trữ trong Repository:** [`.agents/skills/`](../.agents/skills/) & file tổng hợp [`SKILL.md`](../SKILL.md)  
+> **Tổng số lượng:** **10 Skills chuyên môn** + **18 tài liệu tham chiếu (`references/`)** = **28 file tri thức chuẩn hóa**  
+> **Mục đích:** Chuẩn hóa quy trình làm việc của AI Coding Assistants & AI Agents để đảm bảo chất lượng đồng nhất về giao diện, chuyển đổi, SEO/GEO, quản trị nội dung, tuyển chọn KOC, nghiệm thu video và triển khai an toàn cho [kocity.io.vn](https://kocity.io.vn).
 
 ---
 
@@ -17,11 +17,11 @@ Mỗi Skill trong `.agents/skills/<skill-name>/` được tổ chức theo cấu
     └── *.md / *.sql
 ```
 
-**Cơ chế hoạt động:** Khi người dùng đưa yêu cầu có từ khóa khớp với `description` của Skill (ví dụ: *"tối ưu form nhận mẫu"*, *"viết bài chuẩn SEO"*, *"deploy lên kocity.io.vn"*), AI Agent **bắt buộc đọc `SKILL.md` và các file `references/` liên quan** trước khi viết code hoặc chỉnh sửa hệ thống.
+**Cơ chế hoạt động:** Khi người dùng đưa yêu cầu có từ khóa khớp với `description` của Skill (ví dụ: *"tối ưu form nhận mẫu"*, *"viết bài chuẩn SEO"*, *"matching koc"*, *"kiểm tra hạn nộp video"*), AI Agent **bắt buộc đọc `SKILL.md` và các file `references/` liên quan** trước khi viết code hoặc thực hiện phân tích.
 
 ---
 
-## 2. Danh mục đầy đủ 8 AI Skills dùng trong BTL
+## 2. Danh mục đầy đủ 10 AI Skills dùng trong BTL
 
 | STT | Tên Skill | Vai trò chính | File `SKILL.md` | Tài liệu tham chiếu (`references/`) | Ứng dụng thực tế trên KOCity |
 | :---: | :--- | :--- | :--- | :--- | :--- |
@@ -33,6 +33,42 @@ Mỗi Skill trong `.agents/skills/<skill-name>/` được tổ chức theo cấu
 | **6** | **`kocity-seo-editorial`** | Quy chuẩn viết & biên tập bài viết Cẩm nang KOC, kịch bản TikTok, bí kíp nhận mẫu 0đ chuẩn SEO | [SKILL.md](../.agents/skills/kocity-seo-editorial/SKILL.md) | • [content_frameworks.md](../.agents/skills/kocity-seo-editorial/references/content_frameworks.md)<br>• [seo_checklist.md](../.agents/skills/kocity-seo-editorial/references/seo_checklist.md) | Biên soạn bộ bài viết trong `src/data/blogData.ts` & bài công bố 68 KOC Cỏ Mềm |
 | **7** | **`kocity-wysiwyg-cms`** | Phát triển & bảo vệ Admin CMS, trình soạn thảo bài viết giàu định dạng (WYSIWYG), chống lỗi thẻ `<span>` / mất định dạng | [SKILL.md](../.agents/skills/kocity-wysiwyg-cms/SKILL.md) | • [editor_principles.md](../.agents/skills/kocity-wysiwyg-cms/references/editor_principles.md)<br>• [wysiwyg_standards.md](../.agents/skills/kocity-wysiwyg-cms/references/wysiwyg_standards.md) | Quản trị bài viết trên `AdminBlogManager.tsx` & hiển thị an toàn tại `BlogContentRenderer.tsx` |
 | **8** | **`kocity-safe-deploy`** | Quy trình triển khai an toàn Zero-Regression lên `kocity.io.vn`: kiểm tra TypeScript, SEO, build sạch & bảo mật Supabase | [SKILL.md](../.agents/skills/kocity-safe-deploy/SKILL.md) | • [deploy_checklist.md](../.agents/skills/kocity-safe-deploy/references/deploy_checklist.md)<br>• [regression_safeguards.md](../.agents/skills/kocity-safe-deploy/references/regression_safeguards.md)<br>• [supabase_security_setup.sql](../.agents/skills/kocity-safe-deploy/references/supabase_security_setup.sql) | Áp dụng bắt buộc trước mọi lần commit & push lên GitHub / Vercel production |
+| **9** | **`kocity-koc-strategic-matching`** | Tuyển chọn, đánh giá & chấm điểm ứng viên KOC theo mô hình MCDA đa tiêu chí (Độ khớp khán giả 30%, Nội dung 25%, Hiệu suất 20%, Ngân sách 15%, Độ tin cậy 10%) | [SKILL.md](../.agents/skills/kocity-koc-strategic-matching/SKILL.md) | • [mcda_scoring_rubric.md](../.agents/skills/kocity-koc-strategic-matching/references/mcda_scoring_rubric.md) | Phân tích yêu cầu Brand, chấm điểm hồ sơ KOC & xuất báo cáo Shortlist ứng viên đề xuất |
+| **10** | **`kocity-tiktok-fulfillment-sla-auditor`** | Giám sát tiến độ giao nộp video review TikTok (SLA 5-7 ngày), tự động soi hashtag bắt buộc, nhãn hàng, giỏ hàng vàng TikTok Shop & mẫu nhắc nhở đa cấp | [SKILL.md](../.agents/skills/kocity-tiktok-fulfillment-sla-auditor/SKILL.md) | • [video_audit_rules.md](../.agents/skills/kocity-tiktok-fulfillment-sla-auditor/references/video_audit_rules.md) | Nghiệm thu video bài đăng TikTok, cảnh báo vi phạm deadline và kích hoạt tin nhắn đôn đốc KOC |
+
+---
+
+## 3. Quy trình phối hợp liên-Skill (Skill Chaining) trong phát triển thực tế
+
+Trong BTL, các Skill không đứng độc lập mà phối hợp theo chuỗi công việc chuẩn hóa:
+
+```mermaid
+flowchart LR
+    A["1. Thiết kế UI/UX<br/>(kocity-ui-ux-design)"] --> B["2. Tối ưu Form & Leadgen<br/>(form-conversion-cro +<br/>free-tools-leadgen)"]
+    B --> C["3. Nội dung & CMS<br/>(seo-editorial +<br/>wysiwyg-cms)"]
+    C --> D["4. SEO & AI Search<br/>(programmatic-seo +<br/>geo-agentic-seo)"]
+    D --> E["5. Tuyển chọn & Giám sát KOC<br/>(koc-strategic-matching +<br/>tiktok-fulfillment-sla)"]
+    E --> F["6. Kiểm thử & Deploy<br/>(kocity-safe-deploy)"]
+```
+
+### Ví dụ chuỗi phối hợp thực tế cho Chiến dịch Cỏ Mềm Homelab (68 KOC):
+1. **`kocity-seo-editorial` + `kocity-wysiwyg-cms`:** Xuất bản bài công bố 68 KOC nhận mẫu 0đ Cỏ Mềm kèm thanh tìm kiếm realtime và bảng sản phẩm.
+2. **`kocity-koc-strategic-matching`:** Sàng lọc và chấm điểm mức độ phù hợp của 68 KOC với nhóm sản phẩm mỹ phẩm Cỏ Mềm.
+3. **`kocity-tiktok-fulfillment-sla-auditor`:** Đối soát hashtag `#comem` `#ADFI` và theo dõi hạn nộp video 5-7 ngày của 68 KOC được duyệt.
+4. **`kocity-ui-ux-design`:** Chuẩn hóa giao diện bảng danh sách, nút bấm nhận mẫu và Dashboard Admin BI theo dõi 3 đợt chiến dịch Cỏ Mềm.
+5. **`kocity-form-conversion-cro`:** Gắn cơ chế click beacon `fetch keepalive` tại `BlogContentRenderer.tsx` → kết nối n8n Cloud & Telegram báo cáo tức thời khi KOC bấm nhận mẫu.
+6. **`kocity-safe-deploy`:** Chạy kiểm tra `npm run check:seo`, `npm run build` (0 lỗi), xác minh không rò rỉ token bí mật trước khi push lên nhánh `main` deploy tự động lên `kocity.io.vn`.
+
+---
+
+## 4. Hướng dẫn kiểm tra & sử dụng lại Bộ Skills
+
+1. Toàn bộ 10 thư mục Skill đã được commit đầy đủ tại [`.agents/skills/`](../.agents/skills/) và đóng gói tổng hợp tại [`SKILL.md`](../SKILL.md).
+2. Khi mở repository bằng **Antigravity** hoặc **Claude Code**, hệ thống tự động nhận diện thư mục `.agents/skills/` và nạp ngữ cảnh từ [CLAUDE.md](../CLAUDE.md).
+3. Để kích hoạt trực tiếp một Skill bất kỳ, chỉ cần gọi đúng tên hoặc chủ đề trong câu lệnh, ví dụ:
+   - *"Sử dụng skill `kocity-koc-strategic-matching` để chấm điểm và đề xuất 5 KOC ngành mỹ phẩm."*
+   - *"Dùng skill `kocity-tiktok-fulfillment-sla-auditor` kiểm tra video bài nộp và soạn tin nhắc nhở KOC."*
+   - *"Sử dụng skill `kocity-safe-deploy` để kiểm tra build và đẩy bản cập nhật lên `kocity.io.vn`."*
 
 ---
 
