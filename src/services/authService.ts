@@ -22,6 +22,16 @@ const REMEMBER_PREF_KEY = 'koctrend_remember_me';
 const ADMIN_HANDLE = '@adminwebkocity1235';
 const ADMIN_PASSWORD = 'kocity6102026';
 
+const isAdminHandle = (h: string) => {
+  const clean = h.trim().replace(/^@+/, '').replace(/\s+/g, '').toLowerCase();
+  return clean === 'adminwebkocity1235' || clean === 'admin' || clean === 'adminwebkocity' || clean === 'admin@kocity.vn';
+};
+
+const isAdminPhone = (p: string) => {
+  const clean = p.replace(/[\s.-]/g, '');
+  return clean === '0999888999';
+};
+
 export const normalizeHandle = (h: string) => {
   const clean = h.trim().replace(/^@+/, '').replace(/\s+/g, '').toLowerCase();
   return clean ? `@${clean}` : '';
@@ -71,18 +81,23 @@ export function login(params: {
   const password = params.password.trim();
   if (!password) return { ok: false, error: 'Vui lòng nhập mật khẩu.' };
 
-  if (params.method === 'tiktok' && handle === ADMIN_HANDLE) {
+  const isAdminAttempt =
+    (params.method === 'tiktok' && (handle === ADMIN_HANDLE || isAdminHandle(params.handle))) ||
+    (params.method === 'phone' && (isAdminPhone(params.phone) || isAdminHandle(params.phone)));
+
+  if (isAdminAttempt) {
     if (password !== ADMIN_PASSWORD) return { ok: false, error: 'Mật khẩu quản trị viên không chính xác.' };
     const admin: KOCUser = {
       id: 'admin-kocity-root',
       name: 'Quản Trị Viên KOCITY',
       role: 'admin',
-      avatar: '',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
       tiktokHandle: ADMIN_HANDLE,
       followers: 'Quản Trị Viên',
-      phone: '',
+      phone: '0999.888.999',
       email: 'admin@kocity.vn',
       verified: true,
+      city: 'Hà Nội',
     };
     persistRemembered(admin, params.remember);
     return { ok: true, user: admin };
@@ -129,7 +144,7 @@ export function register(params: {
   const handle = normalizeHandle(params.handle);
   if (!handle) return { ok: false, error: 'Vui lòng nhập ID TikTok.' };
   if (params.password.trim().length < 6) return { ok: false, error: 'Mật khẩu cần ít nhất 6 ký tự.' };
-  if (handle === ADMIN_HANDLE) return { ok: false, error: 'ID TikTok này không dùng được.' };
+  if (handle === ADMIN_HANDLE || isAdminHandle(handle)) return { ok: false, error: 'ID TikTok này không dùng được.' };
 
   const users = readUsers();
   if (users.some((u) => handleKey(u.tiktokHandle) === handleKey(handle))) {
@@ -172,7 +187,7 @@ export function resetPassword(params: { handle: string; newPassword: string; con
   if (!handle) return { ok: false, error: 'Vui lòng nhập ID TikTok của tài khoản.' };
   if (newPassword.length < 6) return { ok: false, error: 'Mật khẩu mới cần ít nhất 6 ký tự.' };
   if (newPassword !== params.confirmPassword.trim()) return { ok: false, error: 'Hai mật khẩu chưa khớp nhau.' };
-  if (handle === ADMIN_HANDLE) {
+  if (handle === ADMIN_HANDLE || isAdminHandle(handle)) {
     return { ok: false, error: 'Tài khoản quản trị không đặt lại mật khẩu tại đây. Vui lòng liên hệ quản lý hệ thống.' };
   }
 
