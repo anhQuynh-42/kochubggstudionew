@@ -52,9 +52,10 @@ npm install
 # 2. Chạy môi trường phát triển (http://localhost:3000)
 npm run dev
 
-# 3. Kiểm tra chuẩn SEO / GEO / TypeScript
-npm run check:seo
+# 3. Kiểm tra toàn bộ TypeScript, SEO/GEO & Đóng gói BTL (8 Skills + Workflows)
 npm run lint
+npm run check:seo
+npm run verify:btl
 
 # 4. Build bản production
 npm run build

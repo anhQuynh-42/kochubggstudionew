@@ -8,9 +8,11 @@
     "build": "vite build",
     "check:sync": "node scripts/verify-cloud-sync.js",
     "check:seo": "node scripts/verify-seo-drift.js",
+    "verify:btl": "node scripts/verify-btl.js",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "n8n": "n8n start"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

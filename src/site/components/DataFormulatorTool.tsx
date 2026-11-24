@@ -228,10 +228,10 @@ export const DataFormulatorTool: React.FC = () => {
             <div className="mt-2 flex items-center justify-between">
               <span className="text-[11px] text-slate-400">Hỗ trợ phân cách bằng dấu phẩy (CSV) hoặc Tab (Excel/Sheets)</span>
               <div className="flex gap-2">
-                <Button size="xs" variant="ghost" onClick={() => { setDataset(SAMPLE_DATASET); setRawInputMode(false); }}>
+                <Button size="sm" variant="ghost" onClick={() => { setDataset(SAMPLE_DATASET); setRawInputMode(false); }}>
                   Dùng lại mẫu Cỏ Mềm
                 </Button>
-                <Button size="xs" variant="primary" onClick={handleApplyRawData}>
+                <Button size="sm" variant="primary" onClick={handleApplyRawData}>
                   Xử lý dữ liệu ngay
                 </Button>
               </div>
@@ -568,3 +568,4 @@ export const DataFormulatorTool: React.FC = () => {
     </div>
   );
 };
+

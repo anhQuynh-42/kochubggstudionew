@@ -37,7 +37,7 @@ function writeUsers(users: KOCUser[]) {
   // BẢO MẬT: Đảm bảo không bao giờ có thuộc tính password dạng plaintext trong mảng lưu cache
   const cleanUsers = users.map((u) => {
     const clone = { ...u };
-    delete (clone as Record<string, unknown>).password;
+    delete (clone as unknown as Record<string, unknown>).password;
     return clone;
   });
   localStorage.setItem(USERS_KEY, JSON.stringify(cleanUsers));
@@ -49,7 +49,7 @@ export function loadRememberedAccount(): { user: KOCUser | null; rememberMe: boo
     const pref = localStorage.getItem(REMEMBER_PREF_KEY);
     const user = raw ? JSON.parse(raw) : null;
     if (user) {
-      delete (user as Record<string, unknown>).password;
+      delete (user as unknown as Record<string, unknown>).password;
     }
     return { user, rememberMe: pref === null ? true : pref === 'true' };
   } catch {
@@ -60,7 +60,7 @@ export function loadRememberedAccount(): { user: KOCUser | null; rememberMe: boo
 function persistRemembered(user: KOCUser, remember: boolean) {
   try {
     const safeUser = { ...user };
-    delete (safeUser as Record<string, unknown>).password;
+    delete (safeUser as unknown as Record<string, unknown>).password;
     localStorage.setItem(REMEMBER_PREF_KEY, remember ? 'true' : 'false');
     if (remember) localStorage.setItem(REMEMBERED_KEY, JSON.stringify(safeUser));
     else localStorage.removeItem(REMEMBERED_KEY);
@@ -175,7 +175,7 @@ export async function login(params: {
       matches(u) &&
       (!u.passwordHash ||
         u.passwordHash === inputHash ||
-        (u as Record<string, unknown>).password === password)
+        (u as unknown as Record<string, unknown>).password === password)
   );
 
   // Kiểm tra thêm hồ sơ lưu cục bộ
@@ -187,7 +187,7 @@ export async function login(params: {
         matches(active) &&
         (!active.passwordHash ||
           active.passwordHash === inputHash ||
-          (active as Record<string, unknown>).password === password)
+          (active as unknown as Record<string, unknown>).password === password)
       ) {
         found = active;
         users = [...users, active];
@@ -207,7 +207,7 @@ export async function login(params: {
           if (
             !cloudUser.passwordHash ||
             cloudUser.passwordHash === inputHash ||
-            (cloudUser as Record<string, unknown>).password === password
+            (cloudUser as unknown as Record<string, unknown>).password === password
           ) {
             found = cloudUser;
           }
@@ -229,7 +229,7 @@ export async function login(params: {
     email: found.email || (inputEmail.includes('@') ? inputEmail : ''),
     role: found.role || 'koc',
   };
-  delete (user as Record<string, unknown>).password;
+  delete (user as unknown as Record<string, unknown>).password;
   user.passwordHash = inputHash;
 
   // Đồng bộ đè vào bộ nhớ máy này
@@ -417,7 +417,7 @@ export async function resetPassword(params: {
       phone: existing.phone || inputPhone,
       passwordHash: newPassHash,
     };
-    delete (user as Record<string, unknown>).password;
+    delete (user as unknown as Record<string, unknown>).password;
     users[idx] = user;
   } else {
     // Khôi phục từ hồ sơ cục bộ
@@ -453,7 +453,7 @@ export async function resetPassword(params: {
       ...base,
       passwordHash: newPassHash,
     };
-    delete (user as Record<string, unknown>).password;
+    delete (user as unknown as Record<string, unknown>).password;
     users.push(user);
   }
 

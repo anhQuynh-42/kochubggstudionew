@@ -242,10 +242,14 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const onAdminAuth = (e: Event) => {
       const customEvent = e as CustomEvent<KOCUser>;
-      const adminUser = customEvent.detail || {
+      const adminUser: KOCUser = customEvent.detail || {
         id: 'admin-master',
         name: 'Quản trị viên KOCity',
         tiktokHandle: 'adminwebkocity1235',
+        avatar: '',
+        followers: '0',
+        phone: '',
+        verified: true,
         role: 'admin' as const,
       };
       setCurrentUser(adminUser);

@@ -160,6 +160,8 @@ export const AdminEmailWorkflowModal: React.FC<AdminEmailWorkflowModalProps> = (
       email: 'thuha.koc@gmail.com',
       tiktokHandle: '@thuha.glow',
       followers: '18.2K',
+      followersCount: 18200,
+      avgViews: '25K',
       address: 'TP.HCM',
       shippingCode: 'GHTK-99887766',
       shippingStatus: 'Đang trung chuyển',
