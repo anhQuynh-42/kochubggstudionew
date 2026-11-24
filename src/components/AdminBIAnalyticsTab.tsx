@@ -153,6 +153,7 @@ interface LiveWaveReport {
   totalReviewed: number;
   brandApproved: number;
   adfiApproved: number;
+  videosPosted: number;
   approvedReach: number;
   approvalRatePct: number;
   adfiRatePct: number;
@@ -403,6 +404,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             totalReviewed: 0,
             brandApproved: 0,
             adfiApproved: 0,
+            videosPosted: 0,
             approvedReach: 0,
             approvalRatePct: 0,
             adfiRatePct: 0,
@@ -415,6 +417,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
         const iFollowers = hdr.findIndex((h) => h.includes('follower'));
         const iBrand = hdr.findIndex((h) => h.includes('brand duyệt'));
         const iAdfi = hdr.findIndex((h) => h.includes('adfi'));
+        const iVideo = hdr.findIndex((h) => h.includes('video') || h.includes('lên bài') || h.includes('đăng tải'));
 
         const dataRows = matrix.slice(1).filter((r) => {
           const handleVal = iHandle >= 0 ? r[iHandle] : r[1];
@@ -423,6 +426,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
 
         let brandApproved = 0;
         let adfiApproved = 0;
+        let videosPosted = 0;
         let approvedReach = 0;
         const prodMap = new Map<string, CoMemProductWaveRow>();
 
@@ -431,8 +435,10 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
           const prodKey = rawProd.toLowerCase();
           const brandVal = (iBrand >= 0 ? r[iBrand] : r[4] || '').toUpperCase().trim();
           const adfiVal = (iAdfi >= 0 ? r[iAdfi] : r[5] || '').toUpperCase().trim();
+          const videoVal = (iVideo >= 0 ? r[iVideo] : '').trim();
           const isBrandOk = brandVal === 'TRUE' || brandVal.includes('DUYỆT') || brandVal === 'OK' || brandVal === 'X';
           const isAdfiOk = adfiVal === 'TRUE' || adfiVal.includes('DUYỆT') || adfiVal === 'OK' || adfiVal === 'X';
+          const hasVideoLink = /https?:\/\/|tiktok\.com/i.test(videoVal);
           const rowFollowers = parseSheetFollowerCount(iFollowers >= 0 ? r[iFollowers] : r[3]);
 
           if (isBrandOk) {
@@ -440,6 +446,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             approvedReach += rowFollowers;
           }
           if (isAdfiOk) adfiApproved += 1;
+          if (hasVideoLink) videosPosted += 1;
 
           const existing = prodMap.get(prodKey);
           if (!existing) {
@@ -470,6 +477,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
           totalReviewed,
           brandApproved,
           adfiApproved,
+          videosPosted,
           approvedReach,
           approvalRatePct: totalReviewed > 0 ? Math.round((brandApproved / totalReviewed) * 100) : 0,
           adfiRatePct: brandApproved > 0 ? Math.round((adfiApproved / brandApproved) * 100) : 0,
@@ -1011,6 +1019,9 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             const totalWaveReviewed = sheetsReport.waves.reduce((s, w) => s + w.totalReviewed, 0);
             const totalWaveBrandApproved = sheetsReport.waves.reduce((s, w) => s + w.brandApproved, 0);
             const totalWaveAdfiApproved = sheetsReport.waves.reduce((s, w) => s + w.adfiApproved, 0);
+            const totalWaveVideosPosted = sheetsReport.waves.reduce((s, w) => s + w.videosPosted, 0);
+            const dot1Videos = sheetsReport.waves.find((w) => w.id === 'dot-1')?.videosPosted ?? 0;
+            const dot2Videos = sheetsReport.waves.find((w) => w.id === 'dot-2')?.videosPosted ?? 0;
             const totalWaveReach = sheetsReport.waves.reduce((s, w) => s + w.approvedReach, 0);
             const totalApprovalPct =
               totalWaveReviewed > 0 ? Math.round((totalWaveBrandApproved / totalWaveReviewed) * 100) : 0;
@@ -1093,12 +1104,14 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                       Tỷ lệ duyệt {totalApprovalPct}% · ADFI: {totalWaveAdfiApproved}
                     </span>
                   </div>
-                  <div className="rounded-xl border border-indigo-200 bg-white p-3.5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase">Reach KOC Được Duyệt</p>
-                    <p className="mt-1 text-2xl font-black text-indigo-700">
-                      {sheetsReport.loading ? '...' : formatCompact(totalWaveReach)}
+                  <div className="rounded-xl border border-pink-200 bg-pink-50/70 p-3.5">
+                    <p className="text-[10px] font-bold text-pink-800 uppercase">KOC Đã Đăng Video</p>
+                    <p className="mt-1 text-2xl font-black text-pink-700">
+                      {sheetsReport.loading ? '...' : totalWaveVideosPosted.toLocaleString('vi-VN')}
                     </p>
-                    <span className="text-[11px] text-slate-500">Tổng Followers 3 đợt</span>
+                    <span className="text-[11px] text-pink-700 font-bold">
+                      Đợt 1: {dot1Videos} · Đợt 2: {dot2Videos} video
+                    </span>
                   </div>
                 </div>
 
@@ -1111,6 +1124,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                         <th className="py-2.5 px-3 text-center">Tổng Hồ Sơ Xét Duyệt</th>
                         <th className="py-2.5 px-3 text-center">Brand Duyệt KOC (TRUE)</th>
                         <th className="py-2.5 px-3 text-center">ADFI Duyệt Sample (TRUE)</th>
+                        <th className="py-2.5 px-3 text-center">KOC Đã Lên Video</th>
                         <th className="py-2.5 px-3 text-center">Tỷ Lệ Brand Duyệt</th>
                         <th className="py-2.5 px-3 text-right">Tổng Reach Followers Duyệt</th>
                         <th className="py-2.5 px-4 text-right">Link Sheet</th>
@@ -1131,6 +1145,11 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                           <td className="py-2.5 px-3 text-center">
                             <span className="rounded-md bg-blue-50 px-2.5 py-0.5 font-bold text-blue-700">
                               {w.adfiApproved} mẫu
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className="rounded-md bg-pink-100 px-2.5 py-0.5 font-black text-pink-700">
+                              {w.videosPosted} video
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-center font-bold text-violet-700">{w.approvalRatePct}%</td>
@@ -1155,6 +1174,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                           <td className="py-2.5 px-3 text-center">{totalWaveReviewed.toLocaleString('vi-VN')}</td>
                           <td className="py-2.5 px-3 text-center text-emerald-700">{totalWaveBrandApproved} KOC</td>
                           <td className="py-2.5 px-3 text-center text-blue-700">{totalWaveAdfiApproved} mẫu</td>
+                          <td className="py-2.5 px-3 text-center text-pink-700">{totalWaveVideosPosted} video</td>
                           <td className="py-2.5 px-3 text-center text-violet-700">{totalApprovalPct}%</td>
                           <td className="py-2.5 px-3 text-right text-indigo-700">{formatCompact(totalWaveReach)}</td>
                           <td className="py-2.5 px-4 text-right text-[11px] text-slate-400">100% Live</td>
