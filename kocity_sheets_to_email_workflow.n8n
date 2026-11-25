@@ -57,9 +57,9 @@
     {
       "parameters": {
         "sendTo": "={{ $json['Email của KOC'] }}",
-        "subject": "=[KOCity] Đăng ký nhận mẫu thành công - {{ $json['Brand đăng ký '] }}",
+        "subject": "=[KOCity] Đăng ký nhận mẫu thành công - {{ $json['Brand đăng ký'] || $json['Brand đăng ký '] }}",
         "emailType": "text",
-        "message": "=Chào {{ $json['Tên KOC'] }}\n\nKOCity đã nhận đơn đăng ký nhận mẫu của bạn:\n- Brand: {{ $json['Brand đăng ký '] }}\n- Sản phẩm: {{ $json['Sản phẩm đăng ký'] }}\n- TikTok: {{ $json['ID name Tiktok của bạn ?'] }}\n\nNhãn hàng sẽ duyệt đơn trong 24–48h. Sau khi nhận mẫu, bạn vui lòng đăng clip TikTok trong 5–7 ngày.\n\nTheo dõi đơn tại: https://kocity.io.vn/don-cua-toi\n\nCảm ơn bạn,\nKOCity",
+        "message": "=Chào {{ $json['Tên KOC'] }}\n\nKOCity đã nhận đơn đăng ký nhận mẫu của bạn:\n- Brand: {{ $json['Brand đăng ký'] || $json['Brand đăng ký '] }}\n- Sản phẩm: {{ $json['Sản phẩm đăng ký'] }}\n- TikTok: {{ $json['ID name Tiktok của bạn ?'] }}\n\nNhãn hàng sẽ duyệt đơn trong 24–48h. Sau khi nhận mẫu, bạn vui lòng đăng clip TikTok trong 5–7 ngày.\n\nTheo dõi đơn tại: https://kocity.io.vn/don-cua-toi\n\nCảm ơn bạn,\nKOCity",
         "options": {
           "appendAttribution": false
         }
