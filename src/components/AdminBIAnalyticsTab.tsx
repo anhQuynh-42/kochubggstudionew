@@ -1626,11 +1626,12 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             </div>
           </div>
 
-          {/* 3 PANEL CHI TIẾT PHONG CÁCH INSIGHTS (THREADS • WEBSITE GA4 • FACEBOOK META SUITE) */}
+          {/* 4 PANEL CHI TIẾT PHONG CÁCH INSIGHTS (THREADS • WEBSITE GA4 • FACEBOOK META SUITE • ZALO COMMUNITY) */}
           {(() => {
             const threadsRow = channelMetrics.find((m) => m.channel === 'threads');
             const webRow = channelMetrics.find((m) => m.channel === 'website');
             const fbRow = channelMetrics.find((m) => m.channel === 'facebook');
+            const zaloRow = channelMetrics.find((m) => m.channel === 'zalo');
 
             const thViews = threadsRow?.total_views || 17445;
             const thFollowers = threadsRow?.followers_or_members || 13;
@@ -1644,8 +1645,13 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             const fbFollowers = fbRow?.followers_or_members || 41;
             const fbEngage = fbRow?.engagements || 38;
 
+            const zaloMembers = zaloRow?.followers_or_members || ZALO_GROUP_MEMBERS_COUNT;
+            const zaloNew = zaloRow?.new_subscribers_today || 0;
+            const totalCoMemApproved = sheetsReport.waves.reduce((s, w) => s + w.brandApproved, 0) || 176;
+            const totalCoMemVideos = sheetsReport.waves.reduce((s, w) => s + w.videosPosted, 0) || 89;
+
             return (
-              <div className="grid gap-5 lg:grid-cols-3">
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
                 {/* PANEL 1: THREADS INSIGHTS */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between space-y-4">
                   <div className="space-y-4">
@@ -1899,6 +1905,84 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                   <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3 flex items-center justify-between text-[11px]">
                     <span className="text-slate-600">Tương tác từ người mới:</span>
                     <span className="font-bold text-blue-700">20 mới · 18 follower</span>
+                  </div>
+                </div>
+
+                {/* PANEL 4: ZALO COMMUNITY (329 THÀNH VIÊN) */}
+                <div className="rounded-2xl border border-sky-200 bg-white p-5 shadow-sm flex flex-col justify-between space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-white font-black text-xs shadow-xs">
+                          Zalo
+                        </span>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900">Zalo Community</h4>
+                          <p className="text-[11px] text-slate-500">Group KOCity · Cộng đồng KOC</p>
+                        </div>
+                      </div>
+                      <a
+                        href="https://zalo.me/g/cjenmz664"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg bg-sky-50 px-2.5 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-100"
+                      >
+                        Mở Group ↗
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3">
+                        <p className="text-[11px] text-sky-800 font-semibold">Thành viên nhóm</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-xl font-black text-sky-700">
+                            {zaloMembers.toLocaleString('vi-VN')}
+                          </span>
+                          {zaloNew > 0 && (
+                            <span className="text-[10px] font-bold text-emerald-600">+{zaloNew}</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-sky-700/80 mt-0.5">KOC hoạt động 24/7</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Kéo traffic về Web</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-xl font-black text-slate-900">130</span>
+                          <span className="text-[10px] font-bold text-sky-600">phiên GA4</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Nguồn #2 về kocity.io.vn</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">KOC duyệt Cỏ Mềm</p>
+                        <p className="text-xl font-black text-emerald-700 mt-0.5">{totalCoMemApproved}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                        <p className="text-[11px] text-slate-500 font-medium">Video đã lên sóng</p>
+                        <p className="text-xl font-black text-pink-600 mt-0.5">{totalCoMemVideos}</p>
+                      </div>
+                    </div>
+
+                    {/* Thanh tỷ lệ quy đổi KOC từ cộng đồng Zalo */}
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 space-y-2">
+                      <div className="flex justify-between text-[11px] font-semibold">
+                        <span className="text-sky-700">Tỷ lệ KOC nhận mẫu: {zaloMembers > 0 ? Math.round((totalCoMemApproved / zaloMembers) * 100) : 53}%</span>
+                        <span className="text-slate-600">Active cao</span>
+                      </div>
+                      <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden flex">
+                        <div
+                          className="h-full bg-gradient-to-r from-sky-500 to-blue-600"
+                          style={{ width: `${Math.min(100, zaloMembers > 0 ? Math.round((totalCoMemApproved / zaloMembers) * 100) : 53)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Kênh giữ chân & điều phối KOC nhận mẫu 0đ trực tiếp hiệu quả nhất của KOCity.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-600">Cộng đồng KOCity Zalo:</span>
+                    <span className="font-bold text-sky-700">{zaloMembers.toLocaleString('vi-VN')} thành viên</span>
                   </div>
                 </div>
               </div>
