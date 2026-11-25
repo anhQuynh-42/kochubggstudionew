@@ -138,6 +138,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [appSearch, setAppSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
 
   // Registered KOCs state for CRM (lấy toàn bộ KOC đã đăng ký trên web, kể cả chưa nộp đơn)
   const [registeredKOCs, setRegisteredKOCs] = useState<KOCUser[]>([]);
@@ -1869,18 +1870,113 @@ export const AdminView: React.FC<AdminViewProps> = ({
     });
   };
 
-  // Duyệt hàng loạt KOC đang chờ duyệt của chiến dịch
-  const handleBulkApproveCampaignKocs = (camp: Campaign, pendingApps: KOCApplication[]) => {
-    if (pendingApps.length === 0) return;
-    const confirmApprove = window.confirm(
-      `Bạn có chắc chắn muốn DUYỆT GỬI MẪU cho toàn bộ ${pendingApps.length} KOC đang chờ duyệt của chiến dịch "${camp.title}" không?`
-    );
-    if (!confirmApprove) return;
+  // Cập nhật hàng loạt (Duyệt hoặc Từ chối 1 loạt KOC cùng lúc không bị ghi đè state)
+  const handleBatchUpdateApplications = (
+    targetApps: KOCApplication[],
+    newStatus: 'Đã duyệt gửi mẫu' | 'Từ chối',
+    customFeedback?: string
+  ) => {
+    if (targetApps.length === 0) return;
 
-    for (const app of pendingApps) {
-      handleUpdateStatus(app.id, 'Đã duyệt gửi mẫu');
+    let feedback = customFeedback;
+    if (newStatus === 'Từ chối' && feedback === undefined) {
+      const promptRes = window.prompt(
+        `Nhập lý do từ chối chung cho ${targetApps.length} hồ sơ KOC (hoặc để trống dùng lý do mặc định):`,
+        'Đợt phát mẫu lần này ưu tiên các kênh phù hợp hơn với tệp khách hàng chiến dịch. Hẹn gặp bạn ở chiến dịch tiếp theo của KOCity nhé!'
+      );
+      if (promptRes === null) return; // Bấm Cancel
+      feedback = promptRes.trim() || undefined;
+    } else if (newStatus === 'Đã duyệt gửi mẫu') {
+      const ok = window.confirm(
+        `Bạn có chắc chắn muốn DUYỆT GỬI MẪU hàng loạt cho ${targetApps.length} hồ sơ KOC đã chọn không?`
+      );
+      if (!ok) return;
     }
-    onShowToast('Duyệt thành công!', `Đã duyệt gửi mẫu cho ${pendingApps.length} KOC của chiến dịch`, 'success');
+
+    const targetIds = new Set(targetApps.map((a) => a.id));
+    const prevStatusMap = new Map(applications.map((a) => [a.id, a.status]));
+
+    const updated = applications.map((app) => {
+      if (!targetIds.has(app.id)) return app;
+      let shippingCode = app.shippingCode;
+      let shippingStatus = app.shippingStatus;
+
+      if (newStatus === 'Đã duyệt gửi mẫu') {
+        if (!shippingCode) {
+          shippingCode = `GHTK-${Math.floor(10000000 + Math.random() * 90000000)}`;
+        }
+        shippingStatus = 'Đang trung chuyển';
+      } else if (newStatus === 'Từ chối') {
+        shippingStatus = 'Không gửi mẫu';
+      }
+
+      return {
+        ...app,
+        status: newStatus,
+        shippingCode,
+        shippingStatus,
+        ...(feedback !== undefined ? { adminFeedback: feedback } : {}),
+      };
+    });
+
+    onUpdateApplications(updated);
+    setSelectedAppIds((prev) => prev.filter((id) => !targetIds.has(id)));
+
+    const changedTargets = updated.filter((a) => targetIds.has(a.id));
+    changedTargets.forEach((target, idx) => {
+      updateApplicationStatusOnSupabase(target.id, {
+        status: newStatus,
+        shippingCode: target.shippingCode,
+        shippingStatus: target.shippingStatus,
+        ...(feedback !== undefined ? { adminFeedback: feedback } : {}),
+      });
+
+      const prevSt = prevStatusMap.get(target.id);
+      if (prevSt !== newStatus) {
+        const notifTitle =
+          newStatus === 'Đã duyệt gửi mẫu'
+            ? `🎉 Hồ sơ được duyệt: ${target.campaignName}`
+            : `Kết quả xét duyệt: ${target.campaignName}`;
+        const notifMessage =
+          newStatus === 'Đã duyệt gửi mẫu'
+            ? `Chúc mừng ${target.kocName}! Hồ sơ đăng ký (${target.code}) đã được duyệt gửi mẫu.${target.shippingCode ? ` Mã vận đơn: ${target.shippingCode}.` : ''} Hãy chuẩn bị nhận hàng và lên bài đúng hạn nhé!`
+            : feedback
+            ? `Phản hồi từ Quản trị viên: "${feedback}".`
+            : `Rất tiếc hồ sơ đăng ký (${target.code}) chưa phù hợp với tiêu chí xét duyệt đợt này của Brand.`;
+
+        onAddNotification?.({
+          id: `koc-batch-notif-${target.id}-${Date.now()}-${idx}`,
+          title: notifTitle,
+          message: notifMessage,
+          time: 'Vừa xong',
+          read: false,
+          type: 'approval',
+          targetRole: 'koc',
+          targetKocId: target.kocId,
+          targetTiktokHandle: target.tiktokHandle,
+          targetPhone: target.phone,
+          targetEmail: target.email,
+          linkTab: newStatus === 'Đã duyệt gửi mẫu' ? 'my-campaigns' : 'marketplace',
+        });
+
+        triggerKocStatusEmailWorkflow(target, newStatus, feedback);
+      }
+    });
+
+    onShowToast(
+      newStatus === 'Đã duyệt gửi mẫu' ? '✅ Đã duyệt hàng loạt!' : '❌ Đã từ chối hàng loạt!',
+      `Đã cập nhật trạng thái "${newStatus}" cho ${targetApps.length} hồ sơ KOC.`,
+      'success'
+    );
+  };
+
+  // Duyệt hàng loạt KOC đang chờ duyệt của chiến dịch
+  const handleBulkApproveCampaignKocs = (_camp: Campaign, pendingApps: KOCApplication[]) => {
+    handleBatchUpdateApplications(pendingApps, 'Đã duyệt gửi mẫu');
+  };
+
+  const handleBulkRejectCampaignKocs = (_camp: Campaign, pendingApps: KOCApplication[]) => {
+    handleBatchUpdateApplications(pendingApps, 'Từ chối');
   };
 
   // Status badge styling helper - Tinh gọn dạng Pill chuẩn Modern SaaS
@@ -4332,12 +4428,134 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </div>
             </div>
 
+            {/* Thanh Thao Tác Hàng Loạt: Chọn tích nhiều KOC hoặc Duyệt / Từ chối 1 loạt */}
+            {(() => {
+              const pendingFiltered = filteredApplications.filter((a) => a.status === 'Chờ duyệt');
+              const selectedApps = applications.filter((a) => selectedAppIds.includes(a.id));
+              const allFilteredSelected =
+                filteredApplications.length > 0 &&
+                filteredApplications.every((a) => selectedAppIds.includes(a.id));
+
+              return (
+                <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-r from-indigo-50/70 via-white to-emerald-50/50 p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAppIds(
+                              Array.from(new Set([...selectedAppIds, ...filteredApplications.map((a) => a.id)]))
+                            );
+                          } else {
+                            const removeSet = new Set(filteredApplications.map((a) => a.id));
+                            setSelectedAppIds(selectedAppIds.filter((id) => !removeSet.has(id)));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span>Chọn tất cả đang hiển thị ({filteredApplications.length})</span>
+                    </label>
+
+                    {pendingFiltered.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAppIds(pendingFiltered.map((a) => a.id))}
+                        className="rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 cursor-pointer"
+                      >
+                        ⚡ Chọn nhanh {pendingFiltered.length} đơn Chờ duyệt
+                      </button>
+                    )}
+
+                    {selectedApps.length > 0 && (
+                      <span className="rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-black text-white">
+                        Đã chọn: {selectedApps.length} KOC
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedApps.length > 0 ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleBatchUpdateApplications(selectedApps, 'Đã duyệt gửi mẫu')}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                          <span>Duyệt đã chọn ({selectedApps.length})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBatchUpdateApplications(selectedApps, 'Từ chối')}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">cancel</span>
+                          <span>Từ chối đã chọn ({selectedApps.length})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAppIds([])}
+                          className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600 cursor-pointer"
+                        >
+                          Bỏ chọn
+                        </button>
+                      </>
+                    ) : (
+                      pendingFiltered.length > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleBatchUpdateApplications(pendingFiltered, 'Đã duyệt gửi mẫu')}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">done_all</span>
+                            <span>Duyệt tất cả chờ ({pendingFiltered.length})</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleBatchUpdateApplications(pendingFiltered, 'Từ chối')}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3.5 py-1.5 text-xs font-bold text-rose-700 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">block</span>
+                            <span>Từ chối tất cả chờ ({pendingFiltered.length})</span>
+                          </button>
+                        </>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Applications Table */}
             <div className="rounded-2xl bg-white shadow-xs border border-slate-200/80 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50/90 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80">
                     <tr>
+                      <th className="w-10 px-3 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredApplications.length > 0 &&
+                            filteredApplications.every((a) => selectedAppIds.includes(a.id))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedAppIds(
+                                Array.from(new Set([...selectedAppIds, ...filteredApplications.map((a) => a.id)]))
+                              );
+                            } else {
+                              const removeSet = new Set(filteredApplications.map((a) => a.id));
+                              setSelectedAppIds(selectedAppIds.filter((id) => !removeSet.has(id)));
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          title="Chọn / Bỏ chọn tất cả"
+                        />
+                      </th>
                       <th className="px-4 py-3 sm:px-5 sm:py-3.5">Mã Đơn / Ngày</th>
                       <th className="px-4 py-3 sm:px-5 sm:py-3.5">Thông Tin KOC</th>
                       <th className="px-4 py-3 sm:px-5 sm:py-3.5">Chiến Dịch</th>
@@ -4349,7 +4567,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {filteredApplications.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-slate-500">
+                        <td colSpan={7} className="py-12 text-center text-slate-500">
                           <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">inbox</span>
                           <p className="text-sm font-semibold">Không tìm thấy hồ sơ KOC nào phù hợp</p>
                           <p className="text-xs text-slate-400 mt-1">Hãy thử đổi từ khóa tìm kiếm hoặc bấm chọn tab khác.</p>
@@ -4357,7 +4575,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </tr>
                     ) : (
                       filteredApplications.map((app) => (
-                        <tr key={app.id} className="hover:bg-slate-50/60 transition-colors">
+                        <tr
+                          key={app.id}
+                          className={`hover:bg-slate-50/60 transition-colors ${
+                            selectedAppIds.includes(app.id) ? 'bg-indigo-50/40' : ''
+                          }`}
+                        >
+                          <td className="w-10 px-3 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedAppIds.includes(app.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedAppIds((prev) => [...prev, app.id]);
+                                } else {
+                                  setSelectedAppIds((prev) => prev.filter((id) => id !== app.id));
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
                           <td className="px-4 py-3 sm:px-5 sm:py-3.5 whitespace-nowrap">
                             <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded">
                               {app.code}
@@ -4648,17 +4885,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-auto">
-                        {/* Duyệt nhanh tất cả đơn chờ */}
+                        {/* Duyệt / Từ chối nhanh tất cả đơn chờ trong chiến dịch */}
                         {subPending.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleBulkApproveCampaignKocs(targetCamp, subPending)}
-                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 active:scale-95 cursor-pointer"
-                            title={`Duyệt hàng loạt ${subPending.length} KOC đang chờ nhận mẫu`}
-                          >
-                            <span className="material-symbols-outlined text-[17px]">task_alt</span>
-                            <span>Duyệt tất cả ({subPending.length})</span>
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleBulkApproveCampaignKocs(targetCamp, subPending)}
+                              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 active:scale-95 cursor-pointer"
+                              title={`Duyệt hàng loạt ${subPending.length} KOC đang chờ nhận mẫu`}
+                            >
+                              <span className="material-symbols-outlined text-[17px]">task_alt</span>
+                              <span>Duyệt tất cả ({subPending.length})</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBulkRejectCampaignKocs(targetCamp, subPending)}
+                              className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3.5 py-2 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                              title={`Từ chối hàng loạt ${subPending.length} KOC đang chờ duyệt`}
+                            >
+                              <span className="material-symbols-outlined text-[17px]">cancel</span>
+                              <span>Từ chối tất cả ({subPending.length})</span>
+                            </button>
+                          </>
                         )}
 
                         {/* Menu Thông Minh: Gửi Brand */}
