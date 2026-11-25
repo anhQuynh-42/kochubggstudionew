@@ -210,19 +210,28 @@ function parseSheetCsvToChannelMetrics(csvText: string): KocityChannelMetric[] {
     if (!matchedChannel) continue;
 
     const toNum = (v?: string) => parseInt((v || '').replace(/[^\d-]/g, ''), 10) || 0;
-    // Ghi đè theo thứ tự từ trên xuống để luôn lấy dòng mới nhất cho từng kênh
-    byChannel.set(matchedChannel, {
-      id: `sheet-${matchedChannel}-${r}`,
-      report_date: cols[iDate] || new Date().toISOString().split('T')[0],
-      channel: matchedChannel,
-      channel_name: cols[iName] || CHANNEL_CONFIG[matchedChannel].label,
-      channel_url: CHANNEL_CONFIG[matchedChannel].defaultUrl,
-      followers_or_members: toNum(cols[iFollowers]),
-      total_views: toNum(cols[iViews]),
-      engagements: toNum(cols[iEngage]),
-      new_subscribers_today: toNum(cols[iNew]),
-      notes: 'Đồng bộ trực tiếp từ Google Sheet BI_He_Sinh_Thai',
-    });
+    const followersNum = toNum(cols[iFollowers]);
+    const viewsNum = toNum(cols[iViews]);
+    const engageNum = toNum(cols[iEngage]);
+    const newNum = toNum(cols[iNew]);
+    const hasAnyData = followersNum > 0 || viewsNum > 0 || engageNum > 0 || newNum > 0;
+    const prev = byChannel.get(matchedChannel);
+
+    // Chỉ ghi đè nếu dòng mới có số liệu thực (> 0) hoặc kênh chưa có dữ liệu (tránh dòng 0,0,0,0 xóa mất số thật)
+    if (!prev || hasAnyData) {
+      byChannel.set(matchedChannel, {
+        id: `sheet-${matchedChannel}-${r}`,
+        report_date: cols[iDate] || new Date().toISOString().split('T')[0],
+        channel: matchedChannel,
+        channel_name: cols[iName] || CHANNEL_CONFIG[matchedChannel].label,
+        channel_url: CHANNEL_CONFIG[matchedChannel].defaultUrl,
+        followers_or_members: followersNum,
+        total_views: viewsNum,
+        engagements: engageNum,
+        new_subscribers_today: newNum,
+        notes: 'Đồng bộ trực tiếp từ Google Sheet BI_He_Sinh_Thai',
+      });
+    }
   }
 
   return Array.from(byChannel.values());
@@ -359,6 +368,7 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
 
   // Dữ liệu lượt xem & tăng trưởng 5 kênh hệ sinh thái (TikTok, Facebook, Threads, Zalo, Website)
   const [channelMetrics, setChannelMetrics] = useState<KocityChannelMetric[]>(DEFAULT_OMNICHANNEL_METRICS);
+  const [channelChartMetric, setChannelChartMetric] = useState<'views' | 'followers' | 'engagements' | 'new'>('views');
   const [dataSourceLabel, setDataSourceLabel] = useState<'sheet' | 'supabase' | 'sample'>('sample');
   const [sheetUrl, setSheetUrl] = useState<string>(() => {
     try {
@@ -1895,12 +1905,228 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
             );
           })()}
 
-          {/* Biểu đồ so sánh Lượt Xem (Views) giữa 5 nền tảng */}
+          {/* BIỂU ĐỒ HIỆU QUẢ THU HÚT KHÁCH HÀNG / KOC GIỮA 5 KÊNH (DONUT + CỘT DỌC) */}
+          {(() => {
+            const CHANNEL_COLORS: Record<KocityChannelType, string> = {
+              threads: '#0f172a',
+              website: '#7c3aed',
+              facebook: '#2563eb',
+              zalo: '#0284c7',
+              tiktok: '#ec4899',
+            };
+
+            const metricMeta = {
+              views: { label: 'Lượt Tiếp Cận (Views)', unit: 'views', getter: (m: KocityChannelMetric) => Number(m.total_views) || 0 },
+              followers: { label: 'Khách Hàng / Thành Viên', unit: 'KOC/Users', getter: (m: KocityChannelMetric) => Number(m.followers_or_members) || 0 },
+              engagements: { label: 'Lượt Tương Tác', unit: 'tương tác', getter: (m: KocityChannelMetric) => Number(m.engagements) || 0 },
+              new: { label: 'Tăng Trưởng Mới', unit: 'mới', getter: (m: KocityChannelMetric) => Number(m.new_subscribers_today) || 0 },
+            }[channelChartMetric];
+
+            const ranked = [...channelMetrics]
+              .map((m) => ({ ...m, val: metricMeta.getter(m), hex: CHANNEL_COLORS[m.channel] || '#6366f1' }))
+              .sort((a, b) => b.val - a.val);
+
+            const totalVal = ranked.reduce((s, x) => s + x.val, 0);
+            const maxVal = Math.max(...ranked.map((x) => x.val), 1);
+
+            const topViews = [...channelMetrics].sort((a, b) => (b.total_views || 0) - (a.total_views || 0))[0];
+            const topCustomers = [...channelMetrics].sort((a, b) => (b.followers_or_members || 0) - (a.followers_or_members || 0))[0];
+            const topGrowth = [...channelMetrics].sort((a, b) => (b.new_subscribers_today || 0) - (a.new_subscribers_today || 0))[0];
+
+            // Tính các cung tròn cho biểu đồ Donut SVG (r = 58, C = 2*pi*58 = 364.42)
+            const radius = 58;
+            const circumference = 2 * Math.PI * radius;
+            let cumulative = 0;
+            const slices = ranked.map((item) => {
+              const frac = totalVal > 0 ? item.val / totalVal : 0;
+              const dash = frac * circumference;
+              const offset = -cumulative * circumference;
+              cumulative += frac;
+              return { ...item, frac, dash, offset, pct: Math.round(frac * 100) };
+            });
+
+            return (
+              <div className="rounded-2xl border border-violet-200 bg-white p-5 shadow-sm space-y-5">
+                {/* Header + Bộ chuyển chỉ số */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      📊 Biểu Đồ Hiệu Quả Thu Hút Khách Hàng / KOC Theo 5 Kênh
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      So sánh trực tiếp để xác định kênh nào kéo nhiều lượt xem, khách hàng/KOC và tăng trưởng nhất cho báo cáo BI
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 rounded-xl bg-slate-100 p-1">
+                    {(
+                      [
+                        ['views', '👁️ Lượt Xem'],
+                        ['followers', '👥 Khách Hàng / TV'],
+                        ['engagements', '💬 Tương Tác'],
+                        ['new', '📈 Tăng Mới'],
+                      ] as const
+                    ).map(([key, text]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setChannelChartMetric(key)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                          channelChartMetric === key
+                            ? 'bg-violet-600 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+                        }`}
+                      >
+                        {text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3 Thẻ kết luận Top Kênh Dẫn Đầu */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
+                    <p className="text-[10px] font-bold uppercase text-slate-500">🏆 Kênh Phủ Sóng / Views Cao Nhất</p>
+                    <p className="mt-1 text-base font-black text-slate-900">
+                      {topViews ? (CHANNEL_CONFIG[topViews.channel]?.label || topViews.channel_name) : '—'}
+                    </p>
+                    <p className="text-xs font-bold text-pink-600">
+                      {(topViews?.total_views || 0).toLocaleString('vi-VN')} views
+                      {ecosystemTotals.totalViews > 0 && topViews
+                        ? ` (${Math.round(((topViews.total_views || 0) / ecosystemTotals.totalViews) * 100)}% toàn hệ thống)`
+                        : ''}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-3.5">
+                    <p className="text-[10px] font-bold uppercase text-violet-700">🎯 Kênh Thu Hút Khách Hàng / KOC Nhất</p>
+                    <p className="mt-1 text-base font-black text-violet-900">
+                      {topCustomers ? (CHANNEL_CONFIG[topCustomers.channel]?.label || topCustomers.channel_name) : '—'}
+                    </p>
+                    <p className="text-xs font-bold text-violet-700">
+                      {(topCustomers?.followers_or_members || 0).toLocaleString('vi-VN')} khách hàng / thành viên
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5">
+                    <p className="text-[10px] font-bold uppercase text-emerald-800">🚀 Kênh Tăng Trưởng Mới Nhanh Nhất</p>
+                    <p className="mt-1 text-base font-black text-emerald-900">
+                      {topGrowth ? (CHANNEL_CONFIG[topGrowth.channel]?.label || topGrowth.channel_name) : '—'}
+                    </p>
+                    <p className="text-xs font-bold text-emerald-700">
+                      +{(topGrowth?.new_subscribers_today || 0).toLocaleString('vi-VN')} lượt tăng mới
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2 Biểu đồ chính: Tròn Donut + Cột Dọc So Sánh */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+                  {/* Trái: Biểu đồ Donut tỷ trọng */}
+                  <div className="lg:col-span-5 rounded-xl border border-slate-100 bg-slate-50/60 p-4 flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center justify-center gap-5">
+                    <div className="relative h-40 w-40 shrink-0">
+                      <svg viewBox="0 0 160 160" className="h-full w-full -rotate-90">
+                        <circle cx="80" cy="80" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="22" />
+                        {slices.map((s) =>
+                          s.val > 0 ? (
+                            <circle
+                              key={s.channel}
+                              cx="80"
+                              cy="80"
+                              r={radius}
+                              fill="none"
+                              stroke={s.hex}
+                              strokeWidth="22"
+                              strokeDasharray={`${s.dash} ${circumference}`}
+                              strokeDashoffset={s.offset}
+                              className="transition-all duration-500"
+                            />
+                          ) : null
+                        )}
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Tổng</span>
+                        <span className="text-lg font-black text-slate-900 leading-tight">
+                          {formatCompact(totalVal)}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-500">{metricMeta.unit}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 w-full max-w-[210px]">
+                      <p className="text-[11px] font-extrabold text-slate-700 uppercase">Tỷ trọng {metricMeta.label}</p>
+                      {slices.map((s) => {
+                        const cfg = CHANNEL_CONFIG[s.channel] || CHANNEL_CONFIG.website;
+                        return (
+                          <div key={s.channel} className="flex items-center justify-between text-xs gap-2">
+                            <span className="flex items-center gap-2 font-bold text-slate-700 truncate">
+                              <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: s.hex }} />
+                              {cfg.label.replace(' KOCity', '').replace(' Community', '')}
+                            </span>
+                            <span className="font-black text-slate-900 shrink-0">
+                              {s.pct}% <span className="text-[11px] font-normal text-slate-400">({formatCompact(s.val)})</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Phải: Biểu đồ Cột Dọc Xếp Hạng 5 Kênh */}
+                  <div className="lg:col-span-7 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-extrabold text-slate-800 uppercase">
+                        Xếp Hạng 5 Kênh Theo {metricMeta.label}
+                      </p>
+                      <span className="text-[11px] font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">
+                        #1: {ranked[0] ? CHANNEL_CONFIG[ranked[0].channel]?.label : '—'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-3 items-end h-48 pt-6 pb-1 px-2 border-b border-slate-200">
+                      {ranked.map((item, idx) => {
+                        const cfg = CHANNEL_CONFIG[item.channel] || CHANNEL_CONFIG.website;
+                        const heightPct = item.val > 0 ? Math.max(10, Math.round((item.val / maxVal) * 100)) : 4;
+                        return (
+                          <div key={item.channel} className="flex flex-col items-center justify-end h-full gap-1.5">
+                            <span className="text-[11px] font-black text-slate-900 text-center leading-none">
+                              {item.val.toLocaleString('vi-VN')}
+                            </span>
+                            <div className="w-full max-w-[56px] flex-1 flex items-end">
+                              <div
+                                className="w-full rounded-t-xl transition-all duration-500 relative shadow-xs"
+                                style={{ height: `${heightPct}%`, backgroundColor: item.hex }}
+                                title={`${cfg.label}: ${item.val.toLocaleString('vi-VN')} ${metricMeta.unit}`}
+                              >
+                                {idx === 0 && (
+                                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs">👑</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="grid grid-cols-5 gap-3 pt-2 px-2">
+                      {ranked.map((item, idx) => {
+                        const cfg = CHANNEL_CONFIG[item.channel] || CHANNEL_CONFIG.website;
+                        return (
+                          <div key={item.channel} className="text-center">
+                            <p className="text-[11px] font-extrabold text-slate-800 truncate">
+                              #{idx + 1} {cfg.label.replace(' KOCity', '').replace(' Community', '')}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate">{item.channel_name}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Biểu đồ thanh chi tiết Lượt Xem (Views) giữa 5 nền tảng */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">So Sánh Lượt Xem (Views) Giữa Các Nền Tảng</h3>
-                <p className="text-xs text-slate-500">Tỷ trọng lượt xem giữa TikTok, Threads, Facebook, Website và Zalo</p>
+                <h3 className="text-base font-bold text-slate-900">Chi Tiết Chỉ Số Từng Kênh Trong Hệ Sinh Thái</h3>
+                <p className="text-xs text-slate-500">Tỷ trọng lượt xem, khách hàng/thành viên và tương tác giữa TikTok, Threads, Facebook, Website và Zalo</p>
               </div>
               <span className="rounded-lg bg-pink-50 px-2.5 py-1 text-xs font-bold text-pink-700">
                 Tổng: {ecosystemTotals.totalViews.toLocaleString('vi-VN')} views
