@@ -1116,9 +1116,14 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                   </div>
                   <div className="rounded-xl border border-pink-200 bg-pink-50/70 p-3.5">
                     <p className="text-[10px] font-bold text-pink-800 uppercase">KOC Đã Đăng Video</p>
-                    <p className="mt-1 text-2xl font-black text-pink-700">
-                      {sheetsReport.loading ? '...' : totalWaveVideosPosted.toLocaleString('vi-VN')}
-                    </p>
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <p className="text-2xl font-black text-pink-700">
+                        {sheetsReport.loading ? '...' : totalWaveVideosPosted.toLocaleString('vi-VN')}
+                      </p>
+                      <span className="rounded-md bg-pink-200/80 px-1.5 py-0.5 text-[10px] font-black text-pink-900">
+                        201,8K views
+                      </span>
+                    </div>
                     <span className="text-[11px] text-pink-700 font-bold">
                       Đợt 1: {dot1Videos} · Đợt 2: {dot2Videos} video
                     </span>
@@ -1192,6 +1197,177 @@ export const AdminBIAnalyticsTab: React.FC<AdminBIAnalyticsTabProps> = ({
                       )}
                     </tbody>
                   </table>
+                </div>
+
+                {/* BÁO CÁO QUÉT THỰC TẾ LƯỢT XEM (VIEWS) & TOP VIDEO VIRAL: CỎ MỀM ĐỢT 1 VS ĐỢT 2 */}
+                <div className="rounded-2xl border border-pink-200/90 bg-white p-5 shadow-xs space-y-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="rounded-full bg-pink-100 px-2.5 py-0.5 text-[11px] font-black text-pink-700">
+                          🎬 TikTok Video Audit · 88/88 Video Độc Nhất
+                        </span>
+                        <h4 className="text-sm sm:text-base font-extrabold text-slate-900">
+                          So Sánh Hiệu Quả Lượt Xem (Views): Cỏ Mềm Đợt 1 vs Cỏ Mềm Đợt 2
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Kết quả quét thực tế toàn bộ link video KOC đã nộp trên TikTok: <b>Cỏ Mềm Đợt 1 thắng áp đảo với 93,46% tổng lượt xem (gấp 14,3 lần Đợt 2)</b>.
+                      </p>
+                    </div>
+                    <span className="self-start md:self-auto rounded-xl bg-gradient-to-r from-pink-600 to-violet-600 px-3.5 py-1.5 text-xs font-black text-white shadow-xs">
+                      🏆 Chiến dịch hiệu quả nhất: Cỏ Mềm Đợt 1 (188.623 views)
+                    </span>
+                  </div>
+
+                  {/* 4 Thẻ KPI Tổng Hợp Lượt Xem 2 Đợt */}
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <div className="rounded-xl border border-pink-200 bg-pink-50/70 p-3.5">
+                      <p className="text-[10px] font-bold uppercase text-pink-800">Tổng Lượt Xem Cả 2 Đợt</p>
+                      <p className="mt-1 text-2xl font-black text-pink-700">201.815</p>
+                      <span className="text-[11px] font-semibold text-pink-700">88 video độc nhất (89 link nộp)</span>
+                    </div>
+                    <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-3.5">
+                      <p className="text-[10px] font-bold uppercase text-violet-800">🥇 Cỏ Mềm Đợt 1 (59 Video)</p>
+                      <p className="mt-1 text-2xl font-black text-violet-700">188.623</p>
+                      <span className="text-[11px] font-bold text-violet-700">93,46% tổng view · TB 3.197/clip</span>
+                    </div>
+                    <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3.5">
+                      <p className="text-[10px] font-bold uppercase text-sky-800">🥈 Cỏ Mềm Đợt 2 (29 Video)</p>
+                      <p className="mt-1 text-2xl font-black text-sky-700">13.192</p>
+                      <span className="text-[11px] font-bold text-sky-700">6,54% tổng view · TB 455/clip</span>
+                    </div>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5">
+                      <p className="text-[10px] font-bold uppercase text-emerald-800">Tổng Tương Tác TikTok</p>
+                      <p className="mt-1 text-2xl font-black text-emerald-700">2.846</p>
+                      <span className="text-[11px] font-semibold text-emerald-700">1.604 Tim · 874 Cmt · 368 Share</span>
+                    </div>
+                  </div>
+
+                  {/* Thanh Tỷ Trọng Trực Quan & Bảng Đối Chiếu */}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between text-xs font-bold gap-2">
+                      <span className="text-violet-700">🟣 Cỏ Mềm Đợt 1: 188.623 views (93,46% · Gấp 14,3 lần)</span>
+                      <span className="text-sky-700">🔵 Cỏ Mềm Đợt 2: 13.192 views (6,54%)</span>
+                    </div>
+                    <div className="h-4 w-full rounded-full bg-slate-200 overflow-hidden flex shadow-inner">
+                      <div
+                        className="h-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 flex items-center justify-center text-[10px] font-black text-white"
+                        style={{ width: '93.46%' }}
+                      >
+                        93,5% ĐỢT 1
+                      </div>
+                      <div
+                        className="h-full bg-sky-500 flex items-center justify-center text-[9px] font-black text-white"
+                        style={{ width: '6.54%' }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                      <div className="rounded-lg bg-white border border-slate-200/80 px-3 py-2 flex items-center justify-between">
+                        <span className="text-slate-500">Views TB / 1 video:</span>
+                        <span className="font-black text-slate-900">Đợt 1: 3.197 vs Đợt 2: 455 (gấp 7,0×)</span>
+                      </div>
+                      <div className="rounded-lg bg-white border border-slate-200/80 px-3 py-2 flex items-center justify-between">
+                        <span className="text-slate-500">Tổng Tương tác:</span>
+                        <span className="font-black text-slate-900">Đợt 1: 2.350 vs Đợt 2: 496 (gấp 4,7×)</span>
+                      </div>
+                      <div className="rounded-lg bg-white border border-slate-200/80 px-3 py-2 flex items-center justify-between">
+                        <span className="text-slate-500">Tỷ lệ KOC trả bài:</span>
+                        <span className="font-black text-emerald-700">Đợt 1: 83,3% (60/72) · Đợt 2: 80,6% (29/36)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2 Bảng Top 5 Video Nhiều View Nhất Từng Đợt */}
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    {/* Top 5 Đợt 1 */}
+                    <div className="rounded-xl border border-violet-200 bg-violet-50/30 p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-xs font-extrabold text-violet-900 uppercase">
+                          🔥 Top 5 Video Nhiều View Nhất — Cỏ Mềm Đợt 1
+                        </h5>
+                        <span className="text-[11px] font-bold text-violet-700">Tổng 59 clip: 188.623 views</span>
+                      </div>
+                      <div className="overflow-x-auto rounded-lg border border-violet-100 bg-white">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-100 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase">
+                              <th className="py-2 px-2.5">#</th>
+                              <th className="py-2 px-2.5">KOC TikTok</th>
+                              <th className="py-2 px-2.5">Sản Phẩm</th>
+                              <th className="py-2 px-2.5 text-right">Lượt Xem</th>
+                              <th className="py-2 px-2.5 text-right">Tim/Cmt</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {[
+                              { rank: '#1', koc: '@linhlan633', prod: 'Combo Dầu Gội & Sữa Tắm / Son bóng', views: 104500, interact: '270 · 19', url: 'https://www.tiktok.com/@linhlan633/video/7711369843437522194' },
+                              { rank: '#2', koc: '@meemtom1010', prod: '[Set 20/10] Sữa Tắm & Kem Da Tay', views: 42600, interact: '170 · 134', url: 'https://www.tiktok.com/@meemtom1010/video/7695426052247555349' },
+                              { rank: '#3', koc: '@meomeo_2569', prod: '[Set 20/10] Son Lụa Diễm & Cushion', views: 3678, interact: '75 · 47', url: 'https://www.tiktok.com/@meomeo_2569/video/7696103167578213650' },
+                              { rank: '#4', koc: '@tiemnhahau99', prod: '[Set 20/10] Sữa Tắm & Kem Da Tay', views: 3606, interact: '14 · 0', url: 'https://www.tiktok.com/@tiemnhahau99/video/7696150718524198165' },
+                              { rank: '#5', koc: '@gia.nh.nemo', prod: '[Set 20/10] Sữa Tắm & Kem Da Tay', views: 3276, interact: '14 · 4', url: 'https://www.tiktok.com/@gia.nh.nemo/video/7706536630827437320' },
+                            ].map((v) => (
+                              <tr key={v.koc} className="hover:bg-violet-50/40">
+                                <td className="py-2 px-2.5 font-black text-violet-700">{v.rank}</td>
+                                <td className="py-2 px-2.5 font-bold">
+                                  <a href={v.url} target="_blank" rel="noreferrer" className="text-slate-900 hover:text-violet-700 hover:underline">
+                                    {v.koc} ↗
+                                  </a>
+                                </td>
+                                <td className="py-2 px-2.5 text-slate-600 truncate max-w-[160px]">{v.prod}</td>
+                                <td className="py-2 px-2.5 text-right font-black text-pink-600">{v.views.toLocaleString('vi-VN')}</td>
+                                <td className="py-2 px-2.5 text-right text-[11px] text-slate-500">{v.interact}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Top 5 Đợt 2 */}
+                    <div className="rounded-xl border border-sky-200 bg-sky-50/30 p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-xs font-extrabold text-sky-900 uppercase">
+                          ⭐ Top 5 Video Nhiều View Nhất — Cỏ Mềm Đợt 2
+                        </h5>
+                        <span className="text-[11px] font-bold text-sky-700">Tổng 29 clip: 13.192 views</span>
+                      </div>
+                      <div className="overflow-x-auto rounded-lg border border-sky-100 bg-white">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-100 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase">
+                              <th className="py-2 px-2.5">#</th>
+                              <th className="py-2 px-2.5">KOC TikTok</th>
+                              <th className="py-2 px-2.5">Sản Phẩm</th>
+                              <th className="py-2 px-2.5 text-right">Lượt Xem</th>
+                              <th className="py-2 px-2.5 text-right">Tim/Cmt</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {[
+                              { rank: '#1', koc: '@tudonu11', prod: '[Set 20/10] Bộ Đôi Môi Xinh Son & Dưỡng', views: 2255, interact: '4 · 0', url: 'https://www.tiktok.com/@tudonu11/video/7696444063146413333' },
+                              { rank: '#2', koc: '@chichichichii_', prod: '[Set 20/10] Sữa Tắm & Dưỡng Thể Sáng Da', views: 1644, interact: '14 · 7', url: 'https://www.tiktok.com/@chichichichii_/video/7695604446750887175' },
+                              { rank: '#3', koc: '@trntrc384', prod: '[Set 20/10] Kem Da Tay & Bọt Rửa Mặt', views: 1115, interact: '7 · 2', url: 'https://www.tiktok.com/@trntrc384/video/7698423964564983048' },
+                              { rank: '#4', koc: '@huyenshop1998', prod: '[Set 20/10] Bọt Rửa Mặt & Mặt Nạ Dưỡng', views: 851, interact: '9 · 3', url: 'https://www.tiktok.com/@huyenshop1998/video/7697066226228415765' },
+                              { rank: '#5', koc: '@meemsuapanda', prod: '[Set 20/10] Bộ Gội Xả Ngừa Rụng Tóc', views: 675, interact: '14 · 8', url: 'https://www.tiktok.com/@meemsuapanda/video/7698366594308689153' },
+                            ].map((v) => (
+                              <tr key={v.koc} className="hover:bg-sky-50/40">
+                                <td className="py-2 px-2.5 font-black text-sky-700">{v.rank}</td>
+                                <td className="py-2 px-2.5 font-bold">
+                                  <a href={v.url} target="_blank" rel="noreferrer" className="text-slate-900 hover:text-sky-700 hover:underline">
+                                    {v.koc} ↗
+                                  </a>
+                                </td>
+                                <td className="py-2 px-2.5 text-slate-600 truncate max-w-[160px]">{v.prod}</td>
+                                <td className="py-2 px-2.5 text-right font-black text-sky-700">{v.views.toLocaleString('vi-VN')}</td>
+                                <td className="py-2 px-2.5 text-right text-[11px] text-slate-500">{v.interact}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
